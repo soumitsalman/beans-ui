@@ -5,7 +5,7 @@ Beans is a news and blogs aggregator. This specific project is UI part of the ov
 nuxt, pnpm, nuxt/@ui, vue, tailwindcss
 
 ## Development Guideline
-### Code Guideline
+### Coding Guideline: Strict Adherence
 - public variables/fields: lower_snake_case
 - private variables/fields: _prefix_with_underscore_lower_snake_case
 - consts: UPPER_SNAKE_CASE
@@ -14,8 +14,7 @@ nuxt, pnpm, nuxt/@ui, vue, tailwindcss
 - compact, concise, composables, typed
 - separate data model, view model, style/color
 - single responsibility principle, plug-and-play
-- maximize: use of built-in and imported 3rd party libraries (ex: nuxt/@ui, tailwindcss)
-- minimize: basic HTML composition, custom css, scoped css
+- preferences: nuxt@ui components over basicHTML tags, tailwindcss over custom css, central style over scoped style
 
 ### Data Models
 Source: `app/types/`

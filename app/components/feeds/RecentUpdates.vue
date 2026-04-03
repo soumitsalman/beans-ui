@@ -103,7 +103,9 @@ onBeforeUnmount(() => {
       </div>
     </template>
     <template v-else>
-      <BeanCompact v-for="bean in beans" :key="bean.url" :bean="bean" :publisher="publishers[bean.source]" />
+      <UPageList divide>
+        <BeanCompact v-for="bean in beans" :key="bean.url" :bean="bean" :publisher="publishers[bean.source]" />
+      </UPageList>
       <div ref="load_more_trigger" class="h-1 w-full" />
       <div v-if="loading_more" class="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">
         Loading More

@@ -115,9 +115,9 @@ onBeforeUnmount(() => {
         <div
           v-for="bean in beans"
           :key="bean.url"
-          class="min-w-[85%] snap-start md:min-w-[72%]"
+          class="min-w-[85%] snap-start md:min-w-[72%] flex flex-col"
         >
-          <BeanFullWidth :bean="bean" :publisher="publishers[bean.source]" />
+          <BeanExpanded :bean="bean" :publisher="publishers[bean.source]" />
         </div>
         <div ref="load_more_trigger" class="h-1 w-1 shrink-0 self-center" />
       </div>

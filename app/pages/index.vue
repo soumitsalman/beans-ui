@@ -58,11 +58,12 @@ onMounted(() => fetchData())
       </div>
     </header>
 
-    <main class="pt-24 pb-32 px-4 max-w-5xl mx-auto gap-4">
-      <h2>Top Stories</h2>
-      <FeedsTopStories limit="5" />
-      <h2>Recent Updates</h2>
-      <FeedsRecentUpdates limit="5"/>      
+    <main class="py-24 px-4 max-w-5xl mx-auto space-y-4">
+      <h2 class="text-xl font-extrabold tracking-tight">Top Stories</h2>
+      <FeedsTopStories :limit="5" />
+      <h2 class="text-lg font-bold">Recent Updates</h2>
+
+      <FeedsRecentUpdates :limit="5"/>      
     </main>
 
     <nav class="fixed bottom-0 left-0 right-0 h-20 bg-stone-950/90 backdrop-blur-xl border-t border-stone-800/50 flex justify-around items-center px-4 z-50 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.3)]">

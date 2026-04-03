@@ -6,8 +6,7 @@ const PAGE_SIZE = 5
 
 const beans = ref<Bean[]>([])
 const publishers = ref<Record<string, Publisher>>({})
-const initial_loading = ref(true)
-const loading_more = ref(false)
+const loading = ref(false)
 const has_more = ref(true)
 const load_more_trigger = ref<HTMLElement | null>(null)
 const current_offset = ref(0)
@@ -33,9 +32,9 @@ const mergePublishers = async (new_beans: Bean[]) => {
 }
 
 const loadMore = async () => {
-  if (loading_more.value || !has_more.value) return
+  if (loading.value || !has_more.value) return
 
-  loading_more.value = true
+  loading.value = true
   try {
     const batch_size = PAGE_SIZE
     const resp = await fetchLatestArticlesPage({
@@ -53,8 +52,7 @@ const loadMore = async () => {
     has_more.value = next_batch.length === batch_size
     current_offset.value += next_batch.length
   } finally {
-    loading_more.value = false
-    initial_loading.value = false
+    loading.value = false
   }
 }
 
@@ -87,19 +85,12 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="space-y-4">
-    <template v-if="initial_loading">
-      <div v-for="i in 5" :key="i" class="animate-pulse">
-        <div class="h-24 bg-surface-container-low rounded-full" />
-      </div>
-    </template>
-    <template v-else>
-      <UPageList divide>
-        <BeanCompact v-for="bean in beans" :key="bean.url" :bean="bean" :publisher="publishers[bean.source]" />
-      </UPageList>
-      <div ref="load_more_trigger" class="h-1 w-full" />
-      <div v-if="loading_more" class="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">
-        Loading More
-      </div>
-    </template>
+    <UPageList divide>
+      <BeanCompact v-for="bean in beans" :key="bean.url" :bean="bean" :publisher="publishers[bean.source]" />
+    </UPageList>
+    <div ref="load_more_trigger" class="h-1 w-full" />
+    <div v-if="loading" class="flex justify-center items-center py-4">
+      <UIcon name="i-svg-spinners-blocks-scale" class="w-5 h-5 animate-spin" />
+    </div>
   </div>
 </template>

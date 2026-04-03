@@ -2,10 +2,6 @@
 import { fetchLatestArticlesPage, fetchPublishers } from '~/composables/useBeansApi'
 import type { Bean, Publisher } from '~/types/beans'
 
-const props = defineProps<{
-  limit?: number
-}>()
-
 const PAGE_SIZE = 5
 
 const beans = ref<Bean[]>([])
@@ -14,13 +10,11 @@ const initial_loading = ref(true)
 const loading_more = ref(false)
 const has_more = ref(true)
 const load_more_trigger = ref<HTMLElement | null>(null)
+const current_offset = ref(0)
 
 let observer: IntersectionObserver | null = null
 
-const remainingLimit = computed(() => {
-  if (!props.limit) return PAGE_SIZE
-  return Math.max(0, props.limit - beans.value.length)
-})
+// No total cap: page by fixed PAGE_SIZE and track offset with current_offset
 
 const mergePublishers = async (new_beans: Bean[]) => {
   const missing_sources = [...new Set(
@@ -40,18 +34,15 @@ const mergePublishers = async (new_beans: Bean[]) => {
 
 const loadMore = async () => {
   if (loading_more.value || !has_more.value) return
-  if (props.limit && remainingLimit.value <= 0) {
-    has_more.value = false
-    return
-  }
 
   loading_more.value = true
   try {
-    const batch_size = props.limit ? Math.min(PAGE_SIZE, remainingLimit.value) : PAGE_SIZE
-    const next_batch = await fetchLatestArticlesPage({
+    const batch_size = PAGE_SIZE
+    const resp = await fetchLatestArticlesPage({
       limit: batch_size,
-      offset: beans.value.length
+      offset: current_offset.value
     })
+    const next_batch = resp ?? []
 
     const known_urls = new Set(beans.value.map(bean => bean.url))
     const appended = next_batch.filter(bean => !known_urls.has(bean.url))
@@ -60,9 +51,7 @@ const loadMore = async () => {
     await mergePublishers(appended)
 
     has_more.value = next_batch.length === batch_size
-    if (props.limit && beans.value.length >= props.limit) {
-      has_more.value = false
-    }
+    current_offset.value += next_batch.length
   } finally {
     loading_more.value = false
     initial_loading.value = false
@@ -87,6 +76,7 @@ const setupObserver = () => {
 
 onMounted(async () => {
   await loadMore()
+  await nextTick()
   setupObserver()
 })
 

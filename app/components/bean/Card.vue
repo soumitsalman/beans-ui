@@ -62,7 +62,7 @@ const related = computed(() => props.bean.num_related || 0)
         <UBadge :label="category" color="primary" variant="solid" size="xs" class="uppercase font-bold tracking-[0.18em]" />
       </div>
 
-      <h2 class="text-2xl font-black leading-[1.05] tracking-tight text-on-surface transition-colors duration-300 group-hover:text-primary md:text-4xl line-clamp-3 overflow-hidden">
+      <h2 class="text-2xl font-black leading-[1.05] tracking-tight text-on-surface transition-colors duration-300 group-hover:text-primary md:text-4xl line-clamp-3 overflow-hidden min-h-[87px] md:min-h-[114px]">
         {{ bean.title }}
       </h2>
 

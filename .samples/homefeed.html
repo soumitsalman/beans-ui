@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Beans by Cafecito</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#a77d52",
+                        "background-light": "#f7f7f6",
+                        "background-dark": "#1c1916",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .korean-style-logo {
+            font-family: 'Manrope', sans-serif;
+            letter-spacing: -0.02em;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .korean-geometric {
+            font-family: 'Manrope', sans-serif;
+            letter-spacing: 0.15em;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+            transform: scaleY(0.9);
+        }
+        /* Custom scrollbar hide */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+        .korean-style-logo {
+            font-family: 'Manrope', sans-serif;
+            letter-spacing: -0.02em;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .korean-geometric {
+            font-family: 'Manrope', sans-serif;
+            letter-spacing: 0.15em;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+            transform: scaleY(0.9);
+        }
+        /* Custom scrollbar hide */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark max-w-md mx-auto shadow-2xl overflow-hidden border-x border-primary/10">
+<!-- Header -->
+<header class="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-4 pt-6 pb-2">
+<div class="flex items-center justify-between mb-4">
+<div class="flex flex-col">
+<span class="text-[9px] korean-geometric text-primary">Cafecito presents</span>
+<h1 class="text-4xl korean-style-logo text-slate-900 dark:text-slate-100 leading-none mt-1">BEANS</h1>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-full hover:bg-primary/10 text-slate-600 dark:text-slate-400 transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="p-2 rounded-full hover:bg-primary/10 text-slate-600 dark:text-slate-400 transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+<!-- Categories -->
+<div class="flex gap-6 overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-slate-800">
+<a class="pb-3 border-b-2 border-primary text-primary font-bold text-sm whitespace-nowrap" href="#">For You</a>
+<a class="pb-3 border-b-2 border-transparent text-slate-500 dark:text-slate-400 font-medium text-sm whitespace-nowrap" href="#">Brewing Tech</a>
+<a class="pb-3 border-b-2 border-transparent text-slate-500 dark:text-slate-400 font-medium text-sm whitespace-nowrap" href="#">Roast News</a>
+<a class="pb-3 border-b-2 border-transparent text-slate-500 dark:text-slate-400 font-medium text-sm whitespace-nowrap" href="#">Global Trade</a>
+<a class="pb-3 border-b-2 border-transparent text-slate-500 dark:text-slate-400 font-medium text-sm whitespace-nowrap" href="#">Lifestyle</a>
+</div>
+</header>
+<!-- Main Feed -->
+<main class="flex-1 overflow-y-auto px-4 py-6 space-y-8">
+<!-- Featured Section (Horizontal Scroll for Top 5) -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-extrabold tracking-tight">Top Stories</h2>
+<span class="text-xs font-bold text-primary uppercase">Daily Brew</span>
+</div>
+<div class="flex overflow-x-auto gap-4 no-scrollbar -mx-4 px-4">
+<!-- Story 1 -->
+<div class="flex-shrink-0 w-[85%] bg-slate-100 dark:bg-slate-800/50 rounded-xl overflow-hidden shadow-lg flex flex-col">
+<div class="relative h-56 bg-cover bg-center" data-alt="A cinematic close-up of coffee beans roasting in a tray" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDtrhcFfUmS8LnWQV-mBCSoaK2jEfngEZlNzRedgdEjGMxEIJWPC8PUdgOVSWItbIENcRzzSIcpiMBP1gTBUgoDSmTmHNBXN1EhUq89LxOdIFZ4h9KuODEuMl5pD37qTh4AIFjls7b6Tc8qx2eVkqv1mSPfXK-xx74jgEaYCB6c5AtUq4qZ3R1ESxqniaWek4BkALg40n__mEiN5koj3DEZ-8HEQMntFW2BgQsbiApbvuM_xmFD8o2bLmK31y-vphTvf_UeP0Mm3pBe')">
+<div class="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-tighter">New Trend</div>
+<button class="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:text-red-400 transition-colors">
+<span class="material-symbols-outlined text-[20px]">favorite</span>
+</button>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<p class="text-primary text-[11px] font-bold uppercase tracking-wider mb-1">Technology • Automation • Global</p>
+<h3 class="text-xl font-bold leading-snug mb-3">The Rise of AI-Driven Espresso Micro-Roasteries</h3>
+<div class="mt-auto flex items-center justify-between">
+<a class="text-primary font-bold text-sm flex items-center gap-1 hover:underline" href="#">
+                                    Read Details <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</a>
+<span class="text-[11px] text-slate-400">4 min read</span>
+</div>
+</div>
+</div>
+<!-- Story 2 -->
+<div class="flex-shrink-0 w-[85%] bg-slate-100 dark:bg-slate-800/50 rounded-xl overflow-hidden shadow-lg flex flex-col">
+<div class="relative h-56 bg-cover bg-center" data-alt="Freshly brewed latte art in a ceramic cup" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBFgYhBqDCKRURGvslLlbTF-lB9RphSTPm3zqd1cxMeOMuqmNhtgfyy7BYeTPLYfEM7gUwyuOZ_Be-mBsgiOpPm4VtUV1nRiziaLmx7zEvR-_2TBenF3ACalDR65RG2PxSKjInm97d4cibpGvAzcevUvKRY1qOxm4Qauun2eIZyaZEUsfNNBrVde-xFYMrjU8qHx1rvCTU6gxkWqwOjtB78-xdjRdf9kqyq3yYzELVYBjg1UB__O7GfzbGyYIciG5Bft2hswIuxnpEV')">
+<div class="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-tighter">Harvest</div>
+<button class="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:text-red-400 transition-colors">
+<span class="material-symbols-outlined text-[20px]">favorite</span>
+</button>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<p class="text-primary text-[11px] font-bold uppercase tracking-wider mb-1">Sustainability • Agriculture • Brazil</p>
+<h3 class="text-xl font-bold leading-snug mb-3">Eco-Friendly Farming: Restoring the Soil in Minas Gerais</h3>
+<div class="mt-auto flex items-center justify-between">
+<a class="text-primary font-bold text-sm flex items-center gap-1 hover:underline" href="#">
+                                    Read Details <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</a>
+<span class="text-[11px] text-slate-400">6 min read</span>
+</div>
+</div>
+</div>
+<!-- Story 3 -->
+<div class="flex-shrink-0 w-[85%] bg-slate-100 dark:bg-slate-800/50 rounded-xl overflow-hidden shadow-lg flex flex-col">
+<div class="relative h-56 bg-cover bg-center" data-alt="Modern interior of a minimalist coffee shop" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDJJ-8dqtbNMddlY9gX9VTuWQBKPekKH_dzc_Mdlnv_Zjc4tTGk9zS2TfptiYF4lvSeWs0pJFptxomU6uQBkJnGbmetOJMXBZup4n_yGLlzq9oMeR6cGnfRhk6zGKHp1prafugYfz7HoifjUvZZjkynsLuRAKhqX0g8lauTEt9SCP8XnPAj0y2xKdpIfeEnlRZSyQ91JvhnFLo_LXnBfd5H83IqJiHAElfdTjGNFG78XBmZbPRr2CKrSMrjJbJ55RB1DRkFp_pQtved')">
+<div class="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-tighter">Business</div>
+<button class="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:text-red-400 transition-colors">
+<span class="material-symbols-outlined text-[20px]">favorite</span>
+</button>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<p class="text-primary text-[11px] font-bold uppercase tracking-wider mb-1">Industry • Retail • South Korea</p>
+<h3 class="text-xl font-bold leading-snug mb-3">Seoul's Thriving Specialty Coffee Culture in 2024</h3>
+<div class="mt-auto flex items-center justify-between">
+<a class="text-primary font-bold text-sm flex items-center gap-1 hover:underline" href="#">
+                                    Read Details <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</a>
+<span class="text-[11px] text-slate-400">5 min read</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Feed -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="text-lg font-bold">Recent Updates</h2>
+<button class="text-xs text-primary font-bold uppercase">View All</button>
+</div>
+<!-- Feed Item 1 -->
+<div class="flex gap-4 items-start group">
+<div class="h-20 w-20 rounded-lg overflow-hidden flex-shrink-0 bg-cover bg-center" data-alt="A close up of an aeropress brewing coffee" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuApOIjZZj9uaHds_guUm18ourXK_lp5gp-NYrxX9jpJv1H9-0w5_GI7_g_wxBE8l9JmqmvHFCUUufpQ8w0EkXU_mBaA0s6O0njvVKrSi1-dgtNYjAONhNZGg6NeZfrBja0HkUuFHo-jCc01hDMhr4Ctd4aF4mOk7pxRndwrwNTKPgkfXsKOPf2E5vBmTpyzgBWzgNdkOoVyECfP9pDwGc1gJddOICA-OpFp6UYsAS9BaAS564qSjin5D8rw3Ocblx1r0_Z0C5zDkfF1')"></div>
+<div class="flex flex-col gap-1 border-b border-slate-200 dark:border-slate-800 pb-4 w-full">
+<p class="text-[10px] font-bold text-primary uppercase">Gadgets • Home Brew</p>
+<h4 class="font-bold text-sm leading-tight group-hover:text-primary transition-colors">5 New Filter Methods for the Perfect Morning Pour Over</h4>
+<div class="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+<span>2h ago</span>
+<span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px] fill-1">favorite</span> 1.2k</span>
+</div>
+</div>
+</div>
+<!-- Feed Item 2 -->
+<div class="flex gap-4 items-start group">
+<div class="h-20 w-20 rounded-lg overflow-hidden flex-shrink-0 bg-cover bg-center" data-alt="Dark roasted coffee beans spilling from a sack" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAlZC_PU1GZcNcJ0Ref-0pL7BTHK1WiY5rUVD4JrV99vrRfYfvE37vMfUcoE3NHDyAnvQbdAYMR4wMZYAVJWQV_GFLy0jBnl0knCM5KuE0QLJzvT1T7-f4rKAvhLFK1Nb8Le5Mu0nJpzFWlvXiMFvclNH8GtSWlYV9WCZEZjz3hwSgDC5EDjdXaGoNtF7AY1aR0bUKRDOg22TnUMPWpbhRCsSLlcB_pxMWlXD3Lhyc8p92dNrCEGLP-_4yF1D2xRPiok_VCcbwBtIMq')"></div>
+<div class="flex flex-col gap-1 border-b border-slate-200 dark:border-slate-800 pb-4 w-full">
+<p class="text-[10px] font-bold text-primary uppercase">Logistics • Supply Chain</p>
+<h4 class="font-bold text-sm leading-tight group-hover:text-primary transition-colors">Port Congestion Impacts Specialty Bean Pricing Globally</h4>
+<div class="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+<span>5h ago</span>
+<span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">favorite</span> 840</span>
+</div>
+</div>
+</div>
+<!-- Feed Item 3 -->
+<div class="flex gap-4 items-start group">
+<div class="h-20 w-20 rounded-lg overflow-hidden flex-shrink-0 bg-cover bg-center" data-alt="A barista preparing coffee with steam" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCsn79bHSEsmc5v7r7JW7DcBa3NLZnBxgiTrV0cb6Si8ayMtdU6GJPH9lzz7ZnwNvtCnE-lmsb05tXYtp1wzSYLRCcmh-3hrAamTYDBKnOYbjDo6lIYSdpURk-LzY9fdPkAdCxDq8pCYHohIZv5FmH1qeOVe1-GMnXhxNO7Qly8xqX2zzgXM8AumjahmkWQWYlXfuVbezz0ssCs5dZ374t1VBjRXkiQ04GcLSsGGb5IyJdU4leuPTUG4ih94BiW-RCxgIra89usZF45')"></div>
+<div class="flex flex-col gap-1 border-b border-slate-200 dark:border-slate-800 pb-4 w-full">
+<p class="text-[10px] font-bold text-primary uppercase">Culture • Barista</p>
+<h4 class="font-bold text-sm leading-tight group-hover:text-primary transition-colors">World Barista Championship 2024: Meet the Top Finalists</h4>
+<div class="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+<span>8h ago</span>
+<span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">favorite</span> 2.5k</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation -->
+<nav class="bg-slate-100/90 dark:bg-background-dark/95 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-6 py-3">
+<div class="flex items-center justify-between max-w-sm mx-auto">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-1">rss_feed</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Feed</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Explore</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">bookmark</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Saved</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Settings</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>

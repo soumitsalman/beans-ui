@@ -2,17 +2,65 @@
 @import "@nuxt/ui";
 
 @theme static {
-  --font-sans: 'Public Sans', sans-serif;
+  --font-sans: 'Manrope', sans-serif;
+  --font-headline: 'Manrope', sans-serif;
+  --font-label: 'Manrope', sans-serif;
 
-  --color-green-50: #EFFDF5;
-  --color-green-100: #D9FBE8;
-  --color-green-200: #B3F5D1;
-  --color-green-300: #75EDAE;
-  --color-green-400: #00DC82;
-  --color-green-500: #00C16A;
-  --color-green-600: #00A155;
-  --color-green-700: #007F45;
-  --color-green-800: #016538;
-  --color-green-900: #0A5331;
-  --color-green-950: #052E16;
+  --color-primary: #a77d52;
+  --color-primary-fixed: #ffdcbd;
+  --color-primary-fixed-dim: #eebd8d;
+  --color-primary-container: #b4885c;
+  --color-on-primary: #ffffff;
+  --color-on-primary-fixed: #2c1600;
+  --color-on-primary-fixed-variant: #61401a;
+  --color-on-primary-container: #3f2301;
+  --color-inverse-primary: #7c572f;
+
+  --color-secondary: #dcc2ab;
+  --color-secondary-fixed: #f9dec6;
+  --color-secondary-fixed-dim: #dcc2ab;
+  --color-secondary-container: #584634;
+  --color-on-secondary: #3d2d1d;
+  --color-on-secondary-fixed: #27190a;
+  --color-on-secondary-fixed-variant: #554332;
+  --color-on-secondary-container: #cdb49d;
+
+  --color-tertiary: #a0cede;
+  --color-tertiary-fixed: #bceafa;
+  --color-tertiary-fixed-dim: #a0cede;
+  --color-tertiary-container: #6b97a6;
+  --color-on-tertiary: #003642;
+  --color-on-tertiary-fixed: #001f27;
+  --color-on-tertiary-fixed-variant: #1e4c5a;
+  --color-on-tertiary-container: #002e3a;
+
+  --color-background: #1c1916;
+  --color-on-background: #eae1db;
+  --color-surface: #1c1916;
+  --color-surface-dim: #16130f;
+  --color-surface-bright: #3d3834;
+  --color-surface-container-lowest: #110e0a;
+  --color-surface-container-low: #1f1b17;
+  --color-surface-container: #231f1b;
+  --color-surface-container-high: #2e2925;
+  --color-surface-container-highest: #393430;
+  --color-on-surface: #eae1db;
+  --color-on-surface-variant: #d4c4b7;
+  --color-inverse-surface: #eae1db;
+  --color-inverse-on-surface: #34302c;
+
+  --color-outline: #9c8e83;
+  --color-outline-variant: #50453b;
+
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+
+  --color-surface-tint: #eebd8d;
+
+  --radius-DEFAULT: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
 }

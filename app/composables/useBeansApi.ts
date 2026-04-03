@@ -58,6 +58,15 @@ export interface ArticleSearchParams {
 	offset?: number;
 }
 
+const DEFAULT_PAGE_SIZE = 5;
+
+const withPagingDefaults = (params?: ArticleSearchParams): ArticleSearchParams => {
+	return {
+		limit: params?.limit ?? DEFAULT_PAGE_SIZE,
+		offset: params?.offset ?? 0,
+		...params,
+	};
+};
 
 export const searchArticles = async (params: ArticleSearchParams) => {
 	return await apiGet<BeanExtended[]>(`/articles/search`, params);
@@ -77,3 +86,10 @@ export const fetchTopHeadlines = async (params?: ArticleSearchParams) => {
 	return await apiGet<BeanTrend[]>(`/articles/top-headlines`, params);
 };
 
+export const fetchTrendingArticlesPage = async (params?: ArticleSearchParams) => {
+	return await fetchTrendingArticles(withPagingDefaults(params));
+};
+
+export const fetchLatestArticlesPage = async (params?: ArticleSearchParams) => {
+	return await fetchLatestArticles(withPagingDefaults(params));
+};

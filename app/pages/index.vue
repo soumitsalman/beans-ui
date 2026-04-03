@@ -1,112 +1,108 @@
 <script setup lang="ts">
-import { fetchTrendingArticles, fetchPublishers } from '~/composables/useBeansApi'
-import type { Bean, BeanTrend, Publisher } from '~/types/beans'
+import { fetchTrendingArticles, fetchLatestArticles, fetchPublishers } from '~/composables/useBeansApi'
+import type { BeanTrend, Bean, Publisher } from '~/types/beans'
 
-const feed = ref<Bean[] | BeanTrend[]>([])
+const activeTab = ref<'top-stories' | 'recent-updates'>('top-stories')
+
+const tabs = [
+  { value: 'top-stories', label: 'Top Stories' },
+  { value: 'recent-updates', label: 'Recent Updates' }
+]
+
+const topStories = ref<BeanTrend[]>([])
+const recentUpdates = ref<Bean[]>([])
 const publishers = ref<Record<string, Publisher>>({})
 const loading = ref(true)
 
-onMounted(async () => {
+const fetchData = async () => {
+  loading.value = true
   try {
-    feed.value = await fetchTrendingArticles({ q: "topic: Technology", limit: 5 })
-    const sources = feed.value.map((bean: any) => bean.source)
+    const [trending, latest] = await Promise.all([
+      fetchTrendingArticles({ q: 'Topic: Technology', limit: 5 }),
+      fetchLatestArticles({ q: 'Topic: Technology', limit: 5 })
+    ])
+    topStories.value = trending
+    recentUpdates.value = latest
+
+    console.log(trending.length, latest.length)
+
+    const sources = [...new Set([...trending, ...latest].map((b) => b.source))]
     const pubs = await fetchPublishers({ sources })
-    publishers.value = pubs.reduce((acc: any, pub: any) => {
-      acc[pub.source] = pub
+    publishers.value = pubs.reduce((acc: Record<string, Publisher>, pub: Publisher) => {
+      if (pub.source) acc[pub.source] = pub
       return acc
     }, {})
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(() => fetchData())
 </script>
 
 <template>
-  <div>
-    <UPageHero
-      title="Nuxt Starter Template"
-      description="A production-ready starter template powered by Nuxt UI. Build beautiful, accessible, and performant applications in minutes, not hours."
-      :links="[{
-        label: 'Get started',
-        to: 'https://ui.nuxt.com/docs/getting-started/installation/nuxt',
-        target: '_blank',
-        trailingIcon: 'i-lucide-arrow-right',
-        size: 'xl'
-      }, {
-        label: 'Use this template',
-        to: 'https://github.com/nuxt-ui-templates/starter',
-        target: '_blank',
-        icon: 'i-simple-icons-github',
-        size: 'xl',
-        color: 'neutral',
-        variant: 'subtle'
-      }]"
-    />
+  <div class="min-h-screen bg-background">
+    <header class="fixed top-0 left-0 right-0 z-50 bg-stone-950/80 backdrop-blur-xl shadow-lg flex justify-between items-center px-6 h-16">
+      <div class="flex items-center gap-4">
+        <UButton variant="ghost" size="sm" square>
+          <UIcon name="lucide:menu" class="w-6 h-6 text-primary" />
+        </UButton>
+        <h1 class="text-2xl font-black uppercase tracking-[-0.02em] text-stone-100">
+          Beans
+        </h1>
+      </div>
+      <div class="flex items-center gap-4">
+        <UButton variant="ghost" size="sm" square>
+          <UIcon name="lucide:search" class="w-6 h-6 text-primary" />
+        </UButton>
+      </div>
+    </header>
 
-    <UPageList v-if="!loading" divide>
-      <BeanCard
-        v-for="bean in feed"
-        :key="bean.url"
-        :bean="bean"
-        :publisher="publishers[bean.source]"
-      />
-    </UPageList>
+    <main class="pt-24 pb-32 px-4 max-w-5xl mx-auto gap-4">
+      <h2>Top Stories</h2>
+      <FeedsTopStories limit="5" />
+      <h2>Recent Updates</h2>
+      <FeedsRecentUpdates limit="5"/>      
+    </main>
 
-    <div v-else class="flex justify-center items-center py-8">
-      <span>Loading...</span>
-    </div>
-
-    <!-- <UPageSection
-      id="features"
-      title="Everything you need to build modern Nuxt apps"
-      description="Start with a solid foundation. This template includes all the essentials for building production-ready applications with Nuxt UI's powerful component system."
-      :features="[{
-        icon: 'i-lucide-rocket',
-        title: 'Production-ready from day one',
-        description: 'Pre-configured with TypeScript, ESLint, Tailwind CSS, and all the best practices. Focus on building features, not setting up tooling.'
-      }, {
-        icon: 'i-lucide-palette',
-        title: 'Beautiful by default',
-        description: 'Leveraging Nuxt UI\'s design system with automatic dark mode, consistent spacing, and polished components that look great out of the box.'
-      }, {
-        icon: 'i-lucide-zap',
-        title: 'Lightning fast',
-        description: 'Optimized for performance with SSR/SSG support, automatic code splitting, and edge-ready deployment. Your users will love the speed.'
-      }, {
-        icon: 'i-lucide-blocks',
-        title: '100+ components included',
-        description: 'Access Nuxt UI\'s comprehensive component library. From forms to navigation, everything is accessible, responsive, and customizable.'
-      }, {
-        icon: 'i-lucide-code-2',
-        title: 'Developer experience first',
-        description: 'Auto-imports, hot module replacement, and TypeScript support. Write less boilerplate and ship more features.'
-      }, {
-        icon: 'i-lucide-shield-check',
-        title: 'Built for scale',
-        description: 'Enterprise-ready architecture with proper error handling, SEO optimization, and security best practices built-in.'
-      }]"
-    />
-
-    <UPageSection>
-      <UPageCTA
-        title="Ready to build your next Nuxt app?"
-        description="Join thousands of developers building with Nuxt and Nuxt UI. Get this template and start shipping today."
-        variant="subtle"
-        :links="[{
-          label: 'Start building',
-          to: 'https://ui.nuxt.com/docs/getting-started/installation/nuxt',
-          target: '_blank',
-          trailingIcon: 'i-lucide-arrow-right',
-          color: 'neutral'
-        }, {
-          label: 'View on GitHub',
-          to: 'https://github.com/nuxt-ui-templates/starter',
-          target: '_blank',
-          icon: 'i-simple-icons-github',
-          color: 'neutral',
-          variant: 'outline'
-        }]"
-      />
-    </UPageSection> -->
+    <nav class="fixed bottom-0 left-0 right-0 h-20 bg-stone-950/90 backdrop-blur-xl border-t border-stone-800/50 flex justify-around items-center px-4 z-50 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.3)]">
+      <UButton
+        variant="ghost"
+        size="sm"
+        class="flex-col gap-1 h-auto py-2 px-4"
+        :class="activeTab === 'top-stories' ? 'text-primary' : 'text-stone-500'"
+      >
+        <UIcon
+          :name="activeTab === 'top-stories' ? 'lucide:rss' : 'lucide:rss'"
+          :class="activeTab === 'top-stories' ? 'text-primary' : ''"
+          class="w-6 h-6"
+        />
+        <span class="text-[10px] font-bold uppercase tracking-widest">Feed</span>
+      </UButton>
+      <UButton
+        variant="ghost"
+        size="sm"
+        class="flex-col gap-1 h-auto py-2 px-4 text-stone-500"
+      >
+        <UIcon name="lucide:compass" class="w-6 h-6" />
+        <span class="text-[10px] font-bold uppercase tracking-widest">Explore</span>
+      </UButton>
+      <UButton
+        variant="ghost"
+        size="sm"
+        class="flex-col gap-1 h-auto py-2 px-4 text-stone-500"
+      >
+        <UIcon name="lucide:bookmark" class="w-6 h-6" />
+        <span class="text-[10px] font-bold uppercase tracking-widest">Saved</span>
+      </UButton>
+      <UButton
+        variant="ghost"
+        size="sm"
+        class="flex-col gap-1 h-auto py-2 px-4 text-stone-500"
+      >
+        <UIcon name="lucide:settings" class="w-6 h-6" />
+        <span class="text-[10px] font-bold uppercase tracking-widest">Settings</span>
+      </UButton>
+    </nav>
   </div>
 </template>

@@ -1,32 +1,47 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, resolveComponent, watch } from 'vue'
 import type { NewsStory } from '~/types/news'
+import MarkdownSummary from '~/components/news/MarkdownSummary.vue'
 import StorySourceStack from '~/components/news/StorySourceStack.vue'
 import { formatCount, formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
-import { sourceLabel } from '~/utils/source'
+import { hasResolvableSource } from '~/utils/source'
 
 type StoryCardMode = 'compressed' | 'snapshot' | 'detailed'
 
 interface StoryCardProps {
   story: NewsStory
   mode: StoryCardMode
+  linked?: boolean
 }
 
-const props = defineProps<StoryCardProps>()
+const props = withDefaults(defineProps<StoryCardProps>(), {
+  linked: true
+})
 
 const image_failed = ref(false)
-const story_url = computed(() => `/story/${props.story.id}`)
-const primary_category = computed(() => props.story.categories[0])
-const regions = computed(() => props.story.regions.slice(0, 2))
-const entities = computed(() => props.story.entities.slice(0, 2))
-const primary_entity = computed(() => props.story.entities[0])
+const story_url = computed(() => props.story.story_id
+  ? `/stories/${props.story.story_id}`
+  : props.story.url || undefined
+)
+const is_external_link = computed(() => !props.story.story_id && Boolean(props.story.url))
+const is_linked = computed(() => props.linked && Boolean(story_url.value))
+const card_component = computed(() => is_linked.value ? resolveComponent('NuxtLink') : 'div')
+const SOCIAL_COUNTS = [
+  { key: 'likes', icon: 'lucide:thumbs-up', label: 'likes' },
+  { key: 'comments', icon: 'lucide:messages-square', label: 'comments' },
+  { key: 'shares', icon: 'lucide:share-2', label: 'shares' }
+] as const
+
+const primary_category = computed(() => props.story.categories.find(Boolean))
+const metadata_limit = computed(() => props.mode === 'detailed' ? 3 : 2)
+const regions = computed(() => props.story.regions.filter(Boolean).slice(0, metadata_limit.value))
+const entities = computed(() => props.story.entities.filter(Boolean).slice(0, metadata_limit.value))
+const show_taxonomy = computed(() => Boolean(regions.value.length || entities.value.length))
 const published_label = computed(() => formatFriendlyTime(
   props.story.last_published_at || props.story.published_at
 ))
 const show_story_image = computed(() => Boolean(props.story.image_url) && !image_failed.value)
 const show_summary = computed(() => props.mode !== 'compressed' && Boolean(props.story.summary))
-const show_detailed_metadata = computed(() => props.mode === 'detailed')
-const source_label = computed(() => sourceLabel(props.story.top_articles?.[0]) || sourceLabel({ source: props.story.source }))
 const trend_score = computed(() => props.story.trend?.trend_score)
 const trend_icon = computed(() => {
   if (typeof trend_score.value !== 'number') return undefined
@@ -34,12 +49,25 @@ const trend_icon = computed(() => {
   if (trend_score.value >= 1000) return 'lucide:trending-up'
   return 'lucide:activity'
 })
-const has_trend = computed(() => Boolean(
-  props.story.trend?.trend_score
-  || props.story.trend?.mentions
-  || props.story.trend?.likes
-  || props.story.trend?.comments
-))
+const trend_label = computed(() => {
+  if (typeof trend_score.value !== 'number') return undefined
+  if (trend_score.value >= 10000) return 'High trend activity'
+  if (trend_score.value >= 1000) return 'Rising trend activity'
+  return 'Recent activity'
+})
+const social_counts = computed(() => SOCIAL_COUNTS.flatMap((item) => {
+  const value = props.story.trend?.[item.key]
+  if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return []
+
+  return [{
+    ...item,
+    display: formatCount(value)
+  }]
+}))
+const has_source_group = computed(() => props.story.source_count > 0
+  || (props.story.top_articles ?? []).some(article => hasResolvableSource(article))
+  || hasResolvableSource({ source: props.story.source, url: props.story.url })
+)
 
 watch(() => props.story.image_url, () => {
   image_failed.value = false
@@ -47,210 +75,256 @@ watch(() => props.story.image_url, () => {
 </script>
 
 <template>
-  <NuxtLink
-    :to="story_url"
-    :aria-label="`Open ${story.title}`"
-    :class="[
-      'group relative flex w-full overflow-hidden rounded-lg border border-stone-800/90 bg-stone-900/60 transition-colors duration-150 hover:border-stone-700 hover:bg-stone-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400',
-      mode === 'compressed' ? 'gap-3 p-3' : 'gap-4 p-3.5',
-      mode === 'detailed' ? 'sm:p-4' : ''
-    ]"
+  <component
+    :is="card_component"
+    :to="is_linked ? story_url : undefined"
+    :external="is_external_link || undefined"
+    :target="is_external_link ? '_blank' : undefined"
+    :rel="is_external_link ? 'noopener noreferrer' : undefined"
+    :aria-label="is_linked ? (story.title ? `Open ${story.title}` : 'Open article') : undefined"
+    class="group relative block w-full overflow-hidden rounded-lg border border-stone-800/90 bg-stone-900/60 transition-colors duration-150 hover:border-stone-700 hover:bg-stone-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
   >
-    <div
-      v-if="show_story_image"
-      class="relative shrink-0 overflow-hidden rounded-md bg-stone-800"
-      :class="mode === 'compressed' ? 'size-20' : 'size-24 sm:size-28'"
-    >
-      <img
-        :src="story.image_url"
-        :alt="story.title"
-        class="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-        loading="eager"
-        referrerpolicy="no-referrer"
-        @error="image_failed = true"
+    <template v-if="mode === 'compressed'">
+      <div
+        v-if="show_story_image"
+        class="aspect-[16/9] w-full overflow-hidden bg-stone-800"
       >
-    </div>
-
-    <div class="min-w-0 flex-1">
-      <div class="mb-2 flex items-center justify-between gap-3">
-        <div class="flex min-w-0 items-center gap-2">
-          <StorySourceStack :story="story" />
+        <img
+          :src="story.image_url"
+          :alt="story.title"
+          class="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+          loading="eager"
+          referrerpolicy="no-referrer"
+          @error="image_failed = true"
+        >
+      </div>
+      <div class="space-y-3 p-3.5">
+        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
           <span
-            v-if="source_label"
-            class="truncate text-[11px] font-medium text-stone-500"
+            v-if="primary_category"
+            class="max-w-40 truncate font-medium text-amber-300/80"
           >
-            {{ source_label }}
+            {{ formatTaxonomyLabel(primary_category) }}
+          </span>
+          <time
+            v-if="published_label"
+            class="shrink-0 tabular-nums"
+            :datetime="story.last_published_at || story.published_at"
+          >
+            {{ published_label }}
+          </time>
+          <span
+            v-if="trend_icon"
+            class="inline-flex shrink-0 items-center text-amber-300"
+            :aria-label="trend_label"
+          >
+            <UIcon
+              :name="trend_icon"
+              class="size-3"
+              aria-hidden="true"
+            />
           </span>
         </div>
-        <time
-          v-if="published_label"
-          class="shrink-0 text-[11px] tabular-nums text-stone-600"
-          :datetime="story.last_published_at || story.published_at"
+        <h3
+          v-if="story.title"
+          class="line-clamp-3 text-base font-semibold leading-snug text-stone-100 transition-colors group-hover:text-amber-100"
         >
-          {{ published_label }}
-        </time>
+          {{ story.title }}
+        </h3>
+        <div
+          v-if="show_taxonomy"
+          class="flex flex-wrap gap-1.5"
+        >
+          <UBadge
+            v-for="region in regions"
+            :key="`region-${region}`"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            class="max-w-36 truncate bg-stone-800/80 text-stone-400"
+          >
+            {{ formatTaxonomyLabel(region) }}
+          </UBadge>
+          <UBadge
+            v-for="entity in entities"
+            :key="`entity-${entity}`"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            class="max-w-36 truncate bg-stone-800/80 text-stone-400"
+          >
+            {{ formatTaxonomyLabel(entity) }}
+          </UBadge>
+        </div>
+        <div
+          v-if="has_source_group"
+          class="border-t border-stone-800/80 pt-3"
+        >
+          <StorySourceStack :story="story" />
+        </div>
       </div>
+    </template>
 
-      <h3
-        class="font-semibold leading-snug text-stone-100 transition-colors group-hover:text-amber-100"
-        :class="mode === 'compressed' ? 'line-clamp-3 text-sm' : 'line-clamp-3 text-[15px] sm:text-base'"
-      >
-        {{ story.title }}
-      </h3>
-
-      <p
-        v-if="show_summary"
-        class="mt-2 text-sm leading-5 text-stone-400"
-        :class="mode === 'snapshot' ? 'line-clamp-2' : 'line-clamp-3'"
-      >
-        {{ story.summary }}
-      </p>
-
-      <div class="mt-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-stone-500">
-        <span
-          v-if="primary_category"
-          class="inline-flex min-w-0 items-center gap-1.5"
+    <template v-else-if="mode === 'snapshot'">
+      <div class="flex gap-3.5 p-3.5">
+        <div
+          v-if="show_story_image"
+          class="size-24 shrink-0 overflow-hidden rounded-md bg-stone-800 sm:size-28"
         >
-          <UIcon
-            name="lucide:tag"
-            class="size-3 shrink-0 text-amber-500/80"
-            aria-hidden="true"
+          <img
+            :src="story.image_url"
+            :alt="story.title"
+            class="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="eager"
+            referrerpolicy="no-referrer"
+            @error="image_failed = true"
+          >
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
+            <span
+              v-if="primary_category"
+              class="max-w-36 truncate font-medium text-amber-300/80"
+            >
+              {{ formatTaxonomyLabel(primary_category) }}
+            </span>
+            <time
+              v-if="published_label"
+              class="shrink-0 tabular-nums"
+              :datetime="story.last_published_at || story.published_at"
+            >
+              {{ published_label }}
+            </time>
+            <span
+              v-if="trend_icon"
+              class="inline-flex shrink-0 items-center text-amber-300"
+              :aria-label="trend_label"
+            >
+              <UIcon
+                :name="trend_icon"
+                class="size-3"
+                aria-hidden="true"
+              />
+            </span>
+          </div>
+          <h3
+            v-if="story.title"
+            class="mt-1.5 line-clamp-3 text-[15px] font-semibold leading-snug text-stone-100 transition-colors group-hover:text-amber-100 sm:text-base"
+          >
+            {{ story.title }}
+          </h3>
+          <div
+            v-if="show_taxonomy"
+            class="mt-2 flex flex-wrap gap-1.5"
+          >
+            <UBadge
+              v-for="region in regions"
+              :key="`region-${region}`"
+              color="neutral"
+              variant="soft"
+              size="sm"
+              class="max-w-28 truncate bg-stone-800/80 text-stone-400"
+            >
+              {{ formatTaxonomyLabel(region) }}
+            </UBadge>
+            <UBadge
+              v-for="entity in entities"
+              :key="`entity-${entity}`"
+              color="neutral"
+              variant="soft"
+              size="sm"
+              class="max-w-28 truncate bg-stone-800/80 text-stone-400"
+            >
+              {{ formatTaxonomyLabel(entity) }}
+            </UBadge>
+          </div>
+          <MarkdownSummary
+            v-if="show_summary"
+            :summary="story.summary || ''"
+            :line_limit="2"
+            class="mt-2"
           />
-          <span class="max-w-36 truncate">{{ formatTaxonomyLabel(primary_category) }}</span>
-        </span>
-        <span
-          v-for="region in regions"
-          :key="`region-${region}`"
-          class="inline-flex min-w-0 items-center gap-1.5"
-        >
-          <UIcon
-            name="lucide:map-pin"
-            class="size-3 shrink-0 text-stone-600"
-            aria-hidden="true"
-          />
-          <span class="max-w-28 truncate">{{ formatTaxonomyLabel(region) }}</span>
-        </span>
-        <span
-          v-for="entity in entities"
-          :key="`entity-${entity}`"
-          class="inline-flex min-w-0 items-center gap-1.5"
-        >
-          <UIcon
-            name="lucide:landmark"
-            class="size-3 shrink-0 text-stone-600"
-            aria-hidden="true"
-          />
-          <span class="max-w-28 truncate">{{ formatTaxonomyLabel(entity) }}</span>
-        </span>
-        <span
-          v-if="trend_icon"
-          class="inline-flex items-center gap-1.5 tabular-nums"
-        >
-          <UIcon
-            :name="trend_icon"
-            class="size-3 text-amber-400"
-            aria-hidden="true"
-          />
-          {{ formatCount(trend_score) }}
-        </span>
-        <span
-          v-if="story.trend?.likes !== null && story.trend?.likes !== undefined"
-          class="inline-flex items-center gap-1.5 tabular-nums"
-        >
-          <UIcon
-            name="lucide:thumbs-up"
-            class="size-3 text-stone-600"
-            aria-hidden="true"
-          />
-          {{ formatCount(story.trend.likes) }}
-        </span>
-        <span
-          v-if="story.trend?.comments !== null && story.trend?.comments !== undefined"
-          class="inline-flex items-center gap-1.5 tabular-nums"
-        >
-          <UIcon
-            name="lucide:messages-square"
-            class="size-3 text-stone-600"
-            aria-hidden="true"
-          />
-          {{ formatCount(story.trend.comments) }}
-        </span>
-        <span
-          v-if="story.trend?.mentions !== null && story.trend?.mentions !== undefined"
-          class="inline-flex items-center gap-1.5 tabular-nums"
-        >
-          <UIcon
-            name="lucide:message-circle"
-            class="size-3 text-stone-600"
-            aria-hidden="true"
-          />
-          {{ formatCount(story.trend.mentions) }}
-        </span>
-        <span
-          v-if="story.trend?.shares !== null && story.trend?.shares !== undefined"
-          class="inline-flex items-center gap-1.5 tabular-nums"
-        >
-          <UIcon
-            name="lucide:share-2"
-            class="size-3 text-stone-600"
-            aria-hidden="true"
-          />
-          {{ formatCount(story.trend.shares) }}
-        </span>
+        </div>
       </div>
-
       <div
-        v-if="show_detailed_metadata"
-        class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-stone-800/80 pt-3"
+        v-if="has_source_group || social_counts.length"
+        class="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-stone-800/80 px-3.5 py-3 text-[11px] text-stone-500"
       >
-        <UBadge
-          v-if="primary_entity"
-          color="neutral"
-          variant="soft"
-          size="sm"
-          class="max-w-40 truncate bg-stone-800 text-stone-300"
+        <StorySourceStack :story="story" />
+        <div
+          v-if="social_counts.length"
+          class="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 tabular-nums"
         >
-          {{ formatTaxonomyLabel(primary_entity) }}
-        </UBadge>
-        <UBadge
-          v-if="has_trend && story.trend?.trend_score"
-          color="warning"
-          variant="soft"
-          size="sm"
-          class="bg-amber-500/10 text-amber-300"
-        >
-          {{ formatCount(story.trend?.trend_score) }} score
-        </UBadge>
-        <span
-          v-if="story.trend?.likes"
-          class="inline-flex items-center gap-1 text-[11px] tabular-nums text-stone-500"
-        >
-          <UIcon
-            name="lucide:thumbs-up"
-            class="size-3"
-            aria-hidden="true"
-          />
-          {{ formatCount(story.trend?.likes) }}
-        </span>
-        <span
-          v-if="story.trend?.comments"
-          class="inline-flex items-center gap-1 text-[11px] tabular-nums text-stone-500"
-        >
-          <UIcon
-            name="lucide:messages-square"
-            class="size-3"
-            aria-hidden="true"
-          />
-          {{ formatCount(story.trend?.comments) }}
-        </span>
+          <span
+            v-for="count in social_counts"
+            :key="count.key"
+            class="inline-flex items-center gap-1"
+          >
+            <UIcon
+              :name="count.icon"
+              class="size-3"
+              aria-hidden="true"
+            />
+            {{ count.display }} {{ count.label }}
+          </span>
+        </div>
       </div>
-    </div>
+    </template>
 
-    <UIcon
-      v-if="mode === 'detailed'"
-      name="lucide:arrow-up-right"
-      class="absolute right-3 top-3 size-4 text-stone-600 transition-colors group-hover:text-amber-400"
-      aria-hidden="true"
-    />
-  </NuxtLink>
+    <template v-else>
+      <div class="space-y-4 p-4 sm:p-5">
+        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
+          <span
+            v-if="primary_category"
+            class="max-w-48 truncate font-medium text-amber-300/80"
+          >
+            {{ formatTaxonomyLabel(primary_category) }}
+          </span>
+          <time
+            v-if="published_label"
+            class="shrink-0 tabular-nums"
+            :datetime="story.last_published_at || story.published_at"
+          >
+            {{ published_label }}
+          </time>
+        </div>
+        <h1
+          v-if="story.title"
+          class="text-xl font-semibold leading-snug text-stone-100 sm:text-2xl"
+        >
+          {{ story.title }}
+        </h1>
+        <MarkdownSummary
+          v-if="show_summary"
+          :summary="story.summary || ''"
+          :line_limit="3"
+        />
+        <div
+          v-if="show_taxonomy"
+          class="flex flex-wrap gap-1.5"
+        >
+          <UBadge
+            v-for="region in regions"
+            :key="`region-${region}`"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            class="max-w-40 truncate bg-stone-800/80 text-stone-400"
+          >
+            {{ formatTaxonomyLabel(region) }}
+          </UBadge>
+          <UBadge
+            v-for="entity in entities"
+            :key="`entity-${entity}`"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            class="max-w-40 truncate bg-stone-800/80 text-stone-400"
+          >
+            {{ formatTaxonomyLabel(entity) }}
+          </UBadge>
+        </div>
+      </div>
+    </template>
+  </component>
 </template>

@@ -32,7 +32,7 @@ function normaliseSource(source?: NewsSource | null): NewsSource | undefined {
 function toNewsArticle(article: BeansArticle): NewsArticle {
   return {
     id: article.id ?? '',
-    title: article.title?.trim() || 'Untitled update',
+    title: article.title?.trim() || '',
     url: article.url,
     published_at: article.published_at,
     story_id: article.story_id,
@@ -49,14 +49,20 @@ function toNewsArticle(article: BeansArticle): NewsArticle {
 
 function toNewsStory(story: BeansStory): NewsStory {
   const articles = Array.isArray(story.top_articles)
-    ? story.top_articles.map(toNewsArticle).filter(article => article.id)
+    ? story.top_articles.map(toNewsArticle).filter(hasArticleIdentity)
     : []
-  const top_article = articles.find(article => Boolean(article.title && article.summary)) || articles[0]
+  const top_article = [...articles]
+    .filter(article => Boolean(article.title && article.summary))
+    .sort((left, right) => {
+      const summary_difference = (right.summary?.length ?? 0) - (left.summary?.length ?? 0)
+      return summary_difference || (right.title.length - left.title.length)
+    })[0] || articles[0]
 
   return {
     id: story.id ?? top_article?.story_id ?? top_article?.id ?? '',
     story_id: story.id ?? top_article?.story_id,
-    title: top_article?.summary ? top_article.title : story.title?.trim() || top_article?.title || 'Untitled story',
+    title: top_article?.title || story.title?.trim() || '',
+    url: top_article?.url,
     summary: top_article?.summary,
     image_url: top_article?.image_url,
     published_at: story.last_published_at ?? top_article?.published_at,
@@ -74,13 +80,18 @@ function toNewsStory(story: BeansStory): NewsStory {
   }
 }
 
+function hasArticleIdentity(article: NewsArticle): boolean {
+  return Boolean(article.id || article.url)
+}
+
 function articleToStory(article: BeansArticle): NewsStory {
   const news_article = toNewsArticle(article)
 
   return {
-    id: news_article.story_id ?? news_article.id,
+    id: news_article.story_id || news_article.id || news_article.url || '',
     story_id: news_article.story_id,
     title: news_article.title,
+    url: news_article.url,
     summary: news_article.summary,
     image_url: news_article.image_url,
     published_at: news_article.published_at,
@@ -101,9 +112,13 @@ function toQuery(params: BeansPageParams = {}): ApiQuery {
     limit: params.limit ?? DEFAULT_PAGE_SIZE,
     cursor: params.cursor ?? undefined,
     q: params.q,
-    categories: params.categories?.join(','),
-    regions: params.regions?.join(','),
-    entities: params.entities?.join(','),
+    score_threshold: params.score_threshold,
+    tags: params.tags?.length ? params.tags.join(',') : undefined,
+    sources: params.sources?.length ? params.sources.join(',') : undefined,
+    domains: params.domains?.length ? params.domains.join(',') : undefined,
+    categories: params.categories?.length ? params.categories.join(',') : undefined,
+    regions: params.regions?.length ? params.regions.join(',') : undefined,
+    entities: params.entities?.length ? params.entities.join(',') : undefined,
     content_type: params.content_type,
     from: params.from,
     to: params.to
@@ -112,11 +127,12 @@ function toQuery(params: BeansPageParams = {}): ApiQuery {
 
 function pageFrom<T>(response: ApiEnvelope<T[]>): NewsPage<T> {
   const data = Array.isArray(response.data) ? response.data : []
+  const num_results = response.pagination?.num_results
 
   return {
     data,
     next_cursor: response.pagination?.next_cursor ?? null,
-    num_results: response.pagination?.num_results ?? data.length
+    num_results: num_results == null ? undefined : num_results
   }
 }
 
@@ -130,7 +146,12 @@ async function fetchBeansPage<T>(path: string, params: BeansPageParams = {}): Pr
 
 export function useBeansApi() {
   async function fetchTopHeadlines(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
-    const page = await fetchBeansPage<BeansArticle>('news/top-headlines', params)
+    const page = await fetchBeansPage<BeansArticle>('news/top-headlines', {
+      ...params,
+      content_type: undefined,
+      from: undefined,
+      to: undefined
+    })
 
     return {
       ...page,
@@ -150,6 +171,40 @@ export function useBeansApi() {
     }
   }
 
+  async function fetchSearchArticles(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
+    const page = await fetchBeansPage<BeansArticle>('articles/search', {
+      ...params,
+      score_threshold: params.q ? params.score_threshold ?? 0 : undefined,
+      content_type: 'news'
+    })
+
+    return {
+      ...page,
+      data: page.data.map(articleToStory).filter(story => story.id)
+    }
+  }
+
+  async function fetchArticle(article_id: string): Promise<NewsArticle> {
+    const response = await $fetch<ApiEnvelope<BeansArticle>>(`/api/beans/articles/${article_id}`)
+    return toNewsArticle(response.data ?? {})
+  }
+
+  async function fetchSimilarArticles(article_id: string, params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
+    const page = await fetchBeansPage<BeansArticle>(`articles/${article_id}/similar`, {
+      ...params,
+      content_type: 'news'
+    })
+
+    return {
+      ...page,
+      data: page.data.map(toNewsArticle).filter(hasArticleIdentity)
+    }
+  }
+
+  function fetchSources(params: BeansPageParams = {}): Promise<NewsPage<NewsSource>> {
+    return fetchBeansPage<NewsSource>('sources', params)
+  }
+
   async function fetchStory(story_id: string): Promise<NewsStory> {
     const response = await $fetch<ApiEnvelope<BeansStory>>(`/api/beans/stories/${story_id}`)
 
@@ -157,17 +212,24 @@ export function useBeansApi() {
   }
 
   async function fetchStoryArticles(story_id: string, params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
-    const page = await fetchBeansPage<BeansArticle>(`stories/${story_id}/articles`, params)
+    const page = await fetchBeansPage<BeansArticle>(`stories/${story_id}/articles`, {
+      ...params,
+      content_type: 'news'
+    })
 
     return {
       ...page,
-      data: page.data.map(toNewsArticle).filter(article => article.id)
+      data: page.data.map(toNewsArticle).filter(hasArticleIdentity)
     }
   }
 
   return {
     fetchTopHeadlines,
     fetchLatestArticles,
+    fetchSearchArticles,
+    fetchArticle,
+    fetchSimilarArticles,
+    fetchSources,
     fetchStory,
     fetchStoryArticles
   }

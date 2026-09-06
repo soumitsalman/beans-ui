@@ -43,3 +43,14 @@ export function formatCount(value?: number | null): string {
 export function formatTaxonomyLabel(value?: string | null): string {
   return value?.replaceAll('_', ' ').toLocaleUpperCase() || ''
 }
+
+export function normaliseTagInput(value?: string | null): string[] {
+  if (!value) return []
+
+  return [...new Set(
+    value
+      .split(',')
+      .map(tag => tag.trim().toLocaleLowerCase().replaceAll(/\s+/g, '_'))
+      .filter(Boolean)
+  )]
+}

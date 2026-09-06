@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NewsArticle } from '~/types/news'
+import { formatCount, formatFriendlyTime } from '~/utils/formatters'
 import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceLabel } from '~/utils/source'
 
 interface StoryTimelineProps {
@@ -10,6 +11,7 @@ interface StoryTimelineProps {
   loading_coverage: boolean
   first_published_at?: string | null
   last_published_at?: string | null
+  article_count?: number | null
   coverage_error?: string | null
   propagation_error?: string | null
 }
@@ -19,6 +21,20 @@ interface PropagationItem {
   date: string
 }
 
+interface CoverageEngagement {
+  mentions?: string
+  likes?: string
+  comments?: string
+  shares?: string
+}
+
+interface CoverageRow {
+  article: NewsArticle
+  source_label?: string
+  favicon?: string
+  engagement: CoverageEngagement
+}
+
 const props = defineProps<StoryTimelineProps>()
 
 const emit = defineEmits<{
@@ -26,12 +42,8 @@ const emit = defineEmits<{
   'retry-propagation': []
 }>()
 
-const PROPAGATION_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: '2-digit',
-  year: 'numeric',
-  timeZone: 'UTC'
-})
+const MAX_PROPAGATION_POINTS = 5
+const MIDDLE_PROPAGATION_GROUPS = 3
 
 const sorted_propagation_articles = computed(() => {
   return [...props.propagation_articles].sort((left, right) => {
@@ -43,7 +55,7 @@ const sorted_propagation_articles = computed(() => {
 
 const timeline_items = computed<PropagationItem[]>(() => {
   const articles = sorted_propagation_articles.value
-  if (articles.length <= 5) {
+  if (articles.length <= MAX_PROPAGATION_POINTS) {
     return articles.map((article, index) => ({
       articles: [article],
       date: formatTimelineDate(article.published_at, index, articles.length)
@@ -55,7 +67,7 @@ const timeline_items = computed<PropagationItem[]>(() => {
   if (!first_article || !last_article) return []
 
   const middle_articles = articles.slice(1, -1)
-  const middle_groups = Array.from({ length: 3 }, () => [] as NewsArticle[])
+  const middle_groups = Array.from({ length: MIDDLE_PROPAGATION_GROUPS }, () => [] as NewsArticle[])
 
   middle_articles.forEach((article, index) => {
     const group_index = Math.min(
@@ -71,9 +83,43 @@ const timeline_items = computed<PropagationItem[]>(() => {
     [last_article]
   ].map((group, index) => ({
     articles: group,
-    date: formatPropagationDateRange(group, index, 5)
+    date: formatPropagationDateRange(group, index, MAX_PROPAGATION_POINTS)
   }))
 })
+
+const coverage_article_count_label = computed(() => {
+  return hasPositiveCount(props.article_count)
+    ? formatCount(props.article_count)
+    : ''
+})
+
+const coverage_rows = computed<CoverageRow[]>(() => {
+  return props.coverage_articles.map(article => ({
+    article,
+    source_label: sourceLabel(article),
+    favicon: sourceFavicon(article),
+    engagement: coverageEngagement(article)
+  }))
+})
+
+function hasPositiveCount(value?: number | null): boolean {
+  return typeof value === 'number' && !Number.isNaN(value) && value > 0
+}
+
+function coverageEngagement(article: NewsArticle): CoverageEngagement {
+  const trend = article.trend
+
+  return {
+    mentions: hasPositiveCount(trend?.mentions) ? formatCount(trend?.mentions) : undefined,
+    likes: hasPositiveCount(trend?.likes) ? formatCount(trend?.likes) : undefined,
+    comments: hasPositiveCount(trend?.comments) ? formatCount(trend?.comments) : undefined,
+    shares: hasPositiveCount(trend?.shares) ? formatCount(trend?.shares) : undefined
+  }
+}
+
+function hasCoverageSocialCounts(engagement: CoverageEngagement): boolean {
+  return Boolean(engagement.likes || engagement.comments || engagement.shares)
+}
 
 function propagationTime(value?: string | null): number {
   if (!value) return Number.POSITIVE_INFINITY
@@ -82,20 +128,11 @@ function propagationTime(value?: string | null): number {
   return Number.isNaN(date_value) ? Number.POSITIVE_INFINITY : date_value
 }
 
-function formatPropagationDate(value?: string | null): string {
-  if (!value) return ''
-
-  const date_value = new Date(value)
-  if (Number.isNaN(date_value.getTime())) return ''
-
-  return PROPAGATION_DATE_FORMATTER.format(date_value)
-}
-
 function formatPropagationDateRange(articles: NewsArticle[], index: number, total: number): string {
-  const first_date = formatPropagationDate(
+  const first_date = formatFriendlyTime(
     index === 0 ? props.first_published_at || articles[0]?.published_at : articles[0]?.published_at
   )
-  const last_date = formatPropagationDate(
+  const last_date = formatFriendlyTime(
     index === total - 1 ? props.last_published_at || articles[articles.length - 1]?.published_at : articles[articles.length - 1]?.published_at
   )
 
@@ -110,7 +147,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
       ? props.last_published_at || value
       : value
 
-  return formatPropagationDate(boundary_value)
+  return formatFriendlyTime(boundary_value)
 }
 </script>
 
@@ -129,6 +166,12 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
         <h2 class="text-sm font-semibold text-stone-100">
           Propagation
         </h2>
+        <UIcon
+          v-if="loading_propagation && timeline_items.length"
+          name="lucide:loader-circle"
+          class="size-3.5 animate-spin text-stone-500"
+          aria-label="Loading remaining propagation"
+        />
       </div>
 
       <UAlert
@@ -163,8 +206,8 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
             root: 'min-w-max',
             item: 'w-52',
             date: 'text-[10px] tabular-nums text-stone-600',
-            title: 'line-clamp-1 text-xs font-medium text-stone-200',
-            description: 'line-clamp-2 text-[11px] leading-5 text-stone-500',
+            title: 'hidden',
+            description: 'hidden',
             indicator: 'ring-1 ring-stone-800'
           }"
         >
@@ -179,8 +222,8 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
                 v-for="article in item.articles"
                 :key="article.id"
                 :src="sourceFavicon(article)"
-                :alt="sourceLabel(article) || 'Source'"
-                :icon="sourceFavicon(article) ? undefined : DEFAULT_SOURCE_ICON"
+                alt="Source"
+                :icon="DEFAULT_SOURCE_ICON"
                 loading="eager"
                 referrerpolicy="no-referrer"
               />
@@ -188,11 +231,19 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
             <UAvatar
               v-else
               :src="sourceFavicon(item.articles[0])"
-              :alt="sourceLabel(item.articles[0]) || 'Source'"
-              :icon="sourceFavicon(item.articles[0]) ? undefined : DEFAULT_SOURCE_ICON"
+              alt="Source"
+              :icon="DEFAULT_SOURCE_ICON"
               loading="eager"
               referrerpolicy="no-referrer"
             />
+          </template>
+          <template #wrapper="{ item }">
+            <div
+              v-if="item.date"
+              class="text-[10px] tabular-nums text-stone-600"
+            >
+              {{ item.date }}
+            </div>
           </template>
         </UTimeline>
       </div>
@@ -218,6 +269,12 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
         <h2 class="text-sm font-semibold text-stone-100">
           Coverage
         </h2>
+        <span
+          v-if="coverage_article_count_label"
+          class="text-xs tabular-nums text-stone-500"
+        >
+          {{ coverage_article_count_label }}
+        </span>
       </div>
 
       <UAlert
@@ -251,44 +308,100 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
       </div>
 
       <div
-        v-else-if="coverage_articles.length"
+        v-else-if="coverage_rows.length"
         class="divide-y divide-stone-800/80 rounded-lg border border-stone-800/90 bg-stone-900/50 px-3"
       >
         <component
-          :is="article.url ? 'a' : 'div'"
-          v-for="article in coverage_articles"
-          :key="article.id"
-          :href="article.url || undefined"
-          :target="article.url ? '_blank' : undefined"
-          :rel="article.url ? 'noopener noreferrer' : undefined"
+          :is="row.article.url ? 'a' : 'div'"
+          v-for="row in coverage_rows"
+          :key="row.article.id"
+          :href="row.article.url || undefined"
+          :target="row.article.url ? '_blank' : undefined"
+          :rel="row.article.url ? 'noopener noreferrer' : undefined"
           :class="[
             'group flex gap-2.5 py-3 transition-colors',
-            article.url ? 'hover:bg-stone-800/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400' : 'cursor-default'
+            row.article.url ? 'hover:bg-stone-800/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400' : 'cursor-default'
           ]"
-          :aria-label="article.url ? `Open ${article.title}` : undefined"
+          :aria-label="row.article.url ? (row.article.title ? `Open ${row.article.title}` : 'Open article') : undefined"
         >
           <UAvatar
-            :src="sourceFavicon(article)"
-            :alt="sourceLabel(article) || 'Source'"
-            :icon="sourceFavicon(article) ? undefined : DEFAULT_SOURCE_ICON"
+            :src="row.favicon"
+            :alt="row.source_label || 'Source'"
+            :icon="DEFAULT_SOURCE_ICON"
             size="xs"
             class="mt-0.5 shrink-0 ring-1 ring-stone-800/80"
             loading="eager"
             referrerpolicy="no-referrer"
           />
           <div class="min-w-0 flex-1">
-            <p
-              v-if="sourceLabel(article)"
-              class="truncate text-[11px] font-medium text-stone-500"
-            >
-              {{ sourceLabel(article) }}
-            </p>
+            <div class="flex items-center justify-between gap-3 text-[11px] text-stone-500">
+              <div class="flex min-w-0 items-center gap-2">
+                <p
+                  v-if="row.source_label"
+                  class="min-w-0 truncate font-medium"
+                >
+                  {{ row.source_label }}
+                </p>
+                <span
+                  v-if="row.engagement.mentions"
+                  class="inline-flex shrink-0 items-center gap-1 tabular-nums"
+                >
+                  <UIcon
+                    name="lucide:message-circle"
+                    class="size-3"
+                    aria-hidden="true"
+                  />
+                  {{ row.engagement.mentions }} mentions
+                </span>
+              </div>
+              <div
+                v-if="hasCoverageSocialCounts(row.engagement)"
+                class="flex shrink-0 flex-wrap items-center justify-end gap-x-2.5 gap-y-1 tabular-nums"
+              >
+                <span
+                  v-if="row.engagement.likes"
+                  class="inline-flex items-center gap-1"
+                >
+                  <UIcon
+                    name="lucide:thumbs-up"
+                    class="size-3"
+                    aria-hidden="true"
+                  />
+                  {{ row.engagement.likes }}
+                </span>
+                <span
+                  v-if="row.engagement.comments"
+                  class="inline-flex items-center gap-1"
+                >
+                  <UIcon
+                    name="lucide:messages-square"
+                    class="size-3"
+                    aria-hidden="true"
+                  />
+                  {{ row.engagement.comments }}
+                </span>
+                <span
+                  v-if="row.engagement.shares"
+                  class="inline-flex items-center gap-1"
+                >
+                  <UIcon
+                    name="lucide:share-2"
+                    class="size-3"
+                    aria-hidden="true"
+                  />
+                  {{ row.engagement.shares }}
+                </span>
+              </div>
+            </div>
             <div class="mt-1 flex items-start gap-3">
-              <h3 class="line-clamp-2 flex-1 text-sm font-medium leading-5 text-stone-200 group-hover:text-amber-100">
-                {{ article.title }}
+              <h3
+                v-if="row.article.title"
+                class="line-clamp-2 flex-1 text-sm font-medium leading-5 text-stone-200 group-hover:text-amber-100"
+              >
+                {{ row.article.title }}
               </h3>
               <UIcon
-                v-if="article.url"
+                v-if="row.article.url"
                 name="lucide:arrow-up-right"
                 class="mt-0.5 size-4 shrink-0 text-stone-600 group-hover:text-amber-400"
                 aria-hidden="true"
@@ -307,7 +420,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
           class="size-5"
           aria-hidden="true"
         />
-        <span class="ml-2">No coverage articles yet.</span>
+        <span class="ml-2">No coverage is available.</span>
       </div>
     </section>
   </div>

@@ -4,7 +4,7 @@ import StorySection from '~/components/news/StorySection.vue'
 import { findCategory } from '~/settings/categories'
 
 const route = useRoute()
-const category = computed(() => findCategory(String(route.params.category)))
+const category = computed(() => findCategory(String(route.params.category_slug)))
 
 if (!category.value) {
   throw createError({ statusCode: 404, statusMessage: 'Unknown category.' })
@@ -26,6 +26,16 @@ const {
   retryLatestNews
 } = useNewsFeed(category)
 
+const feeds_are_empty = computed(() => !loading_top_headlines.value
+  && !loading_latest_news.value
+  && !top_headlines.value.length
+  && !latest_news.value.length
+  && !can_load_more_top_headlines.value
+  && !can_load_more_latest_news.value
+  && !top_headlines_error.value
+  && !latest_news_error.value
+)
+
 useSeoMeta({
   title: () => `${category.value?.label || 'Category'} | Beans`,
   description: () => category.value?.description || 'A focused news category.'
@@ -35,13 +45,13 @@ onMounted(() => {
   void refreshFeed()
 })
 
-watch(() => route.params.category, () => {
+watch(() => route.params.category_slug, () => {
   if (!category.value) {
     void navigateTo('/')
     return
   }
 
-  void refreshFeed()
+  void refreshFeed(true)
 })
 </script>
 
@@ -87,5 +97,24 @@ watch(() => route.params.category, () => {
       @load-more="loadMoreLatestNews"
       @retry="retryLatestNews"
     />
+
+    <UAlert
+      v-if="feeds_are_empty"
+      color="neutral"
+      variant="subtle"
+      icon="lucide:inbox"
+      title="No news is available in this category right now."
+      description="Try again in a moment."
+    >
+      <template #actions>
+        <UButton
+          label="Retry"
+          color="neutral"
+          variant="outline"
+          size="xs"
+          @click="() => refreshFeed()"
+        />
+      </template>
+    </UAlert>
   </div>
 </template>

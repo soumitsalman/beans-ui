@@ -14,10 +14,12 @@
     "@iconify-json/lucide": "^1.2.100",
     "@iconify-json/simple-icons": "^1.2.75",
     "@nuxt/ui": "^4.6.0",
+    "markdown-it": "^14.1.1",
     "nuxt": "^4.4.2",
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
     "@nuxt/eslint": "^1.15.2",
     "eslint": "^10.1.0",
     "typescript": "^6.0.2",

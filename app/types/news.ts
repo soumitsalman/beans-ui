@@ -72,6 +72,7 @@ export interface NewsStory {
   id: string
   story_id?: string | null
   title: string
+  url?: string | null
   summary?: string | null
   image_url?: string | null
   published_at?: string | null
@@ -103,13 +104,17 @@ export interface NewsMention {
 export interface NewsPage<T> {
   data: T[]
   next_cursor: string | null
-  num_results: number
+  num_results?: number
 }
 
 export interface BeansPageParams {
   limit?: number
   cursor?: string | null
   q?: string
+  score_threshold?: number
+  tags?: string[]
+  sources?: string[]
+  domains?: string[]
   categories?: string[]
   regions?: string[]
   entities?: string[]

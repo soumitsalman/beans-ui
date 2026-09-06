@@ -9,7 +9,7 @@ const PAGE_SIZE = 5
 
 const route = useRoute()
 const { fetchStory, fetchStoryArticles } = useBeansApi()
-const story_id = computed(() => String(route.params.story_id))
+const story_id = computed(() => String(route.params.story_id || ''))
 const story = ref<NewsStory | null>(null)
 const coverage_articles = ref<NewsArticle[]>([])
 const propagation_articles = ref<NewsArticle[]>([])
@@ -23,6 +23,7 @@ const story_error = ref<string | null>(null)
 const coverage_error = ref<string | null>(null)
 const propagation_error = ref<string | null>(null)
 const can_load_more_articles = computed(() => Boolean(articles_cursor.value))
+let _request_generation = 0
 
 useSeoMeta({
   title: () => story.value ? `${story.value.title} | Beans` : 'Story | Beans',
@@ -44,11 +45,16 @@ function articleTime(value?: string | null): number {
   return Number.isNaN(date_value) ? 0 : date_value
 }
 
+function articleIdentity(article: NewsArticle): string {
+  return article.id || article.url || ''
+}
+
 function appendCoverageArticles(received: NewsArticle[]): void {
-  const _known_ids = new Set(coverage_articles.value.map(article => article.id))
+  const _known_ids = new Set(coverage_articles.value.map(articleIdentity))
   const _new_articles = received.filter((article) => {
-    if (_known_ids.has(article.id)) return false
-    _known_ids.add(article.id)
+    const _article_id = articleIdentity(article)
+    if (!_article_id || _known_ids.has(_article_id)) return false
+    _known_ids.add(_article_id)
     return true
   })
 
@@ -56,20 +62,34 @@ function appendCoverageArticles(received: NewsArticle[]): void {
 }
 
 function appendPropagationArticles(received: NewsArticle[]): void {
-  const _known_ids = new Set(propagation_articles.value.map(article => article.id))
+  const _known_ids = new Set(propagation_articles.value.map(articleIdentity))
   const _new_articles = received.filter((article) => {
-    if (_known_ids.has(article.id)) return false
-    _known_ids.add(article.id)
+    const _article_id = articleIdentity(article)
+    if (!_article_id || _known_ids.has(_article_id)) return false
+    _known_ids.add(_article_id)
     return true
   })
 
   propagation_articles.value = [...propagation_articles.value, ..._new_articles]
 }
 
+function pickLongestPreview(articles: NewsArticle[]): NewsArticle | undefined {
+  return [...articles]
+    .filter(article => Boolean(article.title && article.summary))
+    .sort((left, right) => {
+      const summary_difference = (right.summary?.length ?? 0) - (left.summary?.length ?? 0)
+      return summary_difference || (right.title.length - left.title.length)
+    })[0]
+}
+
 function enrichStoryPreview(): void {
   if (!story.value) return
 
-  const _preview_article = coverage_articles.value.find(article => Boolean(article.title && article.summary))
+  const _preview_article = pickLongestPreview([
+    ...(story.value.top_articles ?? []),
+    ...propagation_articles.value,
+    ...coverage_articles.value
+  ])
   if (!_preview_article) return
 
   story.value = {
@@ -81,7 +101,18 @@ function enrichStoryPreview(): void {
   }
 }
 
-async function loadPropagation(seed: NewsArticle[], cursor: string | null): Promise<void> {
+function isCurrentGeneration(generation: number): boolean {
+  return generation === _request_generation
+}
+
+async function loadPropagation(
+  seed: NewsArticle[],
+  cursor: string | null,
+  generation = _request_generation
+): Promise<void> {
+  if (!isCurrentGeneration(generation)) return
+
+  const _story_id = story_id.value
   loading_propagation.value = true
   propagation_error.value = null
   propagation_cursor.value = cursor
@@ -90,10 +121,11 @@ async function loadPropagation(seed: NewsArticle[], cursor: string | null): Prom
   try {
     let _cursor = cursor
     while (_cursor) {
-      const _article_page = await fetchStoryArticles(story_id.value, {
+      const _article_page = await fetchStoryArticles(_story_id, {
         limit: PAGE_SIZE,
         cursor: _cursor
       })
+      if (!isCurrentGeneration(generation)) return
 
       appendPropagationArticles(_article_page.data)
       _cursor = _article_page.data.length && _article_page.next_cursor && _article_page.next_cursor !== _cursor
@@ -102,26 +134,31 @@ async function loadPropagation(seed: NewsArticle[], cursor: string | null): Prom
       propagation_cursor.value = _cursor
     }
   } catch {
+    if (!isCurrentGeneration(generation)) return
     propagation_error.value = 'Story propagation could not be fully loaded.'
   } finally {
-    loading_propagation.value = false
+    if (isCurrentGeneration(generation)) {
+      loading_propagation.value = false
+    }
   }
 }
 
-async function loadCoverage(reset = false): Promise<void> {
-  if (loading_coverage.value) return
-  if (!reset && !articles_cursor.value) return
+async function loadCoverage(reset = false, generation = _request_generation): Promise<void> {
+  if (!isCurrentGeneration(generation)) return
+  if (!reset && (loading_coverage.value || !articles_cursor.value)) return
 
+  const _story_id = story_id.value
   loading_coverage.value = true
   coverage_error.value = null
 
   const _cursor = reset ? null : articles_cursor.value
 
   try {
-    const _article_page = await fetchStoryArticles(story_id.value, {
+    const _article_page = await fetchStoryArticles(_story_id, {
       limit: PAGE_SIZE,
       cursor: _cursor
     })
+    if (!isCurrentGeneration(generation)) return
 
     if (reset) {
       coverage_articles.value = []
@@ -136,17 +173,28 @@ async function loadCoverage(reset = false): Promise<void> {
       : null
 
     if (reset) {
-      await loadPropagation(_article_page.data, articles_cursor.value)
+      void loadPropagation(_article_page.data, articles_cursor.value, generation)
+        .then(() => {
+          if (isCurrentGeneration(generation)) enrichStoryPreview()
+        })
     }
   } catch {
+    if (!isCurrentGeneration(generation)) return
     coverage_error.value = 'Coverage articles could not be loaded right now.'
   } finally {
-    loading_coverage.value = false
+    if (isCurrentGeneration(generation)) {
+      loading_coverage.value = false
+    }
   }
 }
 
 async function loadStory(): Promise<void> {
+  const _generation = ++_request_generation
+  const _story_id = story_id.value
   loading_story.value = true
+  loading_coverage.value = false
+  loading_propagation.value = false
+  loading_more_articles.value = false
   story_error.value = null
   coverage_error.value = null
   propagation_error.value = null
@@ -157,12 +205,16 @@ async function loadStory(): Promise<void> {
   propagation_cursor.value = null
 
   try {
-    story.value = await fetchStory(story_id.value)
-    await loadCoverage(true)
+    const _story = await fetchStory(_story_id)
+    if (!isCurrentGeneration(_generation)) return
+
+    story.value = _story
+    loading_story.value = false
+    void loadCoverage(true, _generation)
   } catch {
+    if (!isCurrentGeneration(_generation)) return
     story.value = null
     story_error.value = 'This story could not be loaded right now.'
-  } finally {
     loading_story.value = false
   }
 }
@@ -248,6 +300,7 @@ watch(story_id, () => {
       <StoryCard
         :story="story"
         mode="detailed"
+        :linked="false"
       />
       <StoryTimeline
         :propagation_articles="propagation_articles"
@@ -256,6 +309,7 @@ watch(story_id, () => {
         :loading_coverage="loading_coverage || loading_more_articles"
         :first_published_at="story.first_published_at"
         :last_published_at="story.last_published_at"
+        :article_count="story.article_count"
         :coverage_error="coverage_error"
         :propagation_error="propagation_error"
         @retry-coverage="() => loadCoverage(!coverage_articles.length)"
@@ -266,7 +320,7 @@ watch(story_id, () => {
         class="flex justify-center pt-1"
       >
         <UButton
-          label="Load more articles"
+          label="More"
           icon="lucide:plus"
           color="neutral"
           variant="soft"

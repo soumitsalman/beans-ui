@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import SignalStrip from '~/components/news/SignalStrip.vue'
+import { computed, onMounted } from 'vue'
 import StorySection from '~/components/news/StorySection.vue'
 
 const {
@@ -18,7 +17,16 @@ const {
   retryTopHeadlines,
   retryLatestNews
 } = useNewsFeed()
-const { signals, loading_signals, loadSignals } = useAnalysisFeed()
+
+const feeds_are_empty = computed(() => !loading_top_headlines.value
+  && !loading_latest_news.value
+  && !top_headlines.value.length
+  && !latest_news.value.length
+  && !can_load_more_top_headlines.value
+  && !can_load_more_latest_news.value
+  && !top_headlines_error.value
+  && !latest_news_error.value
+)
 
 useSeoMeta({
   title: 'Beans | Live news',
@@ -27,7 +35,6 @@ useSeoMeta({
 
 onMounted(() => {
   void refreshFeed()
-  void loadSignals()
 })
 </script>
 
@@ -57,12 +64,6 @@ onMounted(() => {
       @retry="retryTopHeadlines"
     />
 
-    <SignalStrip
-      v-if="loading_signals || signals.length"
-      :signals="signals"
-      :loading="loading_signals"
-    />
-
     <StorySection
       v-if="loading_latest_news || latest_news.length || can_load_more_latest_news || latest_news_error"
       title="Latest news"
@@ -76,5 +77,24 @@ onMounted(() => {
       @load-more="loadMoreLatestNews"
       @retry="retryLatestNews"
     />
+
+    <UAlert
+      v-if="feeds_are_empty"
+      color="neutral"
+      variant="subtle"
+      icon="lucide:inbox"
+      title="No news is available right now."
+      description="Try again in a moment."
+    >
+      <template #actions>
+        <UButton
+          label="Retry"
+          color="neutral"
+          variant="outline"
+          size="xs"
+          @click="() => refreshFeed()"
+        />
+      </template>
+    </UAlert>
   </div>
 </template>

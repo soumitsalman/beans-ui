@@ -3,11 +3,17 @@ import { computed } from 'vue'
 import { CATEGORY_GROUPS } from '~/settings/categories'
 
 const route = useRoute()
+const CURRENT_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: '2-digit',
+  year: 'numeric'
+})
+const current_date = CURRENT_DATE_FORMATTER.format(new Date())
 const navigation_items = computed(() => [
   { label: 'Now', to: '/' },
   ...CATEGORY_GROUPS.map(category => ({
     label: category.label,
-    to: `/category/${category.slug}`
+    to: `/categories/${category.slug}`
   }))
 ])
 
@@ -19,22 +25,63 @@ function isActive(path: string): boolean {
 <template>
   <div class="min-h-screen bg-stone-950 text-stone-100">
     <header class="sticky top-0 z-30 border-b border-stone-800/90 bg-stone-950/95 backdrop-blur">
-      <div class="mx-auto flex h-15 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <UButton
-          to="/"
-          variant="ghost"
-          color="neutral"
-          class="-ml-2 px-2 text-left hover:bg-transparent"
-          aria-label="Beans home"
-        >
-          <span class="font-mono text-lg font-semibold tracking-[0.14em] text-stone-100">BEANS</span>
-        </UButton>
-        <div class="flex items-center gap-2 text-xs text-stone-500">
-          <span
-            class="size-1.5 rounded-full bg-amber-300"
-            aria-hidden="true"
-          />
-          <span>Live news</span>
+      <div class="mx-auto flex h-15 max-w-6xl items-center gap-1 px-3 sm:px-6">
+        <time class="shrink-0 text-[10px] font-medium tabular-nums text-stone-400 sm:text-xs">
+          {{ current_date }}
+        </time>
+        <div class="flex min-w-0 flex-1 justify-center">
+          <UButton
+            to="/"
+            variant="ghost"
+            color="neutral"
+            class="min-w-0 px-1.5 text-left hover:bg-transparent sm:px-2"
+            aria-label="Beans home"
+          >
+            <img
+              src="/beans-dark.png"
+              alt=""
+              class="size-6 shrink-0 rounded-sm"
+            >
+            <span class="truncate font-mono text-base font-semibold tracking-[0.1em] text-stone-100 sm:text-lg">BEANS</span>
+          </UButton>
+        </div>
+        <div class="flex shrink-0 items-center gap-0.5">
+          <UTooltip text="Search news">
+            <UButton
+              to="/search"
+              icon="lucide:search"
+              color="neutral"
+              variant="ghost"
+              square
+              aria-label="Search news"
+            />
+          </UTooltip>
+          <UTooltip text="Beans API">
+            <UButton
+              to="https://developer.cafecito.tech/products/beans"
+              icon="lucide:braces"
+              color="neutral"
+              variant="ghost"
+              square
+              external
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open Beans API documentation"
+            />
+          </UTooltip>
+          <UTooltip text="Contact">
+            <UButton
+              to="https://developer.cafecito.tech/contact"
+              icon="lucide:mail"
+              color="neutral"
+              variant="ghost"
+              square
+              external
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Contact Cafecito"
+            />
+          </UTooltip>
         </div>
       </div>
       <nav
@@ -61,5 +108,60 @@ function isActive(path: string): boolean {
     <main class="mx-auto w-full max-w-6xl px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
       <slot />
     </main>
+
+    <footer class="border-t border-stone-800/90 px-4 py-6 sm:px-6">
+      <nav
+        class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-1 gap-y-1"
+        aria-label="Beans links"
+      >
+        <UButton
+          to="https://cafecito.tech"
+          label="Cafecito"
+          color="neutral"
+          variant="link"
+          size="xs"
+          external
+          target="_blank"
+          rel="noopener noreferrer"
+        />
+        <UButton
+          to="https://espresso.cafecito.tech"
+          label="Publications"
+          color="neutral"
+          variant="link"
+          size="xs"
+          external
+          target="_blank"
+          rel="noopener noreferrer"
+        />
+        <UButton
+          to="https://developer.cafecito.tech"
+          label="API"
+          color="neutral"
+          variant="link"
+          size="xs"
+          external
+          target="_blank"
+          rel="noopener noreferrer"
+        />
+        <UButton
+          to="https://github.com/soumitsalman/beans-ui"
+          label="Github"
+          color="neutral"
+          variant="link"
+          size="xs"
+          external
+          target="_blank"
+          rel="noopener noreferrer"
+        />
+        <UButton
+          to="/about-beans"
+          label="About"
+          color="neutral"
+          variant="link"
+          size="xs"
+        />
+      </nav>
+    </footer>
   </div>
 </template>

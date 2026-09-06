@@ -12,7 +12,7 @@ useHead({
 })
 
 const title = 'Beans'
-const description = 'Your smart news and blogs aggregator powered by AI.'
+const description = 'A focused view of top stories, fresh reporting, and market signals.'
 
 useSeoMeta({
   title,
@@ -25,6 +25,8 @@ useSeoMeta({
 
 <template>
   <UApp>
-    <NuxtPage />
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </UApp>
 </template>

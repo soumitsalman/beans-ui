@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import SignalStrip from '~/components/news/SignalStrip.vue'
+import { computed, onMounted, watch } from 'vue'
 import StorySection from '~/components/news/StorySection.vue'
+import { findCategory } from '~/settings/categories'
+
+const route = useRoute()
+const category = computed(() => findCategory(String(route.params.category)))
+
+if (!category.value) {
+  throw createError({ statusCode: 404, statusMessage: 'Unknown category.' })
+}
 
 const {
   top_headlines,
@@ -17,29 +24,39 @@ const {
   loadMoreLatestNews,
   retryTopHeadlines,
   retryLatestNews
-} = useNewsFeed()
-const { signals, loading_signals, loadSignals } = useAnalysisFeed()
+} = useNewsFeed(category)
 
 useSeoMeta({
-  title: 'Beans | Live news',
-  description: 'Top stories from the last 24 hours and the latest incoming news.'
+  title: () => `${category.value?.label || 'Category'} | Beans`,
+  description: () => category.value?.description || 'A focused news category.'
 })
 
 onMounted(() => {
   void refreshFeed()
-  void loadSignals()
+})
+
+watch(() => route.params.category, () => {
+  if (!category.value) {
+    void navigateTo('/')
+    return
+  }
+
+  void refreshFeed()
 })
 </script>
 
 <template>
   <div class="space-y-9">
-    <div class="space-y-2 px-1">
+    <div class="max-w-2xl space-y-2 px-1">
       <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-300/70">
-        Live desk
+        Category
       </p>
       <h1 class="text-2xl font-semibold text-stone-100 sm:text-3xl">
-        The story, not the noise.
+        {{ category?.label }}
       </h1>
+      <p class="text-sm leading-6 text-stone-400">
+        {{ category?.description }}
+      </p>
     </div>
 
     <StorySection
@@ -52,15 +69,9 @@ onMounted(() => {
       :loading="loading_top_headlines"
       :can_load_more="can_load_more_top_headlines"
       :error_message="top_headlines_error"
-      empty_message="No top headlines are available yet."
+      empty_message="No top headlines are available in this category yet."
       @load-more="loadMoreTopHeadlines"
       @retry="retryTopHeadlines"
-    />
-
-    <SignalStrip
-      v-if="loading_signals || signals.length"
-      :signals="signals"
-      :loading="loading_signals"
     />
 
     <StorySection
@@ -72,7 +83,7 @@ onMounted(() => {
       :loading="loading_latest_news"
       :can_load_more="can_load_more_latest_news"
       :error_message="latest_news_error"
-      empty_message="No latest news is available yet."
+      empty_message="No latest news is available in this category yet."
       @load-more="loadMoreLatestNews"
       @retry="retryLatestNews"
     />

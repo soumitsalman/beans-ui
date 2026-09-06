@@ -11,6 +11,12 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  runtimeConfig: {
+    beans_api_base_url: import.meta.env.BEANS_API_BASE_URL || 'https://cafecito-beans-api.fly.dev',
+    espresso_api_base_url: import.meta.env.ESPRESSO_API_BASE_URL || 'https://cafecito-espresso-api.fly.dev',
+    cafecito_api_key: import.meta.env.CAFECITO_API_KEY
+  },
+
   routeRules: {
     '/': { prerender: true }
   },
@@ -23,13 +29,6 @@ export default defineNuxtConfig({
         commaDangle: 'never',
         braceStyle: '1tbs'
       }
-    }
-  },
-
-  runtimeConfig: {
-    public: {
-      BEANS_API_BASE_URL: import.meta.env.BEANS_API_BASE_URL,
-      BEANS_API_KEY: import.meta.env.BEANS_API_KEY
     }
   }
 })

@@ -1,95 +1,188 @@
-import type { Bean, BeanTrend, BeanExtended, Publisher } from '~/types/beans';
-import { useRuntimeConfig } from '#imports';
+import type {
+  BeansArticle,
+  BeansPageParams,
+  BeansStory,
+  EspressoSignal,
+  NewsArticle,
+  NewsPage,
+  NewsSource,
+  NewsStory
+} from '~/types/news'
 
-type FetchParams = Record<string, any>;
-
-const getOptions = (params?: FetchParams) => {
-	const config = useRuntimeConfig();
-	const BASE_URL = config.public.BEANS_API_BASE_URL as string;
-	const API_KEY = config.public.BEANS_API_KEY as string;
-	return {
-		baseURL: BASE_URL,
-		headers: API_KEY ? { 'X-API-KEY': API_KEY } : undefined,
-		params,
-	};
-};
-
-const apiGet = async <T>(path: string, params?: FetchParams) => {
-	return await $fetch<T>(path, getOptions(params));
-};
-
-// --- TAGS ---
-
-
-export const fetchCategories = async (params?: { limit?: number; offset?: number }) => {
-	return await apiGet<string[]>(`/tags/categories`, params);
-};
-
-export const fetchEntities = async (params?: { limit?: number; offset?: number }) => {
-	return await apiGet<string[]>(`/tags/entities`, params);
-};
-
-export const fetchRegions = async (params?: { limit?: number; offset?: number }) => {
-	return await apiGet<string[]>(`/tags/regions`, params);
-};
-
-// --- PUBLISHERS ---
-
-
-export const fetchPublishers = async (params: { sources: string[]; limit?: number; offset?: number }) => {
-	return await apiGet<Publisher[]>(`/sources`, params);
-};
-
-// --- ARTICLES ---
-
-export interface ArticleSearchParams {
-	q?: string;
-	acc?: number;
-	content_type?: string;
-	urls?: string[];
-	tags?: string[];
-	categories?: string[];
-	regions?: string[];
-	entities?: string[];
-	sources?: string[];
-	from?: string; // YYYY-MM-DD
-	full_content?: boolean;
-	limit?: number;
-	offset?: number;
+interface ApiEnvelope<T> {
+  data?: T
+  pagination?: {
+    next_cursor?: string | null
+    num_results?: number | null
+  } | null
 }
 
-const DEFAULT_PAGE_SIZE = 5;
+type ApiQuery = Record<string, string | number | undefined>
 
-const withPagingDefaults = (params?: ArticleSearchParams): ArticleSearchParams => {
-	return {
-		limit: params?.limit ?? DEFAULT_PAGE_SIZE,
-		offset: params?.offset ?? 0,
-		...params,
-	};
-};
+const DEFAULT_PAGE_SIZE = 5
 
-export const searchArticles = async (params: ArticleSearchParams) => {
-	return await apiGet<BeanExtended[]>(`/articles/search`, params);
-};
+function normaliseList(values?: string[] | null): string[] {
+  return Array.isArray(values) ? values.filter(Boolean) : []
+}
 
-export const fetchLatestArticles = async (params?: ArticleSearchParams) => {
-	return await apiGet<Bean[]>(`/articles/latest`, params);
-};
+function normaliseSource(source?: NewsSource | null): NewsSource | undefined {
+  return source ?? undefined
+}
 
+function toNewsArticle(article: BeansArticle): NewsArticle {
+  return {
+    id: article.id ?? '',
+    title: article.title?.trim() || 'Untitled update',
+    url: article.url,
+    published_at: article.published_at,
+    story_id: article.story_id,
+    image_url: article.image_url,
+    summary: article.summary,
+    categories: normaliseList(article.categories),
+    regions: normaliseList(article.regions),
+    entities: normaliseList(article.entities),
+    tags: normaliseList(article.tags),
+    source: normaliseSource(article.source),
+    trend: article.trend ?? undefined
+  }
+}
 
+function toNewsStory(story: BeansStory): NewsStory {
+  const articles = Array.isArray(story.top_articles)
+    ? story.top_articles.map(toNewsArticle).filter(article => article.id)
+    : []
+  const top_article = articles.find(article => Boolean(article.title && article.summary)) || articles[0]
 
-export const fetchTrendingArticles = async (params?: ArticleSearchParams) => {
-	return await apiGet<BeanTrend[]>(`/articles/trending`, params);
-};
+  return {
+    id: story.id ?? top_article?.story_id ?? top_article?.id ?? '',
+    story_id: story.id ?? top_article?.story_id,
+    title: top_article?.summary ? top_article.title : story.title?.trim() || top_article?.title || 'Untitled story',
+    summary: top_article?.summary,
+    image_url: top_article?.image_url,
+    published_at: story.last_published_at ?? top_article?.published_at,
+    first_published_at: story.first_published_at,
+    last_published_at: story.last_published_at,
+    categories: normaliseList(story.categories).length ? normaliseList(story.categories) : top_article?.categories ?? [],
+    regions: normaliseList(story.regions).length ? normaliseList(story.regions) : top_article?.regions ?? [],
+    entities: normaliseList(story.entities).length ? normaliseList(story.entities) : top_article?.entities ?? [],
+    tags: normaliseList(story.tags).length ? normaliseList(story.tags) : top_article?.tags ?? [],
+    source: top_article?.source,
+    source_count: story.source_count ?? 0,
+    article_count: story.article_count ?? 0,
+    trend: top_article?.trend,
+    top_articles: articles
+  }
+}
 
-export const fetchTopHeadlines = async (params?: ArticleSearchParams) => {
-	return await apiGet<BeanTrend[]>(`/articles/top-headlines`, params);
-};
+function articleToStory(article: BeansArticle): NewsStory {
+  const news_article = toNewsArticle(article)
 
-export const fetchTrendingArticlesPage = async (params?: ArticleSearchParams) => {
-	return await fetchTrendingArticles(withPagingDefaults(params));
-};
+  return {
+    id: news_article.story_id ?? news_article.id,
+    story_id: news_article.story_id,
+    title: news_article.title,
+    summary: news_article.summary,
+    image_url: news_article.image_url,
+    published_at: news_article.published_at,
+    categories: news_article.categories,
+    regions: news_article.regions,
+    entities: news_article.entities,
+    tags: news_article.tags,
+    source: news_article.source,
+    source_count: news_article.source ? 1 : 0,
+    article_count: 1,
+    trend: news_article.trend,
+    top_articles: [news_article]
+  }
+}
 
-export const fetchLatestArticlesPage = async (params?: ArticleSearchParams) => {
-	return await fetchLatestArticles(withPagingDefaults(params));
-};
+function toQuery(params: BeansPageParams = {}): ApiQuery {
+  return {
+    limit: params.limit ?? DEFAULT_PAGE_SIZE,
+    cursor: params.cursor ?? undefined,
+    q: params.q,
+    categories: params.categories?.join(','),
+    regions: params.regions?.join(','),
+    entities: params.entities?.join(','),
+    content_type: params.content_type,
+    from: params.from,
+    to: params.to
+  }
+}
+
+function pageFrom<T>(response: ApiEnvelope<T[]>): NewsPage<T> {
+  const data = Array.isArray(response.data) ? response.data : []
+
+  return {
+    data,
+    next_cursor: response.pagination?.next_cursor ?? null,
+    num_results: response.pagination?.num_results ?? data.length
+  }
+}
+
+async function fetchBeansPage<T>(path: string, params: BeansPageParams = {}): Promise<NewsPage<T>> {
+  const response = await $fetch<ApiEnvelope<T[]>>(`/api/beans/${path}`, {
+    query: toQuery(params)
+  })
+
+  return pageFrom(response)
+}
+
+export function useBeansApi() {
+  async function fetchTopHeadlines(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
+    const page = await fetchBeansPage<BeansArticle>('news/top-headlines', params)
+
+    return {
+      ...page,
+      data: page.data.map(articleToStory).filter(story => story.id)
+    }
+  }
+
+  async function fetchLatestArticles(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
+    const page = await fetchBeansPage<BeansArticle>('articles/latest', {
+      ...params,
+      content_type: 'news'
+    })
+
+    return {
+      ...page,
+      data: page.data.map(articleToStory).filter(story => story.id)
+    }
+  }
+
+  async function fetchStory(story_id: string): Promise<NewsStory> {
+    const response = await $fetch<ApiEnvelope<BeansStory>>(`/api/beans/stories/${story_id}`)
+
+    return toNewsStory(response.data ?? {})
+  }
+
+  async function fetchStoryArticles(story_id: string, params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
+    const page = await fetchBeansPage<BeansArticle>(`stories/${story_id}/articles`, params)
+
+    return {
+      ...page,
+      data: page.data.map(toNewsArticle).filter(article => article.id)
+    }
+  }
+
+  return {
+    fetchTopHeadlines,
+    fetchLatestArticles,
+    fetchStory,
+    fetchStoryArticles
+  }
+}
+
+export function useEspressoApi() {
+  async function fetchSignals(params: BeansPageParams = {}): Promise<NewsPage<EspressoSignal>> {
+    const response = await $fetch<ApiEnvelope<EspressoSignal[]>>('/api/espresso/signals', {
+      query: toQuery(params)
+    })
+
+    return pageFrom(response)
+  }
+
+  return {
+    fetchSignals
+  }
+}

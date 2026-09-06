@@ -1,0 +1,147 @@
+{
+  "app/app.config.ts": {
+    "mtime": 1788557102.1182146,
+    "ast_hash": "4a5d4c5a0707b4fbdfb4af785191a784",
+    "semantic_hash": "4a5d4c5a0707b4fbdfb4af785191a784"
+  },
+  "app/app.vue": {
+    "mtime": 1788557102.2742171,
+    "ast_hash": "ce93d88be5e6ed24ebda5004617d0460",
+    "semantic_hash": "ce93d88be5e6ed24ebda5004617d0460"
+  },
+  "app/pages/index.vue": {
+    "mtime": 1788557898.7091033,
+    "ast_hash": "bb2eecbfd53b2dc8cd5c2cc46ccb5f93",
+    "semantic_hash": "bb2eecbfd53b2dc8cd5c2cc46ccb5f93"
+  },
+  "eslint.config.mjs": {
+    "mtime": 1788557795.3120623,
+    "ast_hash": "1171ecd2b76e79a5f0240b3cf0057759",
+    "semantic_hash": "1171ecd2b76e79a5f0240b3cf0057759"
+  },
+  "nuxt.config.ts": {
+    "mtime": 1788557540.636499,
+    "ast_hash": "b8c735881a2488ab1bc2f16d306bc70a",
+    "semantic_hash": "b8c735881a2488ab1bc2f16d306bc70a"
+  },
+  "package.json": {
+    "mtime": 1788546052.9531982,
+    "ast_hash": "a5077ee846aa596f1dca1b6d3bc5ab6e",
+    "semantic_hash": "a5077ee846aa596f1dca1b6d3bc5ab6e"
+  },
+  "renovate.json": {
+    "mtime": 1788546052.9537919,
+    "ast_hash": "589921bd03d1d9b66e27fac32c2e0e01",
+    "semantic_hash": "589921bd03d1d9b66e27fac32c2e0e01"
+  },
+  "tsconfig.json": {
+    "mtime": 1788546052.9537919,
+    "ast_hash": "44a7760e440af404ce6bd8f20de6f1d2",
+    "semantic_hash": "44a7760e440af404ce6bd8f20de6f1d2"
+  },
+  ".github/workflows/ci.yml": {
+    "mtime": 1788546052.9518266,
+    "ast_hash": "adf68c763684f063041819960e39432b",
+    "semantic_hash": "adf68c763684f063041819960e39432b"
+  },
+  "AGENTS.md": {
+    "mtime": 1788555932.1910934,
+    "ast_hash": "60a0593439ce7d9a9622bd73556611ae",
+    "semantic_hash": "60a0593439ce7d9a9622bd73556611ae"
+  },
+  "design/GOAL.md": {
+    "mtime": 1788556143.791757,
+    "ast_hash": "a7c2da8dba1070e9c955e8c3f32f08d9",
+    "semantic_hash": "a7c2da8dba1070e9c955e8c3f32f08d9"
+  },
+  "pnpm-workspace.yaml": {
+    "mtime": 1788546052.9537919,
+    "ast_hash": "83345d30a9927b759cf0bbb234f95890",
+    "semantic_hash": "83345d30a9927b759cf0bbb234f95890"
+  },
+  "app/components/news/SignalStrip.vue": {
+    "mtime": 1788557540.6352775,
+    "ast_hash": "2df1bc5a95529b6359e5f9e2272542fb",
+    "semantic_hash": "2df1bc5a95529b6359e5f9e2272542fb"
+  },
+  "app/components/news/StoryCard.vue": {
+    "mtime": 1788557540.636499,
+    "ast_hash": "e91583c2f78f0e125a9da3dfe6fd211f",
+    "semantic_hash": "e91583c2f78f0e125a9da3dfe6fd211f"
+  },
+  "app/components/news/StorySection.vue": {
+    "mtime": 1788557540.636499,
+    "ast_hash": "c454a4e57402e89856e160fd409868dc",
+    "semantic_hash": "c454a4e57402e89856e160fd409868dc"
+  },
+  "app/components/news/StorySourceStack.vue": {
+    "mtime": 1788557540.636499,
+    "ast_hash": "822f5d5e0efda28ec718f8af1516b729",
+    "semantic_hash": "822f5d5e0efda28ec718f8af1516b729"
+  },
+  "app/components/news/StoryTimeline.vue": {
+    "mtime": 1788557540.636499,
+    "ast_hash": "e1fb15640133ec1523a17969a4dc9c0c",
+    "semantic_hash": "e1fb15640133ec1523a17969a4dc9c0c"
+  },
+  "app/composables/useAnalysisFeed.ts": {
+    "mtime": 1788557101.5482051,
+    "ast_hash": "b6dd9d54c57237833ec496b22b704515",
+    "semantic_hash": "b6dd9d54c57237833ec496b22b704515"
+  },
+  "app/composables/useBeansApi.ts": {
+    "mtime": 1788557040.4201546,
+    "ast_hash": "6870828f221f5b8cb2cc85dbe2e42a92",
+    "semantic_hash": "6870828f221f5b8cb2cc85dbe2e42a92"
+  },
+  "app/composables/useNewsFeed.ts": {
+    "mtime": 1788557001.1154423,
+    "ast_hash": "888d0ab58022d3b62cc174f070230d56",
+    "semantic_hash": "888d0ab58022d3b62cc174f070230d56"
+  },
+  "app/layouts/default.vue": {
+    "mtime": 1788557540.636499,
+    "ast_hash": "52e5d9f394a9690218cf44c6f1cccfab",
+    "semantic_hash": "52e5d9f394a9690218cf44c6f1cccfab"
+  },
+  "app/pages/category/[category].vue": {
+    "mtime": 1788557898.862105,
+    "ast_hash": "e5b5e48b2e7039bb69dc793107234fcf",
+    "semantic_hash": "e5b5e48b2e7039bb69dc793107234fcf"
+  },
+  "app/pages/story/[story_id].vue": {
+    "mtime": 1788557899.0191064,
+    "ast_hash": "4e798cf889f3d9854231bd9731f4ff48",
+    "semantic_hash": "4e798cf889f3d9854231bd9731f4ff48"
+  },
+  "app/settings/categories.ts": {
+    "mtime": 1788557000.8121197,
+    "ast_hash": "766ccb7cdb7f318e9d47c5e29d5b1ce5",
+    "semantic_hash": "766ccb7cdb7f318e9d47c5e29d5b1ce5"
+  },
+  "app/types/news.ts": {
+    "mtime": 1788557000.6634338,
+    "ast_hash": "c998f06cd891fd3cfef09e49cbfc1fea",
+    "semantic_hash": "c998f06cd891fd3cfef09e49cbfc1fea"
+  },
+  "server/api/beans/[...path].get.ts": {
+    "mtime": 1788557532.6991844,
+    "ast_hash": "9f6b2fed63b37beff48508c0073857bd",
+    "semantic_hash": "9f6b2fed63b37beff48508c0073857bd"
+  },
+  "server/api/espresso/[...path].get.ts": {
+    "mtime": 1788557532.8571863,
+    "ast_hash": "27ec8725225a6403e97c3422b9f9458a",
+    "semantic_hash": "27ec8725225a6403e97c3422b9f9458a"
+  },
+  "server/utils/proxyApi.ts": {
+    "mtime": 1788557040.667159,
+    "ast_hash": "12f083e55eb6ec677a6e1f79170a99db",
+    "semantic_hash": "12f083e55eb6ec677a6e1f79170a99db"
+  },
+  "design/WORKLOG.md": {
+    "mtime": 1788558049.0505517,
+    "ast_hash": "0f065ec10d27628f74f82074d909a72f",
+    "semantic_hash": "0f065ec10d27628f74f82074d909a72f"
+  }
+}

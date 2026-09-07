@@ -25,7 +25,7 @@ function confidenceLabel(confidence?: number | null): string | null {
   >
     <div class="flex items-end justify-between gap-4">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-300/70">
+        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary/70">
           Espresso
         </p>
         <h2
@@ -37,7 +37,7 @@ function confidenceLabel(confidence?: number | null): string | null {
       </div>
       <UIcon
         name="lucide:activity"
-        class="size-5 text-amber-300/80"
+        class="size-5 text-primary/80"
         aria-hidden="true"
       />
     </div>
@@ -54,7 +54,7 @@ function confidenceLabel(confidence?: number | null): string | null {
         class="w-72 shrink-0 rounded-lg border border-stone-800 bg-stone-900/70 p-4"
       >
         <div class="flex items-center justify-between gap-3 text-xs">
-          <span class="truncate font-medium text-amber-200">{{ signalLabel(signal) }}</span>
+          <span class="truncate font-medium text-primary">{{ signalLabel(signal) }}</span>
           <span
             v-if="confidenceLabel(signal.confidence)"
             class="shrink-0 text-stone-500"

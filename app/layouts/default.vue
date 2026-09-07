@@ -3,12 +3,18 @@ import { computed } from 'vue'
 import { CATEGORY_GROUPS } from '~/settings/categories'
 
 const route = useRoute()
+const NOW = new Date()
 const CURRENT_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
   month: 'short',
-  day: '2-digit',
-  year: 'numeric'
+  day: '2-digit'
 })
-const current_date = CURRENT_DATE_FORMATTER.format(new Date())
+const current_date = CURRENT_DATE_FORMATTER.format(NOW)
+const current_date_iso = [
+  NOW.getFullYear(),
+  String(NOW.getMonth() + 1).padStart(2, '0'),
+  String(NOW.getDate()).padStart(2, '0')
+].join('-')
 const navigation_items = computed(() => [
   { label: 'Now', to: '/' },
   ...CATEGORY_GROUPS.map(category => ({
@@ -26,7 +32,16 @@ function isActive(path: string): boolean {
   <div class="min-h-screen bg-stone-950 text-stone-100">
     <header class="sticky top-0 z-30 border-b border-stone-800/90 bg-stone-950/95 backdrop-blur">
       <div class="mx-auto flex h-15 max-w-6xl items-center gap-1 px-3 sm:px-6">
-        <time class="shrink-0 text-[10px] font-medium tabular-nums text-stone-400 sm:text-xs">
+        <time
+          :datetime="current_date_iso"
+          class="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-medium tabular-nums text-stone-400 sm:text-xs"
+          :aria-label="`Live, ${current_date}`"
+        >
+          <UIcon
+            name="lucide:radio"
+            class="size-3 shrink-0 text-primary"
+            aria-hidden="true"
+          />
           {{ current_date }}
         </time>
         <div class="flex min-w-0 flex-1 justify-center">

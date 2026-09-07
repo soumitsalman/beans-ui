@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NewsArticle } from '~/types/news'
+import StoryTrendCounts from '~/components/news/StoryTrendCounts.vue'
 import { formatCount, formatFriendlyTime } from '~/utils/formatters'
 import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceLabel } from '~/utils/source'
+import { hasPositiveCount } from '~/utils/trend'
 
 interface StoryTimelineProps {
   propagation_articles: NewsArticle[]
@@ -21,18 +23,10 @@ interface PropagationItem {
   date: string
 }
 
-interface CoverageEngagement {
-  mentions?: string
-  likes?: string
-  comments?: string
-  shares?: string
-}
-
 interface CoverageRow {
   article: NewsArticle
   source_label?: string
   favicon?: string
-  engagement: CoverageEngagement
 }
 
 const props = defineProps<StoryTimelineProps>()
@@ -97,29 +91,9 @@ const coverage_rows = computed<CoverageRow[]>(() => {
   return props.coverage_articles.map(article => ({
     article,
     source_label: sourceLabel(article),
-    favicon: sourceFavicon(article),
-    engagement: coverageEngagement(article)
+    favicon: sourceFavicon(article)
   }))
 })
-
-function hasPositiveCount(value?: number | null): boolean {
-  return typeof value === 'number' && !Number.isNaN(value) && value > 0
-}
-
-function coverageEngagement(article: NewsArticle): CoverageEngagement {
-  const trend = article.trend
-
-  return {
-    mentions: hasPositiveCount(trend?.mentions) ? formatCount(trend?.mentions) : undefined,
-    likes: hasPositiveCount(trend?.likes) ? formatCount(trend?.likes) : undefined,
-    comments: hasPositiveCount(trend?.comments) ? formatCount(trend?.comments) : undefined,
-    shares: hasPositiveCount(trend?.shares) ? formatCount(trend?.shares) : undefined
-  }
-}
-
-function hasCoverageSocialCounts(engagement: CoverageEngagement): boolean {
-  return Boolean(engagement.likes || engagement.comments || engagement.shares)
-}
 
 function propagationTime(value?: string | null): number {
   if (!value) return Number.POSITIVE_INFINITY
@@ -160,7 +134,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
       <div class="flex items-center gap-2 px-1">
         <UIcon
           name="lucide:git-fork"
-          class="size-4 text-amber-400"
+          class="size-4 text-primary"
           aria-hidden="true"
         />
         <h2 class="text-sm font-semibold text-stone-100">
@@ -263,7 +237,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
       <div class="flex items-center gap-2 px-1">
         <UIcon
           name="lucide:newspaper"
-          class="size-4 text-amber-400"
+          class="size-4 text-primary"
           aria-hidden="true"
         />
         <h2 class="text-sm font-semibold text-stone-100">
@@ -320,7 +294,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
           :rel="row.article.url ? 'noopener noreferrer' : undefined"
           :class="[
             'group flex gap-2.5 py-3 transition-colors',
-            row.article.url ? 'hover:bg-stone-800/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400' : 'cursor-default'
+            row.article.url ? 'hover:bg-stone-800/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary' : 'cursor-default'
           ]"
           :aria-label="row.article.url ? (row.article.title ? `Open ${row.article.title}` : 'Open article') : undefined"
         >
@@ -334,76 +308,29 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
             referrerpolicy="no-referrer"
           />
           <div class="min-w-0 flex-1">
-            <div class="flex items-center justify-between gap-3 text-[11px] text-stone-500">
-              <div class="flex min-w-0 items-center gap-2">
-                <p
-                  v-if="row.source_label"
-                  class="min-w-0 truncate font-medium"
-                >
-                  {{ row.source_label }}
-                </p>
-                <span
-                  v-if="row.engagement.mentions"
-                  class="inline-flex shrink-0 items-center gap-1 tabular-nums"
-                >
-                  <UIcon
-                    name="lucide:message-circle"
-                    class="size-3"
-                    aria-hidden="true"
-                  />
-                  {{ row.engagement.mentions }} mentions
-                </span>
-              </div>
-              <div
-                v-if="hasCoverageSocialCounts(row.engagement)"
-                class="flex shrink-0 flex-wrap items-center justify-end gap-x-2.5 gap-y-1 tabular-nums"
+            <div class="flex min-w-0 flex-nowrap items-center gap-3 text-[11px] text-stone-500">
+              <p
+                v-if="row.source_label"
+                class="min-w-0 truncate font-medium"
               >
-                <span
-                  v-if="row.engagement.likes"
-                  class="inline-flex items-center gap-1"
-                >
-                  <UIcon
-                    name="lucide:thumbs-up"
-                    class="size-3"
-                    aria-hidden="true"
-                  />
-                  {{ row.engagement.likes }}
-                </span>
-                <span
-                  v-if="row.engagement.comments"
-                  class="inline-flex items-center gap-1"
-                >
-                  <UIcon
-                    name="lucide:messages-square"
-                    class="size-3"
-                    aria-hidden="true"
-                  />
-                  {{ row.engagement.comments }}
-                </span>
-                <span
-                  v-if="row.engagement.shares"
-                  class="inline-flex items-center gap-1"
-                >
-                  <UIcon
-                    name="lucide:share-2"
-                    class="size-3"
-                    aria-hidden="true"
-                  />
-                  {{ row.engagement.shares }}
-                </span>
-              </div>
+                {{ row.source_label }}
+              </p>
+              <StoryTrendCounts
+                :trend="row.article.trend"
+                class="ml-auto shrink-0"
+              />
             </div>
             <div class="mt-1 flex items-start gap-3">
               <h3
                 v-if="row.article.title"
-                class="line-clamp-2 flex-1 text-sm font-medium leading-5 text-stone-200 group-hover:text-amber-100"
+                class="line-clamp-2 flex-1 text-sm font-medium leading-5 text-stone-200 group-hover:text-primary"
               >
                 {{ row.article.title }}
               </h3>
               <UIcon
                 v-if="row.article.url"
                 name="lucide:arrow-up-right"
-                class="mt-0.5 size-4 shrink-0 text-stone-600 group-hover:text-amber-400"
+                class="mt-0.5 size-4 shrink-0 text-stone-600 group-hover:text-primary"
                 aria-hidden="true"
               />
             </div>

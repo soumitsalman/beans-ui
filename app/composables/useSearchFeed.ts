@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import type { NewsSource, NewsStory } from '~/types/news'
 import { normaliseTagInput } from '~/utils/formatters'
+import { hasTrendPayload, overlayArticleTrend } from '~/utils/trend'
 
 const PAGE_SIZE = 5
 const RELEVANCE_SCORE_THRESHOLD = 0
@@ -77,7 +78,7 @@ function hasUnresolvedSources(criteria: SearchCriteria): boolean {
 }
 
 export function useSearchFeed() {
-  const { fetchSearchArticles, fetchSources } = useBeansApi()
+  const { fetchArticle, fetchSearchArticles, fetchSources } = useBeansApi()
   const results = ref<NewsStory[]>([])
   const source_matches = ref<NewsSource[]>([])
   const next_cursor = ref<string | null>(null)
@@ -114,6 +115,27 @@ export function useSearchFeed() {
 
   function isCurrentSearchGeneration(search_generation: number): boolean {
     return search_generation === _search_generation
+  }
+
+  async function enrichSearchStories(
+    received: NewsStory[],
+    search_generation: number
+  ): Promise<void> {
+    const _enriched_stories = await Promise.all(
+      received.map(async (story) => {
+        const _primary_article = story.top_articles?.[0]
+        if (!_primary_article?.id || hasTrendPayload(story.trend)) return story
+
+        const _detailed_article = await fetchArticle(_primary_article.id).catch(() => undefined)
+        return overlayArticleTrend(story, _detailed_article?.trend)
+      })
+    )
+    if (!isCurrentSearchGeneration(search_generation)) return
+
+    results.value = results.value.map((story) => {
+      const _enriched_story = _enriched_stories.find(item => item.id === story.id)
+      return _enriched_story || story
+    })
   }
 
   async function findSources(source_query: string, search_generation: number): Promise<string[] | null> {
@@ -171,6 +193,7 @@ export function useSearchFeed() {
       next_cursor.value = _page.data.length && _page.next_cursor !== _cursor
         ? _page.next_cursor
         : null
+      void enrichSearchStories(_page.data, search_generation)
     } catch {
       if (isCurrentSearchGeneration(search_generation)) {
         const _label = submittedCriteriaLabel(_criteria)

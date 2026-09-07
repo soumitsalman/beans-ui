@@ -40,19 +40,12 @@ onMounted(() => {
 
 <template>
   <div class="space-y-9">
-    <div class="space-y-2 px-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-300/70">
-        Live desk
-      </p>
-      <h1 class="text-2xl font-semibold text-stone-100 sm:text-3xl">
-        The story, not the noise.
-      </h1>
-    </div>
-
+    <h1 class="sr-only">
+      Beans
+    </h1>
     <StorySection
       v-if="loading_top_headlines || top_headlines.length || can_load_more_top_headlines || top_headlines_error"
-      title="Top headlines"
-      eyebrow="Last 24 hours"
+      title="Trending"
       :stories="top_headlines"
       mode="compressed"
       variant="carousel"
@@ -66,8 +59,7 @@ onMounted(() => {
 
     <StorySection
       v-if="loading_latest_news || latest_news.length || can_load_more_latest_news || latest_news_error"
-      title="Latest news"
-      eyebrow="Just in"
+      title="Just In"
       :stories="latest_news"
       mode="snapshot"
       :loading="loading_latest_news"

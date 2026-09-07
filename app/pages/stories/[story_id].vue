@@ -3,12 +3,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import StoryCard from '~/components/news/StoryCard.vue'
 import StoryTimeline from '~/components/news/StoryTimeline.vue'
 import type { NewsArticle, NewsStory } from '~/types/news'
-import { formatCount } from '~/utils/formatters'
+import { hasTrendPayload, overlayArticleTrend } from '~/utils/trend'
 
 const PAGE_SIZE = 5
 
 const route = useRoute()
-const { fetchStory, fetchStoryArticles } = useBeansApi()
+const { fetchArticle, fetchStory, fetchStoryArticles } = useBeansApi()
 const story_id = computed(() => String(route.params.story_id || ''))
 const story = ref<NewsStory | null>(null)
 const coverage_articles = ref<NewsArticle[]>([])
@@ -105,6 +105,29 @@ function isCurrentGeneration(generation: number): boolean {
   return generation === _request_generation
 }
 
+async function enrichCoverageArticles(
+  received: NewsArticle[],
+  generation: number
+): Promise<void> {
+  const _enriched_articles = await Promise.all(
+    received.map(async (article) => {
+      if (!article.id || hasTrendPayload(article.trend)) return article
+
+      const _detailed_article = await fetchArticle(article.id).catch(() => undefined)
+      return overlayArticleTrend(article, _detailed_article?.trend)
+    })
+  )
+  if (!isCurrentGeneration(generation)) return
+
+  coverage_articles.value = coverage_articles.value.map((article) => {
+    const _enriched_article = _enriched_articles.find(item =>
+      articleIdentity(item) === articleIdentity(article)
+    )
+
+    return _enriched_article || article
+  })
+}
+
 async function loadPropagation(
   seed: NewsArticle[],
   cursor: string | null,
@@ -168,6 +191,7 @@ async function loadCoverage(reset = false, generation = _request_generation): Pr
 
     appendCoverageArticles(_article_page.data)
     enrichStoryPreview()
+    void enrichCoverageArticles(_article_page.data, generation)
     articles_cursor.value = _article_page.data.length && _article_page.next_cursor !== _cursor
       ? _article_page.next_cursor
       : null
@@ -245,7 +269,7 @@ watch(story_id, () => {
 
 <template>
   <div class="space-y-7">
-    <div class="flex items-center justify-between gap-4">
+    <div>
       <UTooltip text="Back to news">
         <UButton
           to="/"
@@ -256,17 +280,6 @@ watch(story_id, () => {
           aria-label="Back to news"
         />
       </UTooltip>
-      <div
-        v-if="story && (story.source_count || story.article_count)"
-        class="flex flex-wrap justify-end gap-x-3 gap-y-1 text-xs tabular-nums text-stone-500"
-      >
-        <span v-if="story.source_count">
-          {{ formatCount(story.source_count) }} {{ story.source_count === 1 ? 'source' : 'sources' }}
-        </span>
-        <span v-if="story.article_count">
-          {{ formatCount(story.article_count) }} {{ story.article_count === 1 ? 'article' : 'articles' }}
-        </span>
-      </div>
     </div>
 
     <div

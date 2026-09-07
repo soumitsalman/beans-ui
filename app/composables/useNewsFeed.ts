@@ -4,7 +4,9 @@ import type { NewsCategory } from '~/settings/categories'
 import type { NewsArticle, NewsStory, NewsTrend } from '~/types/news'
 import { sourceIdentity } from '~/utils/source'
 
-const PAGE_SIZE = 5
+const DISPLAY_PAGE_SIZE = 5
+const FETCH_BATCH_SIZE = 20
+const MAX_FETCH_BATCH_SIZE = 100
 
 interface FeedFilters {
   categories?: string[]
@@ -14,17 +16,25 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
   const { fetchArticle, fetchLatestArticles, fetchSimilarArticles, fetchStory, fetchTopHeadlines } = useBeansApi()
   const top_headlines = ref<NewsStory[]>([])
   const latest_news = ref<NewsStory[]>([])
-  const top_headlines_cursor = ref<string | null>(null)
+  const top_headlines_pool = ref<NewsStory[]>([])
+  const latest_news_pool = ref<NewsStory[]>([])
   const latest_news_cursor = ref<string | null>(null)
+  const top_headlines_exhausted = ref(false)
+  const latest_news_exhausted = ref(false)
   const loading_top_headlines = ref(false)
   const loading_latest_news = ref(false)
   const top_headlines_error = ref<string | null>(null)
   const latest_news_error = ref<string | null>(null)
   const active_category = computed(() => unref(category))
-  const can_load_more_top_headlines = computed(() => Boolean(top_headlines_cursor.value))
-  const can_load_more_latest_news = computed(() => Boolean(latest_news_cursor.value))
+  const can_load_more_top_headlines = computed(() =>
+    top_headlines.value.length < top_headlines_pool.value.length || !top_headlines_exhausted.value
+  )
+  const can_load_more_latest_news = computed(() =>
+    latest_news.value.length < latest_news_pool.value.length || !latest_news_exhausted.value
+  )
   let _top_feed_generation = 0
   let _latest_feed_generation = 0
+  let _top_fetch_limit = FETCH_BATCH_SIZE
 
   function filters(): FeedFilters {
     return {
@@ -175,7 +185,7 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
             ? fetchStory(story.story_id).catch(() => undefined)
             : Promise.resolve(undefined),
           _primary_article?.id
-            ? fetchSimilarArticles(_primary_article.id, { limit: PAGE_SIZE })
+            ? fetchSimilarArticles(_primary_article.id, { limit: DISPLAY_PAGE_SIZE })
                 .then(page => page.data)
                 .catch(() => [])
             : Promise.resolve([]),
@@ -189,43 +199,150 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     )
     if (!isCurrentGeneration(target, feed_generation)) return
 
-    const _target = target === 'top' ? top_headlines : latest_news
+    const _by_id = new Map(_enriched_stories.map(story => [story.id, story]))
+    const _overlay = (story: NewsStory) => _by_id.get(story.id) || story
+    const _visible = target === 'top' ? top_headlines : latest_news
+    const _pool = target === 'top' ? top_headlines_pool : latest_news_pool
 
-    _target.value = _target.value.map((story) => {
-      const _enriched_story = _enriched_stories.find(item => item.id === story.id)
+    _pool.value = _pool.value.map(_overlay)
+    _visible.value = _visible.value.map(_overlay)
+  }
 
-      return _enriched_story || story
-    })
+  function revealStories(pool: NewsStory[], target: number): NewsStory[] {
+    return pool.slice(0, Math.min(target, pool.length))
+  }
+
+  function resetTopPaging(): void {
+    top_headlines_pool.value = []
+    top_headlines_exhausted.value = false
+    _top_fetch_limit = FETCH_BATCH_SIZE
+  }
+
+  function resetLatestPaging(): void {
+    latest_news_pool.value = []
+    latest_news_cursor.value = null
+    latest_news_exhausted.value = false
+  }
+
+  async function fillTopHeadlinesPool(
+    min_unique: number,
+    feed_generation: number
+  ): Promise<NewsStory[]> {
+    let _received_for_enrich: NewsStory[] = []
+
+    while (
+      top_headlines_pool.value.length < min_unique
+      && !top_headlines_exhausted.value
+      && isCurrentGeneration('top', feed_generation)
+    ) {
+      const _page = await fetchTopHeadlines({
+        ...filters(),
+        limit: _top_fetch_limit
+      })
+      if (!isCurrentGeneration('top', feed_generation)) return _received_for_enrich
+
+      const _before = top_headlines_pool.value.length
+      top_headlines_pool.value = appendStories(top_headlines_pool.value, _page.data)
+      const _added = top_headlines_pool.value.length - _before
+      _received_for_enrich = [..._received_for_enrich, ..._page.data]
+      const _short_page = _page.data.length < _top_fetch_limit
+      // #region agent log
+      fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'D',location:'useNewsFeed.ts:fillTopHeadlinesPool',message:'top headlines batch',data:{fetch_limit:_top_fetch_limit,received:_page.data.length,added_unique:_added,pool:top_headlines_pool.value.length,min_unique,short_page:_short_page,api_next_cursor:Boolean(_page.next_cursor),story_ids:_page.data.map(story=>story.story_id||story.id)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+
+      if (_short_page) {
+        top_headlines_exhausted.value = true
+        break
+      }
+
+      if (_added === 0) {
+        if (_top_fetch_limit >= MAX_FETCH_BATCH_SIZE) {
+          top_headlines_exhausted.value = true
+          break
+        }
+        _top_fetch_limit = Math.min(MAX_FETCH_BATCH_SIZE, _top_fetch_limit + FETCH_BATCH_SIZE)
+        continue
+      }
+
+      if (top_headlines_pool.value.length < min_unique && _top_fetch_limit < MAX_FETCH_BATCH_SIZE) {
+        _top_fetch_limit = Math.min(MAX_FETCH_BATCH_SIZE, _top_fetch_limit + FETCH_BATCH_SIZE)
+      }
+    }
+
+    return _received_for_enrich
+  }
+
+  async function fillLatestNewsPool(
+    min_unique: number,
+    feed_generation: number
+  ): Promise<NewsStory[]> {
+    let _received_for_enrich: NewsStory[] = []
+
+    while (
+      latest_news_pool.value.length < min_unique
+      && !latest_news_exhausted.value
+      && isCurrentGeneration('latest', feed_generation)
+    ) {
+      if (!latest_news_cursor.value && latest_news_pool.value.length) {
+        latest_news_exhausted.value = true
+        break
+      }
+
+      const _cursor = latest_news_cursor.value
+      const _page = await fetchLatestArticles({
+        ...filters(),
+        limit: FETCH_BATCH_SIZE,
+        cursor: _cursor
+      })
+      if (!isCurrentGeneration('latest', feed_generation)) return _received_for_enrich
+
+      const _before = latest_news_pool.value.length
+      latest_news_pool.value = appendStories(latest_news_pool.value, _page.data)
+      const _added = latest_news_pool.value.length - _before
+      _received_for_enrich = [..._received_for_enrich, ..._page.data]
+      latest_news_cursor.value = nextCursor(_page.next_cursor, _cursor, _page.data.length)
+      if (!latest_news_cursor.value) latest_news_exhausted.value = true
+      // #region agent log
+      fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'D',location:'useNewsFeed.ts:fillLatestNewsPool',message:'latest news batch',data:{append:Boolean(_cursor),received:_page.data.length,added_unique:_added,pool:latest_news_pool.value.length,min_unique,stored_cursor:Boolean(latest_news_cursor.value),exhausted:latest_news_exhausted.value},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+
+      if (!_page.data.length && _added === 0) {
+        latest_news_exhausted.value = true
+        break
+      }
+    }
+
+    return _received_for_enrich
   }
 
   async function loadTopHeadlines(append = false): Promise<void> {
     if (append && loading_top_headlines.value) return
-    if (append && !top_headlines_cursor.value) return
+    if (append && top_headlines.value.length >= top_headlines_pool.value.length && top_headlines_exhausted.value) {
+      // #region agent log
+      fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'D',location:'useNewsFeed.ts:loadTopHeadlines',message:'append skipped exhausted',data:{visible:top_headlines.value.length,pool:top_headlines_pool.value.length},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      return
+    }
 
-    const _filters = filters()
-    const _cursor = append ? top_headlines_cursor.value : null
     const _feed_generation = nextFeedGeneration('top', append)
+    if (!append) resetTopPaging()
+    const _target = append
+      ? top_headlines.value.length + DISPLAY_PAGE_SIZE
+      : DISPLAY_PAGE_SIZE
     loading_top_headlines.value = true
     top_headlines_error.value = null
+    // #region agent log
+    fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'A',location:'useNewsFeed.ts:loadTopHeadlines',message:'top headlines reveal',data:{append,target:_target,visible:top_headlines.value.length,pool:top_headlines_pool.value.length,fetch_limit:_top_fetch_limit},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     try {
-      const _page = await fetchTopHeadlines({
-        ..._filters,
-        limit: PAGE_SIZE,
-        cursor: _cursor
-      })
+      const _received = await fillTopHeadlinesPool(_target, _feed_generation)
       if (!isCurrentGeneration('top', _feed_generation)) return
 
-      const _stories = _page.data
-
-      top_headlines.value = append
-        ? appendStories(top_headlines.value, _stories)
-        : appendStories([], _stories)
-      top_headlines_cursor.value = nextCursor(
-        _page.next_cursor,
-        _cursor,
-        _page.data.length
-      )
-      void enrichStories(_stories, 'top', _feed_generation)
+      top_headlines.value = revealStories(top_headlines_pool.value, _target)
+      // #region agent log
+      fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'E',location:'useNewsFeed.ts:loadTopHeadlines',message:'top headlines visible',data:{append,visible:top_headlines.value.length,pool:top_headlines_pool.value.length,exhausted:top_headlines_exhausted.value,can_load_more:top_headlines.value.length<top_headlines_pool.value.length||!top_headlines_exhausted.value,visible_story_ids:top_headlines.value.map(story=>story.story_id||story.id)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      void enrichStories(_received, 'top', _feed_generation)
     } catch {
       if (isCurrentGeneration('top', _feed_generation)) {
         top_headlines_error.value = 'Top headlines could not be loaded right now.'
@@ -237,32 +354,21 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
 
   async function loadLatestNews(append = false): Promise<void> {
     if (append && loading_latest_news.value) return
-    if (append && !latest_news_cursor.value) return
+    if (append && latest_news.value.length >= latest_news_pool.value.length && latest_news_exhausted.value) return
 
-    const _filters = filters()
-    const _cursor = append ? latest_news_cursor.value : null
     const _feed_generation = nextFeedGeneration('latest', append)
+    if (!append) resetLatestPaging()
+    const _target = append
+      ? latest_news.value.length + DISPLAY_PAGE_SIZE
+      : DISPLAY_PAGE_SIZE
     loading_latest_news.value = true
     latest_news_error.value = null
     try {
-      const _page = await fetchLatestArticles({
-        ..._filters,
-        limit: PAGE_SIZE,
-        cursor: _cursor
-      })
+      const _received = await fillLatestNewsPool(_target, _feed_generation)
       if (!isCurrentGeneration('latest', _feed_generation)) return
 
-      const _stories = _page.data
-
-      latest_news.value = append
-        ? appendStories(latest_news.value, _stories)
-        : appendStories([], _stories)
-      latest_news_cursor.value = nextCursor(
-        _page.next_cursor,
-        _cursor,
-        _page.data.length
-      )
-      void enrichStories(_stories, 'latest', _feed_generation)
+      latest_news.value = revealStories(latest_news_pool.value, _target)
+      void enrichStories(_received, 'latest', _feed_generation)
     } catch {
       if (isCurrentGeneration('latest', _feed_generation)) {
         latest_news_error.value = 'Latest news could not be loaded right now.'
@@ -277,8 +383,8 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     nextFeedGeneration('latest', false)
     top_headlines_error.value = null
     latest_news_error.value = null
-    top_headlines_cursor.value = null
-    latest_news_cursor.value = null
+    resetTopPaging()
+    resetLatestPaging()
     if (clear_content) {
       top_headlines.value = []
       latest_news.value = []

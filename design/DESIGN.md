@@ -7,7 +7,7 @@
 - Trend Likes, Shares, Comments: render ONLY if value > 0
 - Source Favicon: Use system default if not determined
 - Article Image: Excude if not exists. Avoid system default
-- Header: | {current_date} (justify start) | {beans_favicon} Beans - (justify-center) | [search_button](/search) [api_button](https://developer.cafecito.tech/products/beans) [contact_button](https://developer.cafecito.tech/contact) - (justify-end) |
+- Header: | {current_date as `Weekday, MMM dd` with live-indicator icon} (justify start) | {beans_favicon} Beans - (justify-center) | [search_button](/search) [api_button](https://developer.cafecito.tech/products/beans) [contact_button](https://developer.cafecito.tech/contact) - (justify-end) |
 - Footer: [Cafecito](https://cafecito.tech) | [Publications](https://espresso.cafecito.tech) | [API](https://developer.cafecito.tech) | [Github](https://github.com/soumitsalman/beans-ui) | [About](/about-beans)
 
 ## Pages
@@ -17,15 +17,15 @@
 - Search page: search news/articles using semmantic search, tags, sources | route `/search`
 
 ### Home Page & Category Page
-- Top Headlines: Carousel. Exclude if empty. Fetch more when user reaches end of loaded carousel. Allow arrow and gesture scrolling. 1 item in view. Use next_cursor to load more items when scolling reaches the last item.
-- Latest news: List. Exclude if empty. Include a `More` button at the end of the list - fetch more items using next_cursor when clicked.
+- Top Headlines: Carousel titled Trending. Exclude if empty. Fetch more when user reaches end of loaded carousel. Allow arrow and gesture scrolling. Visible slides by Tailwind viewport: 1 below `md` (xs/sm), 2 at `md` and above (`md`, `lg`, `xl`). Use next_cursor to load more items when scolling reaches the last item.
+- Latest news: List titled Just In. Exclude if empty. Columns by Tailwind viewport: 1 below `md` (xs/sm), 2 at `md` and above (`md`, `lg`, `xl`). Include a `More` button at the end of the list - fetch more items using next_cursor when clicked.
 - news item: click navigate_to_story_page("/stories/{article.story_id}") if story_id != null and story_id != missing else navigate_to_original_article(article.url)
 - news item: show sources of the the article itself and the similar articles. show <=5 favicons as avatar group + total distinct sources count
 
 #### Layout
 
 ```
-Top News
+Trending
 
 +---------------------------------------+
 | image if exists                       |
@@ -40,7 +40,7 @@ Top News
 
 ---[divider]---
 
-Latest News
+Just In
 
 +-----------------------------------------------------------------------
 | image if exists | categories[0]          date trend_score
@@ -48,7 +48,7 @@ Latest News
 |                 | 2-entities 2-regions
 |                 | summary 2-line truncated
 +-----------------------------------------------------------------------
-| source_favicons_group N sources |         L likes C comments S shares
+| source_favicons_group N sources |         icon+count mentions, likes, comments (no word labels)
 +-----------------------------------------------------------------------
 ... more items
 +---------------+
@@ -57,14 +57,14 @@ Latest News
 ```
 
 ### Story Page
-- Story title,  category, regions, entities, last_published_at, summary | use title and summary of which ever top article has both
+- Story title, category, regions, entities, last_published_at, summary | use title and summary of which ever top article has both. article_count and source_count sit on the category/date row, right-aligned (`justify-end`), only when each value is > 0.
 - Propagation: timeline of (published_at, source_favicon) | show 5 items including the first_published_at and last_published_at. If there are more than 5 group the sources in between
 - Coverage (articles_count): List of articles in that story. Limit=5. Use Use next_cursor to fetch more when needed. Latest first. Click goes to article.url
 
 #### Layout
 
 ```
-[categories[0]] last_published_at
+[categories[0]] last_published_at          article_count sources_count
 title (H3)
 summary
 3 regions, 3 entities

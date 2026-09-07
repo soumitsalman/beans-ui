@@ -1,8 +1,20 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-@theme {
+@theme static {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
+
+  --color-coffee-50: #f3ebe4;
+  --color-coffee-100: #e2d0c2;
+  --color-coffee-200: #d4b49a;
+  --color-coffee-300: #c99a72;
+  --color-coffee-400: #c48654;
+  --color-coffee-500: #9a5c34;
+  --color-coffee-600: #6f4e37;
+  --color-coffee-700: #563c2a;
+  --color-coffee-800: #402d20;
+  --color-coffee-900: #2f2118;
+  --color-coffee-950: #1a130e;
 }
 
 :root {
@@ -15,6 +27,7 @@
   --ui-text: #f5f0e8;
   --ui-text-muted: #b7ab9b;
   --ui-text-dimmed: #847a70;
+  --ui-primary: var(--ui-color-primary-400);
 }
 
 html,

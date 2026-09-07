@@ -29,7 +29,7 @@ const summary_class = computed(() => props.line_limit === 3
   <!-- eslint-disable vue/no-v-html -->
   <div
     :class="[
-      'text-sm [&_a]:font-medium [&_a]:text-amber-300 [&_a]:underline [&_a]:decoration-amber-300/40 [&_a]:underline-offset-2 [&_code]:rounded [&_code]:bg-stone-800 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-stone-300',
+      'text-sm [&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a]:decoration-primary/40 [&_a]:underline-offset-2 [&_code]:rounded [&_code]:bg-stone-800 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-stone-300',
       summary_class
     ]"
     v-html="rendered_summary"

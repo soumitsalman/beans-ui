@@ -41,7 +41,7 @@ useSeoMeta({
 <template>
   <div class="space-y-7">
     <div class="max-w-2xl space-y-2 px-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-300/70">
+      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary/70">
         Discovery
       </p>
       <h1 class="text-2xl font-semibold text-stone-100 sm:text-3xl">

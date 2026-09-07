@@ -18,4 +18,4 @@ Primary data sources are Beans API and Espresso API
 - Source Label: Use `source.site_name` or `source.domain_name` or `base_url_without_scheme_prefix(article.url)`
 - `trend.trend_score` is a beans platform specific subjective value
 - `trend.mentions`, `trend.likes`, `trend.comments` are lower limit values
-- Fetch limit=5 | Use `next_cursor` to fetch more as needed
+- Fetch `limit=20` internally and reveal 5 unique `story_id`s at a time | Use `next_cursor` to fetch more as needed when that cursor returns items | `/news/top-headlines` `next_cursor` currently returns `data: []` (cursor `ts` is 0 while collection rows omit trend), so continue by expanding `limit` instead of treating that empty cursor as end-of-feed

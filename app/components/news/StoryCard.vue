@@ -3,8 +3,10 @@ import { computed, ref, resolveComponent, watch } from 'vue'
 import type { NewsStory } from '~/types/news'
 import MarkdownSummary from '~/components/news/MarkdownSummary.vue'
 import StorySourceStack from '~/components/news/StorySourceStack.vue'
+import StoryTrendCounts from '~/components/news/StoryTrendCounts.vue'
 import { formatCount, formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
 import { hasResolvableSource } from '~/utils/source'
+import { hasPositiveCount, trendSocialCounts } from '~/utils/trend'
 
 type StoryCardMode = 'compressed' | 'snapshot' | 'detailed'
 
@@ -26,12 +28,6 @@ const story_url = computed(() => props.story.story_id
 const is_external_link = computed(() => !props.story.story_id && Boolean(props.story.url))
 const is_linked = computed(() => props.linked && Boolean(story_url.value))
 const card_component = computed(() => is_linked.value ? resolveComponent('NuxtLink') : 'div')
-const SOCIAL_COUNTS = [
-  { key: 'likes', icon: 'lucide:thumbs-up', label: 'likes' },
-  { key: 'comments', icon: 'lucide:messages-square', label: 'comments' },
-  { key: 'shares', icon: 'lucide:share-2', label: 'shares' }
-] as const
-
 const primary_category = computed(() => props.story.categories.find(Boolean))
 const metadata_limit = computed(() => props.mode === 'detailed' ? 3 : 2)
 const regions = computed(() => props.story.regions.filter(Boolean).slice(0, metadata_limit.value))
@@ -55,19 +51,20 @@ const trend_label = computed(() => {
   if (trend_score.value >= 1000) return 'Rising trend activity'
   return 'Recent activity'
 })
-const social_counts = computed(() => SOCIAL_COUNTS.flatMap((item) => {
-  const value = props.story.trend?.[item.key]
-  if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return []
-
-  return [{
-    ...item,
-    display: formatCount(value)
-  }]
-}))
+const social_counts = computed(() => trendSocialCounts(props.story.trend))
 const has_source_group = computed(() => props.story.source_count > 0
   || (props.story.top_articles ?? []).some(article => hasResolvableSource(article))
   || hasResolvableSource({ source: props.story.source, url: props.story.url })
 )
+const article_count_display = computed(() => hasPositiveCount(props.story.article_count)
+  ? formatCount(props.story.article_count)
+  : undefined
+)
+const source_count_display = computed(() => hasPositiveCount(props.story.source_count)
+  ? formatCount(props.story.source_count)
+  : undefined
+)
+const show_story_counts = computed(() => Boolean(article_count_display.value || source_count_display.value))
 
 watch(() => props.story.image_url, () => {
   image_failed.value = false
@@ -82,7 +79,7 @@ watch(() => props.story.image_url, () => {
     :target="is_external_link ? '_blank' : undefined"
     :rel="is_external_link ? 'noopener noreferrer' : undefined"
     :aria-label="is_linked ? (story.title ? `Open ${story.title}` : 'Open article') : undefined"
-    class="group relative block w-full overflow-hidden rounded-lg border border-stone-800/90 bg-stone-900/60 transition-colors duration-150 hover:border-stone-700 hover:bg-stone-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+    class="group relative block w-full overflow-hidden rounded-lg border border-stone-800/90 bg-stone-900/60 transition-colors duration-150 hover:border-stone-700 hover:bg-stone-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
   >
     <template v-if="mode === 'compressed'">
       <div
@@ -102,7 +99,7 @@ watch(() => props.story.image_url, () => {
         <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
           <span
             v-if="primary_category"
-            class="max-w-40 truncate font-medium text-amber-300/80"
+            class="max-w-40 truncate font-medium text-primary/80"
           >
             {{ formatTaxonomyLabel(primary_category) }}
           </span>
@@ -115,7 +112,7 @@ watch(() => props.story.image_url, () => {
           </time>
           <span
             v-if="trend_icon"
-            class="inline-flex shrink-0 items-center text-amber-300"
+            class="inline-flex shrink-0 items-center text-primary"
             :aria-label="trend_label"
           >
             <UIcon
@@ -127,7 +124,7 @@ watch(() => props.story.image_url, () => {
         </div>
         <h3
           v-if="story.title"
-          class="line-clamp-3 text-base font-semibold leading-snug text-stone-100 transition-colors group-hover:text-amber-100"
+          class="line-clamp-3 text-base font-semibold leading-snug text-stone-100 transition-colors group-hover:text-primary"
         >
           {{ story.title }}
         </h3>
@@ -157,10 +154,14 @@ watch(() => props.story.image_url, () => {
           </UBadge>
         </div>
         <div
-          v-if="has_source_group"
-          class="border-t border-stone-800/80 pt-3"
+          v-if="has_source_group || social_counts.length"
+          class="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-stone-800/80 pt-3 text-[11px] text-stone-500"
         >
           <StorySourceStack :story="story" />
+          <StoryTrendCounts
+            :trend="story.trend"
+            class="ml-auto"
+          />
         </div>
       </div>
     </template>
@@ -184,7 +185,7 @@ watch(() => props.story.image_url, () => {
           <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
             <span
               v-if="primary_category"
-              class="max-w-36 truncate font-medium text-amber-300/80"
+              class="max-w-36 truncate font-medium text-primary/80"
             >
               {{ formatTaxonomyLabel(primary_category) }}
             </span>
@@ -197,7 +198,7 @@ watch(() => props.story.image_url, () => {
             </time>
             <span
               v-if="trend_icon"
-              class="inline-flex shrink-0 items-center text-amber-300"
+              class="inline-flex shrink-0 items-center text-primary"
               :aria-label="trend_label"
             >
               <UIcon
@@ -209,7 +210,7 @@ watch(() => props.story.image_url, () => {
           </div>
           <h3
             v-if="story.title"
-            class="mt-1.5 line-clamp-3 text-[15px] font-semibold leading-snug text-stone-100 transition-colors group-hover:text-amber-100 sm:text-base"
+            class="mt-1.5 line-clamp-3 text-[15px] font-semibold leading-snug text-stone-100 transition-colors group-hover:text-primary sm:text-base"
           >
             {{ story.title }}
           </h3>
@@ -251,32 +252,19 @@ watch(() => props.story.image_url, () => {
         class="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-stone-800/80 px-3.5 py-3 text-[11px] text-stone-500"
       >
         <StorySourceStack :story="story" />
-        <div
-          v-if="social_counts.length"
-          class="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 tabular-nums"
-        >
-          <span
-            v-for="count in social_counts"
-            :key="count.key"
-            class="inline-flex items-center gap-1"
-          >
-            <UIcon
-              :name="count.icon"
-              class="size-3"
-              aria-hidden="true"
-            />
-            {{ count.display }} {{ count.label }}
-          </span>
-        </div>
+        <StoryTrendCounts
+          :trend="story.trend"
+          class="ml-auto"
+        />
       </div>
     </template>
 
     <template v-else>
       <div class="space-y-4 p-4 sm:p-5">
-        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
+        <div class="flex w-full flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
           <span
             v-if="primary_category"
-            class="max-w-48 truncate font-medium text-amber-300/80"
+            class="max-w-48 truncate font-medium text-primary/80"
           >
             {{ formatTaxonomyLabel(primary_category) }}
           </span>
@@ -287,6 +275,23 @@ watch(() => props.story.image_url, () => {
           >
             {{ published_label }}
           </time>
+          <div
+            v-if="show_story_counts"
+            class="ml-auto flex flex-nowrap items-center justify-end gap-x-2.5 tabular-nums"
+          >
+            <span
+              v-if="article_count_display"
+              :aria-label="`${article_count_display} ${story.article_count === 1 ? 'article' : 'articles'}`"
+            >
+              {{ article_count_display }} {{ story.article_count === 1 ? 'article' : 'articles' }}
+            </span>
+            <span
+              v-if="source_count_display"
+              :aria-label="`${source_count_display} ${story.source_count === 1 ? 'source' : 'sources'}`"
+            >
+              {{ source_count_display }} {{ story.source_count === 1 ? 'source' : 'sources' }}
+            </span>
+          </div>
         </div>
         <h1
           v-if="story.title"

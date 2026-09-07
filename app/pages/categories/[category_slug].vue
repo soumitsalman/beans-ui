@@ -58,7 +58,7 @@ watch(() => route.params.category_slug, () => {
 <template>
   <div class="space-y-9">
     <div class="max-w-2xl space-y-2 px-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-300/70">
+      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary/70">
         Category
       </p>
       <h1 class="text-2xl font-semibold text-stone-100 sm:text-3xl">
@@ -71,8 +71,7 @@ watch(() => route.params.category_slug, () => {
 
     <StorySection
       v-if="loading_top_headlines || top_headlines.length || can_load_more_top_headlines || top_headlines_error"
-      title="Top headlines"
-      eyebrow="Last 24 hours"
+      title="Trending"
       :stories="top_headlines"
       mode="compressed"
       variant="carousel"
@@ -86,8 +85,7 @@ watch(() => route.params.category_slug, () => {
 
     <StorySection
       v-if="loading_latest_news || latest_news.length || can_load_more_latest_news || latest_news_error"
-      title="Latest news"
-      eyebrow="Just in"
+      title="Just In"
       :stories="latest_news"
       mode="snapshot"
       :loading="loading_latest_news"

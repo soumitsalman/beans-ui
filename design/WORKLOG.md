@@ -1,5 +1,19 @@
 # Beans UI Working Log
 
+## 2026-09-08T00:20:00Z
+
+- Category tabs stayed packed to the start of the content column, so the nav looked left-weighted on wide screens.
+- Guard: the tab row is `flex w-max min-w-full justify-between`. When the tabs fit, Now sits at the start of the content column and Politics at the end (`space-between`). When they overflow, the inner nav scrolls and the first tab stays reachable; the page does not overflow.
+- Browser CDP on `http://127.0.0.1:3000/`: 1280px `justify-content: space-between`, first/last tabs align with the header column, even ~34px gaps, no page overflow. 320px: inner nav `scrollWidth` 834 > `clientWidth` 320, `Now` visible at scroll start, `Politics` reachable at scroll end, `scrollWidth === clientWidth` on the page. Technology tab still opens `/categories/technology`; Search keeps the same row.
+- Files: `app/layouts/default.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+
+## 2026-09-08T00:15:00Z
+
+- Propagation used a fixed `w-52` step plus `min-w-max`, so the timeline side-scrolled on small screens and did not fill the story column on wide ones.
+- Guard: `UTimeline` is `w-full` with `min-w-0` flex steps; dates wrap (`break-words` / `leading-tight`); grouped avatars use `xs`. No inner `overflow-x-auto`.
+- Browser on `/stories/003d0bb7-2f23-52b4-8869-364dc7d0d7bc`: 1280px timeline width 1104 equals Coverage, 5×216px steps, no overflow. 320px timeline 288 equals Coverage, 5×53px steps, page `scrollWidth === clientWidth`.
+- Files: `app/components/news/StoryTimeline.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+
 ## 2026-09-07T23:59:00Z
 
 - Header date live icon read as a static radio glyph with no on-air presence.

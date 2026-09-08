@@ -8,6 +8,7 @@
 - Source Favicon: Use system default if not determined
 - Article Image: Excude if not exists. Avoid system default
 - Header: | {current_date as `Weekday, MMM dd` with a live-indicator icon that has a slight primary glow} (justify start) | {beans_favicon} Beans - (justify-center) | [search_button](/search) [api_button](https://developer.cafecito.tech/products/beans) [contact_button](https://developer.cafecito.tech/contact) - (justify-end) |
+- Category tabs: Now + category groups in one row across the content column (`justify-between`). Horizontal scroll only inside the tab row when they overflow; no page-level overflow.
 - Footer: [Cafecito](https://cafecito.tech) | [Publications](https://espresso.cafecito.tech) | [API](https://developer.cafecito.tech) | [Github](https://github.com/soumitsalman/beans-ui) | [About](/about-beans)
 
 ## Pages
@@ -58,7 +59,7 @@ Just In
 
 ### Story Page
 - Story title, category, regions, entities, last_published_at, summary | use title and summary of which ever top article has both. article_count and source_count sit on the category/date row, right-aligned (`justify-end`), only when each value is > 0.
-- Propagation: timeline of (published_at, source_favicon) | show 5 items including the first_published_at and last_published_at. If there are more than 5 group the sources in between
+- Propagation: timeline of (published_at, source_favicon) | show 5 items including the first_published_at and last_published_at. If there are more than 5 group the sources in between. The timeline spans the story column (`w-full`, equal flex columns) with no inner horizontal scroll.
 - Coverage (articles_count): List of articles in that story. Limit=5. Use Use next_cursor to fetch more when needed. Latest first. Click goes to article.url
 
 #### Layout

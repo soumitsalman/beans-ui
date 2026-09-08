@@ -108,19 +108,21 @@ function isActive(path: string): boolean {
         class="border-t border-stone-900"
         aria-label="News categories"
       >
-        <div class="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-5">
-          <UButton
-            v-for="item in navigation_items"
-            :key="item.to"
-            :to="item.to"
-            :color="isActive(item.to) ? 'primary' : 'neutral'"
-            :variant="isActive(item.to) ? 'soft' : 'ghost'"
-            size="xs"
-            class="shrink-0 rounded-md font-medium"
-            :aria-current="isActive(item.to) ? 'page' : undefined"
-          >
-            {{ item.label }}
-          </UButton>
+        <div class="mx-auto max-w-6xl overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-5">
+          <div class="flex w-max min-w-full justify-between gap-1">
+            <UButton
+              v-for="item in navigation_items"
+              :key="item.to"
+              :to="item.to"
+              :color="isActive(item.to) ? 'primary' : 'neutral'"
+              :variant="isActive(item.to) ? 'soft' : 'ghost'"
+              size="xs"
+              class="shrink-0 rounded-md font-medium"
+              :aria-current="isActive(item.to) ? 'page' : undefined"
+            >
+              {{ item.label }}
+            </UButton>
+          </div>
         </div>
       </nav>
     </header>

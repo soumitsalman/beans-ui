@@ -169,7 +169,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
 
       <div
         v-if="timeline_items.length"
-        class="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0"
+        class="w-full"
       >
         <UTimeline
           :items="timeline_items"
@@ -177,9 +177,11 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
           color="neutral"
           size="sm"
           :ui="{
-            root: 'min-w-max',
-            item: 'w-52',
-            date: 'text-[10px] tabular-nums text-stone-600',
+            root: 'w-full',
+            item: 'min-w-0',
+            container: 'min-w-0',
+            wrapper: 'min-w-0 pe-1.5',
+            date: 'text-[10px] leading-tight text-pretty tabular-nums text-stone-600',
             title: 'hidden',
             description: 'hidden',
             indicator: 'ring-1 ring-stone-800'
@@ -189,7 +191,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
             <UAvatarGroup
               v-if="item.articles.length > 1"
               :max="5"
-              size="sm"
+              size="xs"
               :ui="{ base: 'ring-stone-950/95' }"
             >
               <UAvatar
@@ -207,6 +209,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
               :src="sourceFavicon(item.articles[0])"
               alt="Source"
               :icon="DEFAULT_SOURCE_ICON"
+              size="xs"
               loading="eager"
               referrerpolicy="no-referrer"
             />
@@ -214,7 +217,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
           <template #wrapper="{ item }">
             <div
               v-if="item.date"
-              class="text-[10px] tabular-nums text-stone-600"
+              class="min-w-0 text-[10px] leading-tight text-pretty break-words tabular-nums text-stone-600"
             >
               {{ item.date }}
             </div>

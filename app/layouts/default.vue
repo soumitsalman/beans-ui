@@ -37,11 +37,16 @@ function isActive(path: string): boolean {
           class="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-medium tabular-nums text-stone-400 sm:text-xs"
           :aria-label="`Live, ${current_date}`"
         >
-          <UIcon
-            name="lucide:radio"
-            class="size-3 shrink-0 text-primary"
+          <span
+            class="relative inline-flex size-3.5 shrink-0 items-center justify-center"
             aria-hidden="true"
-          />
+          >
+            <span class="absolute size-2.5 animate-pulse rounded-full bg-primary/50 blur-[3px]" />
+            <UIcon
+              name="lucide:radio"
+              class="relative size-3 text-primary drop-shadow-[0_0_6px_var(--ui-primary)]"
+            />
+          </span>
           {{ current_date }}
         </time>
         <div class="flex min-w-0 flex-1 justify-center">

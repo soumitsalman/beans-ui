@@ -1,5 +1,12 @@
 # Beans UI Working Log
 
+## 2026-09-07T23:59:00Z
+
+- Header date live icon read as a static radio glyph with no on-air presence.
+- Guard: `lucide:radio` sits over a pulsing, blurred `bg-primary/50` blob plus a primary drop-shadow. Date text stays chip-free (no border, background, or box-shadow). `aria-label` remains `Live, {date}`.
+- Browser on `/` and `/categories/technology`: glow `blur(3px)` + `pulse`, icon drop-shadow coffee `rgb(196, 134, 84)`, time `borderWidth: 0` / `boxShadow: none`. 320px: `scrollWidth === clientWidth`.
+- Files: `app/layouts/default.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+
 ## 2026-09-07T15:02:00Z
 
 - Header date chip still used an inset-shadow / border that looked odd. Story `article_count` / `source_count` sat beside Back instead of on the category/date row.

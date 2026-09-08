@@ -7,7 +7,7 @@
 - Trend Likes, Shares, Comments: render ONLY if value > 0
 - Source Favicon: Use system default if not determined
 - Article Image: Excude if not exists. Avoid system default
-- Header: | {current_date as `Weekday, MMM dd` with live-indicator icon} (justify start) | {beans_favicon} Beans - (justify-center) | [search_button](/search) [api_button](https://developer.cafecito.tech/products/beans) [contact_button](https://developer.cafecito.tech/contact) - (justify-end) |
+- Header: | {current_date as `Weekday, MMM dd` with a live-indicator icon that has a slight primary glow} (justify start) | {beans_favicon} Beans - (justify-center) | [search_button](/search) [api_button](https://developer.cafecito.tech/products/beans) [contact_button](https://developer.cafecito.tech/contact) - (justify-end) |
 - Footer: [Cafecito](https://cafecito.tech) | [Publications](https://espresso.cafecito.tech) | [API](https://developer.cafecito.tech) | [Github](https://github.com/soumitsalman/beans-ui) | [About](/about-beans)
 
 ## Pages

@@ -6,10 +6,10 @@ Primary data sources are Beans API and Espresso API
 - Provides individual published items as well as clustered group of similar items.
 - Base URL: `https://cafecito-beans-api.fly.dev` | Set `X-API-KEY` header value from env var `CAFECITO-API-KEY` | [Swagger Spec](./beans.openapi.yaml)
 - Use `/news/top-headlines` for pulling in top news from the last 24 hours
-- Use `/articles/latest?content_type=news` for latest news (lacks trend data)
-- Use `/articles/trending?content_type=news` for trending news (contains trend data)
+- Use `/news/latest` for latest news (lacks trend data)
+- Use `/news/trending` for trending news (contains trend data)
 - Use `/articles/{article.id}` for details on the news article and trend data
-- Use `/articles/{article.id}/similar?content_type=news` for similar articles
+- Use `/articles/{article.id}/similar` for similar articles
 - Use `/stories/{article.story_id}` field for pulling in the story that the article belongs to
 - Use `/stories/{article.story_id}/articles?content_type=news` for news coverage in that story
 - Use `article.story_id` field to deduplicate articles. If `story_id` is null or missing, treat it as its own cluster/unique
@@ -19,3 +19,27 @@ Primary data sources are Beans API and Espresso API
 - `trend.trend_score` is a beans platform specific subjective value
 - `trend.mentions`, `trend.likes`, `trend.comments` are lower limit values
 - Fetch `limit=20` internally and reveal 5 unique `story_id`s at a time | Use `next_cursor` to fetch more as needed when that cursor returns items | `/news/top-headlines` `next_cursor` currently returns `data: []` (cursor `ts` is 0 while collection rows omit trend), so continue by expanding `limit` instead of treating that empty cursor as end-of-feed
+- Use mandatory query param `languages`. Supported languages in Beans UI
+```csv
+"en"
+"en-ae"
+"en-at"
+"en-au"
+"en-be"
+"en-ca"
+"en-de"
+"en-en"
+"en-gb"
+"en-ie"
+"en-in"
+"en-mt"
+"en-nz"
+"en-pk"
+"en-se"
+"en-sg"
+"en-sv"
+"en-uk"
+"en-us"
+"en-za"
+"english"
+```

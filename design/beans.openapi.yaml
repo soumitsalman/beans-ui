@@ -25,8 +25,6 @@ definitions:
       content:
         type: string
       content_type:
-        description: Kind is the stored Article type. post may appear in responses
-          but is not a valid request filter.
         enum:
         - blog
         - contract
@@ -52,6 +50,8 @@ definitions:
         format: uuid
         type: string
       image_url:
+        type: string
+      language:
         type: string
       links:
         $ref: '#/definitions/router.ArticleLinks'
@@ -102,8 +102,6 @@ definitions:
       content:
         type: string
       content_type:
-        description: Kind is the stored Article type. post may appear in responses
-          but is not a valid request filter.
         enum:
         - blog
         - contract
@@ -129,6 +127,8 @@ definitions:
         format: uuid
         type: string
       image_url:
+        type: string
+      language:
         type: string
       published_at:
         format: date-time
@@ -376,6 +376,8 @@ definitions:
         type: array
       source_count:
         type: integer
+      summary:
+        type: string
       tags:
         items:
           type: string
@@ -420,6 +422,8 @@ definitions:
         type: array
       source_count:
         type: integer
+      summary:
+        type: string
       tags:
         items:
           type: string
@@ -710,6 +714,15 @@ paths:
           type: string
         name: tags
         type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV). Any listed value matches.
+          A stored language matches if it equals a listed code or starts with that
+          code.
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
       - description: UTC lower timestamp bound.
         format: date
         in: query
@@ -778,7 +791,7 @@ paths:
         minimum: 0
         name: score_threshold
         type: number
-      - description: Filterable Article type. post is response-only and returns 400.
+      - description: Filterable Article type.
         enum:
         - blog
         - contract
@@ -873,6 +886,15 @@ paths:
         items:
           type: string
         name: tags
+        type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV). Any listed value matches.
+          A stored language matches if it equals a listed code or starts with that
+          code.
+        in: query
+        items:
+          type: string
+        name: languages
         type: array
       - default: false
         description: Include content when available.
@@ -1038,6 +1060,15 @@ paths:
           type: string
         name: tags
         type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV). Any listed value matches.
+          A stored language matches if it equals a listed code or starts with that
+          code.
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
       - description: UTC lower timestamp bound.
         format: date
         in: query
@@ -1103,7 +1134,7 @@ paths:
         minimum: 0
         name: score_threshold
         type: number
-      - description: Filterable Article type. post is response-only and returns 400.
+      - description: Filterable Article type.
         enum:
         - blog
         - contract
@@ -1198,6 +1229,15 @@ paths:
         items:
           type: string
         name: tags
+        type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV). Any listed value matches.
+          A stored language matches if it equals a listed code or starts with that
+          code.
+        in: query
+        items:
+          type: string
+        name: languages
         type: array
       - default: false
         description: Include content when available.
@@ -1334,6 +1374,147 @@ paths:
       summary: Check API health
       tags:
       - Health
+  /news/latest:
+    get:
+      description: Returns news Articles ordered newest first. Equivalent to /articles/latest?content_type=news.
+        content_type and date bounds are not accepted.
+      operationId: getLatestNews
+      parameters:
+      - description: Optional relevance query. Requires score_threshold greater than
+          zero.
+        in: query
+        maxLength: 512
+        name: q
+        type: string
+      - description: Required when q is supplied.
+        in: query
+        maximum: 1
+        minimum: 0
+        name: score_threshold
+        type: number
+      - collectionFormat: csv
+        description: Source UUIDs to include (CSV).
+        in: query
+        items:
+          type: string
+        name: sources
+        type: array
+      - collectionFormat: csv
+        description: Source UUIDs to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_sources
+        type: array
+      - collectionFormat: csv
+        description: Source domains to include (CSV).
+        in: query
+        items:
+          type: string
+        name: domains
+        type: array
+      - collectionFormat: csv
+        description: Source domains to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_domains
+        type: array
+      - collectionFormat: csv
+        description: Author text filters (CSV).
+        in: query
+        items:
+          type: string
+        name: authors
+        type: array
+      - collectionFormat: csv
+        description: Category values (CSV).
+        in: query
+        items:
+          type: string
+        name: categories
+        type: array
+      - collectionFormat: csv
+        description: Excluded category values (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_categories
+        type: array
+      - collectionFormat: csv
+        description: Region values (CSV).
+        in: query
+        items:
+          type: string
+        name: regions
+        type: array
+      - collectionFormat: csv
+        description: Entity values (CSV).
+        in: query
+        items:
+          type: string
+        name: entities
+        type: array
+      - collectionFormat: csv
+        description: Sentiment values (CSV).
+        in: query
+        items:
+          type: string
+        name: sentiments
+        type: array
+      - collectionFormat: csv
+        description: Normalized tag terms (CSV).
+        in: query
+        items:
+          type: string
+        name: tags
+        type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV). Any listed value matches.
+          A stored language matches if it equals a listed code or starts with that
+          code.
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
+      - default: false
+        description: Include content when available.
+        in: query
+        name: full_content
+        type: boolean
+      - default: 20
+        description: Maximum records per page. Default 20, max 100.
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Opaque continuation token from pagination.next_cursor. Send it
+          unchanged.
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.ArticleCollectionResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+        "500":
+          description: Service unavailable
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+      security:
+      - BackendAPIKey: []
+      summary: List latest news
+      tags:
+      - Articles
   /news/top-headlines:
     get:
       description: Returns news Articles from the recent 24-hour window, ordered by
@@ -1429,6 +1610,15 @@ paths:
           type: string
         name: tags
         type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV). Any listed value matches.
+          A stored language matches if it equals a listed code or starts with that
+          code.
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
       - default: false
         description: Include content when available.
         in: query
@@ -1464,6 +1654,148 @@ paths:
       security:
       - BackendAPIKey: []
       summary: List top headlines
+      tags:
+      - Articles
+  /news/trending:
+    get:
+      description: Returns attention-ranked news Articles with trend metrics when
+        available. Equivalent to /articles/trending?content_type=news. content_type
+        and date bounds are not accepted.
+      operationId: getTrendingNews
+      parameters:
+      - description: Optional relevance query. Requires score_threshold greater than
+          zero.
+        in: query
+        maxLength: 512
+        name: q
+        type: string
+      - description: Required when q is supplied.
+        in: query
+        maximum: 1
+        minimum: 0
+        name: score_threshold
+        type: number
+      - collectionFormat: csv
+        description: Source UUIDs to include (CSV).
+        in: query
+        items:
+          type: string
+        name: sources
+        type: array
+      - collectionFormat: csv
+        description: Source UUIDs to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_sources
+        type: array
+      - collectionFormat: csv
+        description: Source domains to include (CSV).
+        in: query
+        items:
+          type: string
+        name: domains
+        type: array
+      - collectionFormat: csv
+        description: Source domains to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_domains
+        type: array
+      - collectionFormat: csv
+        description: Author text filters (CSV).
+        in: query
+        items:
+          type: string
+        name: authors
+        type: array
+      - collectionFormat: csv
+        description: Category values (CSV).
+        in: query
+        items:
+          type: string
+        name: categories
+        type: array
+      - collectionFormat: csv
+        description: Excluded category values (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_categories
+        type: array
+      - collectionFormat: csv
+        description: Region values (CSV).
+        in: query
+        items:
+          type: string
+        name: regions
+        type: array
+      - collectionFormat: csv
+        description: Entity values (CSV).
+        in: query
+        items:
+          type: string
+        name: entities
+        type: array
+      - collectionFormat: csv
+        description: Sentiment values (CSV).
+        in: query
+        items:
+          type: string
+        name: sentiments
+        type: array
+      - collectionFormat: csv
+        description: Normalized tag terms (CSV).
+        in: query
+        items:
+          type: string
+        name: tags
+        type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV). Any listed value matches.
+          A stored language matches if it equals a listed code or starts with that
+          code.
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
+      - default: false
+        description: Include content when available.
+        in: query
+        name: full_content
+        type: boolean
+      - default: 20
+        description: Maximum records per page. Default 20, max 100.
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Opaque continuation token from pagination.next_cursor. Send it
+          unchanged.
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.ArticleCollectionResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+        "500":
+          description: Service unavailable
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+      security:
+      - BackendAPIKey: []
+      summary: List trending news
       tags:
       - Articles
   /regions:
@@ -1755,6 +2087,15 @@ paths:
           type: string
         name: tags
         type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV). Any listed value matches.
+          A stored language matches if it equals a listed code or starts with that
+          code.
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
       - default: 2
         description: Minimum Story Article count. Default 2.
         in: query
@@ -1946,6 +2287,15 @@ paths:
         items:
           type: string
         name: tags
+        type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV). Any listed value matches.
+          A stored language matches if it equals a listed code or starts with that
+          code.
+        in: query
+        items:
+          type: string
+        name: languages
         type: array
       - description: UTC lower publication timestamp.
         format: date

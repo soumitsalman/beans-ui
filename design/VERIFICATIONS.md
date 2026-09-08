@@ -1,4 +1,5 @@
-## Verification scope
+| Fly Docker image |  +   8080 | Image is built and the process starts | Nitro listens on . Homepage is SSR (not a builder-time prerender). API key is not in image layers;  / base URL env vars reach server  via . |
+| Runtime route and content-load logging | A deployed request, SPA navigation, initial feed load, and feed/story continuation load | The app serves the route and the user loads more content | Fly logs contain structured route request/response records and client page/content-load records with route, surface, feed, action, outcome, and counts; search text, cursors, and API keys are not logged. |## Verification scope
 
 Verify the mobile-first Nuxt UI and its public discoverability surfaces. Beans and Espresso remain external data sources behind the existing same-origin proxies; this document does not authorize API or backend changes.
 
@@ -176,6 +177,7 @@ Verify the mobile-first Nuxt UI and its public discoverability surfaces. Beans a
 | Coverage trend overlay | `/stories/{id}/articles` omits `trend` while matching `/articles/{id}` has positive mentions/likes/comments | Story Coverage loads | Rows overlay detail `trend` only; positive counts render; collection title, url, summary, and image stay; zero/missing counts stay hidden. |
 | Beans API base URL env | `.env` sets `BEANS_API_BASE_URL` to a local origin, and a later run omits it or leaves it blank | The Beans proxy is requested | Requests go to the env origin; when unset or blank they go to `https://cafecito-beans-api.fly.dev`. The URL is absent from client runtime config. |
 | Fly Docker image | `Dockerfile` + `fly.toml` `internal_port` 8080 | Image is built and the process starts | Nitro listens on `0.0.0.0:8080`. Homepage is SSR (not a builder-time prerender). API key is not in image layers; `CAFECITO_API_KEY` / base URL env vars reach server `runtimeConfig` via `NUXT_*`. |
+| Runtime route and content-load logging | A deployed request, SPA navigation, initial feed load, and feed/story continuation load | The app serves the route and the user loads more content | Fly logs contain structured route request/response records and client page/content-load records with route, surface, feed, action, outcome, and counts; search text, cursors, and API keys are not logged. |
 
 ## Verification gates
 

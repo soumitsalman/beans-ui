@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import type { NewsSource, NewsStory } from '~/types/news'
 import { normaliseTagInput } from '~/utils/formatters'
 import { hasTrendPayload, overlayArticleTrend } from '~/utils/trend'
+import { logClientEvent } from '~/utils/telemetry'
 
 const PAGE_SIZE = 5
 const RELEVANCE_SCORE_THRESHOLD = 0
@@ -79,6 +80,7 @@ function hasUnresolvedSources(criteria: SearchCriteria): boolean {
 
 export function useSearchFeed() {
   const { fetchArticle, fetchSearchArticles, fetchSources } = useBeansApi()
+  const route = useRoute()
   const results = ref<NewsStory[]>([])
   const source_matches = ref<NewsSource[]>([])
   const next_cursor = ref<string | null>(null)
@@ -173,6 +175,7 @@ export function useSearchFeed() {
     if (hasUnresolvedSources(_criteria)) return
 
     const _cursor = append ? next_cursor.value : null
+    const _before_count = results.value.length
     loading_results.value = true
     error_message.value = null
     last_attempt_append.value = append
@@ -194,12 +197,36 @@ export function useSearchFeed() {
         ? _page.next_cursor
         : null
       void enrichSearchStories(_page.data, search_generation)
+      logClientEvent({
+        event: 'content_load',
+        path: route.path,
+        surface: 'search',
+        feed: 'search_results',
+        action: append ? 'more' : 'initial',
+        outcome: 'success',
+        cursor_present: Boolean(_cursor),
+        requested_count: PAGE_SIZE,
+        received_count: _page.data.length,
+        visible_count: results.value.length
+      })
     } catch {
       if (isCurrentSearchGeneration(search_generation)) {
         const _label = submittedCriteriaLabel(_criteria)
         error_message.value = _label
           ? `Search results could not be loaded for ${_label}.`
           : 'Search results could not be loaded right now.'
+        logClientEvent({
+          event: 'content_load',
+          path: route.path,
+          surface: 'search',
+          feed: 'search_results',
+          action: append ? 'more' : 'initial',
+          outcome: 'error',
+          cursor_present: Boolean(_cursor),
+          requested_count: PAGE_SIZE,
+          received_count: 0,
+          visible_count: _before_count
+        })
       }
     } finally {
       if (isCurrentSearchGeneration(search_generation)) loading_results.value = false

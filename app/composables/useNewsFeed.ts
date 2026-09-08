@@ -3,6 +3,7 @@ import type { MaybeRef } from 'vue'
 import type { NewsCategory } from '~/settings/categories'
 import type { NewsArticle, NewsStory, NewsTrend } from '~/types/news'
 import { sourceIdentity } from '~/utils/source'
+import { logClientEvent } from '~/utils/telemetry'
 
 const DISPLAY_PAGE_SIZE = 5
 const FETCH_BATCH_SIZE = 20
@@ -14,6 +15,7 @@ interface FeedFilters {
 
 export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
   const { fetchArticle, fetchLatestArticles, fetchSimilarArticles, fetchStory, fetchTopHeadlines } = useBeansApi()
+  const route = useRoute()
   const top_headlines = ref<NewsStory[]>([])
   const latest_news = ref<NewsStory[]>([])
   const top_headlines_pool = ref<NewsStory[]>([])
@@ -35,6 +37,29 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
   let _top_feed_generation = 0
   let _latest_feed_generation = 0
   let _top_fetch_limit = FETCH_BATCH_SIZE
+
+  function logFeedLoad(
+    feed: 'top_headlines' | 'latest_news',
+    append: boolean,
+    outcome: 'success' | 'error',
+    requested_count: number,
+    received_count: number,
+    visible_count: number,
+    cursor_present: boolean
+  ): void {
+    logClientEvent({
+      event: 'content_load',
+      path: route.path,
+      surface: active_category.value ? 'category' : 'home',
+      feed,
+      action: append ? 'more' : 'initial',
+      outcome,
+      requested_count,
+      received_count,
+      visible_count,
+      cursor_present
+    })
+  }
 
   function filters(): FeedFilters {
     return {
@@ -318,6 +343,7 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     const _target = append
       ? top_headlines.value.length + DISPLAY_PAGE_SIZE
       : DISPLAY_PAGE_SIZE
+    const _before_count = top_headlines.value.length
     loading_top_headlines.value = true
     top_headlines_error.value = null
     try {
@@ -326,9 +352,27 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
 
       top_headlines.value = revealStories(top_headlines_pool.value, _target)
       void enrichStories(_received, 'top', _feed_generation)
+      logFeedLoad(
+        'top_headlines',
+        append,
+        'success',
+        _target,
+        _received.length,
+        top_headlines.value.length,
+        false
+      )
     } catch {
       if (isCurrentGeneration('top', _feed_generation)) {
         top_headlines_error.value = 'Top headlines could not be loaded right now.'
+        logFeedLoad(
+          'top_headlines',
+          append,
+          'error',
+          _target,
+          0,
+          _before_count,
+          false
+        )
       }
     } finally {
       if (isCurrentGeneration('top', _feed_generation)) loading_top_headlines.value = false
@@ -344,6 +388,8 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     const _target = append
       ? latest_news.value.length + DISPLAY_PAGE_SIZE
       : DISPLAY_PAGE_SIZE
+    const _before_count = latest_news.value.length
+    const _cursor_present = Boolean(latest_news_cursor.value)
     loading_latest_news.value = true
     latest_news_error.value = null
     try {
@@ -352,9 +398,27 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
 
       latest_news.value = revealStories(latest_news_pool.value, _target)
       void enrichStories(_received, 'latest', _feed_generation)
+      logFeedLoad(
+        'latest_news',
+        append,
+        'success',
+        _target,
+        _received.length,
+        latest_news.value.length,
+        _cursor_present
+      )
     } catch {
       if (isCurrentGeneration('latest', _feed_generation)) {
         latest_news_error.value = 'Latest news could not be loaded right now.'
+        logFeedLoad(
+          'latest_news',
+          append,
+          'error',
+          _target,
+          0,
+          _before_count,
+          _cursor_present
+        )
       }
     } finally {
       if (isCurrentGeneration('latest', _feed_generation)) loading_latest_news.value = false

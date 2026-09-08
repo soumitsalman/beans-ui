@@ -1,5 +1,16 @@
 # Beans UI Working Log
 
+## 2026-09-08T19:11:41Z
+
+- Added structured Fly-visible observability for route visits and content loading. Server access logs record sanitized request/response paths, methods, status codes, and durations; client telemetry records SPA page views and initial versus more content loads for home, category, search, and story Coverage.
+- Guard: telemetry records paths, surfaces, feeds, actions, outcomes, and item counts only. Query strings, search text, cursors, user identity, and API keys are excluded.
+- Added the telemetry verification case and validated the endpoint locally with a synthetic search path containing a query; the logged path was `/search` only.
+- Verification: `corepack pnpm lint`, `corepack pnpm typecheck`, and `corepack pnpm build` pass.
+
+Code snapshot SHA-256: `f5ec519c68a5fd7f9f21016eb2cb4b5ec65ae3cc16848dd630deec81efdfc61d`
+
+Hash inputs: 38 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
 ## 2026-09-08T15:47:20Z
 
 - Added a configurable public site origin (`NUXT_PUBLIC_SITE_URL`) and site-wide canonical, Open Graph, and Twitter metadata. Organization and WebSite JSON-LD now identify Beans as a Project Cafecito web property.

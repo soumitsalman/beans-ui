@@ -4,6 +4,7 @@ import StoryCard from '~/components/news/StoryCard.vue'
 import StoryTimeline from '~/components/news/StoryTimeline.vue'
 import type { NewsArticle, NewsStory } from '~/types/news'
 import { hasTrendPayload, overlayArticleTrend } from '~/utils/trend'
+import { logClientEvent } from '~/utils/telemetry'
 
 const PAGE_SIZE = 5
 
@@ -214,9 +215,23 @@ async function loadStory(): Promise<void> {
 async function loadMoreArticles(): Promise<void> {
   if (!articles_cursor.value || loading_more_articles.value) return
 
+  const _before_count = coverage_articles.value.length
+  const _cursor_present = Boolean(articles_cursor.value)
   loading_more_articles.value = true
   try {
     await loadCoverage()
+    logClientEvent({
+      event: 'content_load',
+      path: route.path,
+      surface: 'story',
+      feed: 'story_coverage',
+      action: 'more',
+      outcome: coverage_error.value ? 'error' : 'success',
+      cursor_present: _cursor_present,
+      requested_count: PAGE_SIZE,
+      received_count: Math.max(0, coverage_articles.value.length - _before_count),
+      visible_count: coverage_articles.value.length
+    })
   } finally {
     loading_more_articles.value = false
   }

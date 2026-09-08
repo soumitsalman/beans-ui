@@ -4,42 +4,18 @@ Primary data sources are Beans API and Espresso API
 ### Beans API
 - Provides publisher contents like news, blogs, earnings_report, press_release, whitepapers etc. 
 - Provides individual published items as well as clustered group of similar items.
-- Base URL: `https://cafecito-beans-api.fly.dev` | Set `X-API-KEY` header value from env var `CAFECITO-API-KEY` | [Swagger Spec](./beans.openapi.yaml)
-- Use `/news/top-headlines` for pulling in top news from the last 24 hours
-- Use `/news/latest` for latest news (lacks trend data)
-- Use `/news/trending` for trending news (contains trend data)
+- Base URL: env var `BEANS_API_BASE_URL` (default `https://cafecito-beans-api.fly.dev`; runtime override `NUXT_BEANS_API_BASE_URL`) | Set `X-API-KEY` header value from env var `CAFECITO_API_KEY` | [Swagger Spec](./beans.openapi.yaml)
+- Use `/news/top-headlines?languages=en` for pulling in top news from the last 24 hours
+- Use `/news/latest?languages=en` for latest news (lacks trend data)
+- Use `/news/trending?languages=en` for trending news (contains trend data)
 - Use `/articles/{article.id}` for details on the news article and trend data
 - Use `/articles/{article.id}/similar` for similar articles
 - Use `/stories/{article.story_id}` field for pulling in the story that the article belongs to
-- Use `/stories/{article.story_id}/articles?content_type=news` for news coverage in that story
+- Use `/stories/{article.story_id}/articles` for news coverage in that story
 - Use `article.story_id` field to deduplicate articles. If `story_id` is null or missing, treat it as its own cluster/unique
-- Story Title & Summary: Use article that has the longest summary and title
+- Story Title, Summary, and Top Articles: Use `title`, `summary`, and `top_articles` from `/stories/{id}` as returned.
 - Source Favicon: Use `source.favicon` or `https://www.google.com/s2/favicons?domain={article.url}`
 - Source Label: Use `source.site_name` or `source.domain_name` or `base_url_without_scheme_prefix(article.url)`
 - `trend.trend_score` is a beans platform specific subjective value
 - `trend.mentions`, `trend.likes`, `trend.comments` are lower limit values
 - Fetch `limit=20` internally and reveal 5 unique `story_id`s at a time | Use `next_cursor` to fetch more as needed when that cursor returns items | `/news/top-headlines` `next_cursor` currently returns `data: []` (cursor `ts` is 0 while collection rows omit trend), so continue by expanding `limit` instead of treating that empty cursor as end-of-feed
-- Use mandatory query param `languages`. Supported languages in Beans UI
-```csv
-"en"
-"en-ae"
-"en-at"
-"en-au"
-"en-be"
-"en-ca"
-"en-de"
-"en-en"
-"en-gb"
-"en-ie"
-"en-in"
-"en-mt"
-"en-nz"
-"en-pk"
-"en-se"
-"en-sg"
-"en-sv"
-"en-uk"
-"en-us"
-"en-za"
-"english"
-```

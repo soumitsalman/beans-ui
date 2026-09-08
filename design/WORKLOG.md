@@ -1,5 +1,79 @@
 # Beans UI Working Log
 
+## 2026-09-08T15:47:20Z
+
+- Added a configurable public site origin (`NUXT_PUBLIC_SITE_URL`) and site-wide canonical, Open Graph, and Twitter metadata. Organization and WebSite JSON-LD now identify Beans as a Project Cafecito web property.
+- Added About Beans SoftwareApplication JSON-LD and tightened its product copy: Beans presents source-linked publisher snapshots and discovery context; it does not republish articles or claim to verify their truth.
+- Added runtime `/robots.txt`, `/sitemap.xml`, and `/llms.txt` routes. They use the public site origin, block internal `/api/` routes from crawlers, list stable category pages, and direct programmatic or freshness-sensitive work to the Beans API documentation.
+- Updated README, deployment/example configuration, and verification criteria to document the public crawlability and AI-agent surfaces.
+- Verification: local ESLint passes. The Fly-equivalent production output served `/about-beans`, `/robots.txt`, `/sitemap.xml`, and `/llms.txt`; canonical, Open Graph/Twitter metadata, and `Organization`/`WebSite`/`SoftwareApplication` JSON-LD rendered and parsed. Nuxt typecheck remains blocked by the existing `MarkdownSummary.vue` missing `markdown-it` declaration.
+
+Code snapshot SHA-256: `13bd805ed9c5c343959e651ac4ea62d14dd5e56af3c06c61c08f7935aaad995c`
+
+Hash inputs: 33 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
+## 2026-09-08T15:22:57Z
+
+- Rebuilt About Beans around four explicit sections: the publisher-news snapshot, the broader public Beans API, source-correlated discovery, and the Project Cafecito product lineup.
+- Clarified that Beans presents and links to original publisher reporting, while Espresso Publications publishes editorial/opinion analysis derived from market events and signals. Correlation is presented as supporting context rather than proof of truth.
+- Added safe external calls to action for the Beans API, Espresso, and the Cafecito product catalog, plus mobile-first verification criteria.
+- Browser verification: desktop renders the product cards in two columns; 320px renders one column with no page or card overflow. The page exposes one H1, all four requested sections, safe external-link attributes, and no console errors.
+- Static checks: ESLint and the Nuxt production build pass. Nuxt typecheck remains blocked by the existing `MarkdownSummary.vue` error: TypeScript cannot resolve `markdown-it` or its declarations.
+- Files: `app/pages/about-beans.vue`, `design/VERIFICATIONS.md`.
+
+Code snapshot SHA-256: `b1880dc1a22acc7b498d3a07756c4666eac395e3ab82d69b280d0d75cb85233e`
+
+Hash inputs: 30 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
+## 2026-09-08T14:23:00Z
+
+- Removed leftover agent debug ingest hooks from the home feed composable (localhost:7380 POSTs).
+- Guard: `useNewsFeed` no longer posts to `/ingest/...` from `fillTopHeadlinesPool`, `fillLatestNewsPool`, or `loadTopHeadlines`.
+- Files: `app/composables/useNewsFeed.ts`.
+
+## 2026-09-08T14:10:00Z
+
+- Story Coverage and Propagation still sent `languages=en` on `/stories/{id}/articles`, which hid non-English members of the same story.
+- Guard: `fetchStoryArticles` calls `/stories/{story_id}/articles` with `limit`/`cursor` only. It does not send `languages` or `content_type`. Home news collections still send `languages=en`.
+- Browser on `/stories/003d0bb7-2f23-52b4-8869-364dc7d0d7bc`: Coverage includes unfiltered members (bears/Rockies, KFC, Rhode Island, WBUR). `More` requested `/api/beans/stories/{id}/articles?limit=5&cursor=…` with no `languages` and no `content_type`. Story heading stayed the API title/summary.
+- Files: `app/composables/useBeansApi.ts`, `design/VERIFICATIONS.md`.
+
+## 2026-09-08T14:05:00Z
+
+- Added a Fly.io multi-stage Dockerfile (pnpm, Nitro `node-server`, listen on 8080) and `.dockerignore`. Runtime image is only `.output`, non-root.
+- Guard: Docker build sets `NUXT_SKIP_HOME_PRERENDER=1` so `/` is not prerendered without Flycast/API secrets. Container maps `CAFECITO_API_KEY` / `BEANS_API_BASE_URL` / `ESPRESSO_API_BASE_URL` onto `NUXT_*` runtimeConfig overrides. `fly.toml` sets `HOST`/`PORT` to match `http_service.internal_port`.
+- Files: `Dockerfile`, `.dockerignore`, `nuxt.config.ts`, `fly.toml`, `design/VERIFICATIONS.md`.
+
+## 2026-09-08T13:54:42Z
+
+- Replaced the ten narrow category tabs with eight general-news groups: Tech & Innovation, Business & Markets, Science & Health, Climate & Energy, World, Politics & Society, Culture & Lifestyle, Security & Defense, and Industry & Infrastructure.
+- Each slug is the kebab-case form of its label. Crypto, blockchain, and DeFi now belong to Business & Markets; the former technology and hardware/robotics/space groups are consolidated under Tech & Innovation; culture and lifestyle are consolidated.
+- Preserved every 119 underlying category value exactly once. Updated DESIGN.md so its Category Map matches the UI taxonomy.
+- Verified category-value set equality against the tracked baseline; lint and production build pass. Nuxt typecheck remains blocked by the existing missing markdown-it module declaration in app/components/news/MarkdownSummary.vue.
+
+Code snapshot SHA-256: `308cb4219247ed299d7c0faa7806b5f2c8395072c7cae4546250343377d007f9`
+
+Hash inputs: 30 application and configuration files under app/, server/, nuxt.config.ts, and eslint.config.mjs; paths and file bytes are hashed in lexical path order.
+
+## 2026-09-08T13:42:00Z
+
+- Beans (and Espresso) API origins were baked in at config-eval time via `import.meta.env`, so a `.env` `BEANS_API_BASE_URL` never reached the server proxy.
+- Guard: server-only `runtimeConfig` reads `process.env.BEANS_API_BASE_URL` / `ESPRESSO_API_BASE_URL` (blank falls back to the fly.dev hosts). Proxies call `useRuntimeConfig(event)` so `NUXT_BEANS_API_BASE_URL` still overrides at runtime. `.env.example` documents the vars.
+- Files: `nuxt.config.ts`, `server/api/beans/[...path].get.ts`, `server/api/espresso/[...path].get.ts`, `.env.example`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+
+## 2026-09-08T13:40:00Z
+
+- `/stories/{id}` now returns a cleaned `title`, `summary`, and `top_articles`. The UI was still picking the longest article title/summary pair and overwriting that copy when Coverage loaded.
+- Guard: `toNewsStory` maps story `title` and `summary` from the story payload. Story detail no longer rewrites title/summary from Coverage, Propagation, or `top_articles`. Missing titles stay empty (no Untitled copy).
+- Browser on `/stories/003d0bb7-2f23-52b4-8869-364dc7d0d7bc`: heading and SEO title stay the story `title` (`Loose Women star Judi Love…`); summary stays the story `summary` (`Comedian lived in social housing…`). Coverage rows (North Korea, amusement parks, Fox host, and the next page after `More`) do not replace that copy. Unrelated `top_articles` titles (bears/Rockies) are not used as the story heading.
+- Files: `app/composables/useBeansApi.ts`, `app/types/news.ts`, `app/pages/stories/[story_id].vue`, `design/DATASOURCES.md`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+
+## 2026-09-08T13:27:00Z
+
+- DATASOURCES news routes now require `languages=en`. Latest was still hitting `/articles/latest` with `content_type=news`, and Coverage used `content_type=news` instead of language.
+- Guard: Beans collection helpers always send `languages=en` for `/news/top-headlines`, `/news/latest`, `/news/trending`, and `/stories/{id}/articles`. Latest News uses `/news/latest`. Coverage no longer sends `content_type`. Trending is available as `fetchTrendingNews`.
+- Files: `app/composables/useBeansApi.ts`, `app/types/news.ts`, `design/VERIFICATIONS.md`.
+
 ## 2026-09-08T00:20:00Z
 
 - Category tabs stayed packed to the start of the content column, so the nav looked left-weighted on wide screens.

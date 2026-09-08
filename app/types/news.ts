@@ -41,6 +41,7 @@ export interface BeansArticle {
 export interface BeansStory {
   id?: string | null
   title?: string | null
+  summary?: string | null
   article_count?: number | null
   source_count?: number | null
   first_published_at?: string | null
@@ -119,6 +120,7 @@ export interface BeansPageParams {
   regions?: string[]
   entities?: string[]
   content_type?: string
+  languages?: string | string[]
   from?: string
   to?: string
 }

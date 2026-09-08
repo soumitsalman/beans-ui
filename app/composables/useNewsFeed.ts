@@ -246,9 +246,6 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
       const _added = top_headlines_pool.value.length - _before
       _received_for_enrich = [..._received_for_enrich, ..._page.data]
       const _short_page = _page.data.length < _top_fetch_limit
-      // #region agent log
-      fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'D',location:'useNewsFeed.ts:fillTopHeadlinesPool',message:'top headlines batch',data:{fetch_limit:_top_fetch_limit,received:_page.data.length,added_unique:_added,pool:top_headlines_pool.value.length,min_unique,short_page:_short_page,api_next_cursor:Boolean(_page.next_cursor),story_ids:_page.data.map(story=>story.story_id||story.id)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       if (_short_page) {
         top_headlines_exhausted.value = true
@@ -302,9 +299,6 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
       _received_for_enrich = [..._received_for_enrich, ..._page.data]
       latest_news_cursor.value = nextCursor(_page.next_cursor, _cursor, _page.data.length)
       if (!latest_news_cursor.value) latest_news_exhausted.value = true
-      // #region agent log
-      fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'D',location:'useNewsFeed.ts:fillLatestNewsPool',message:'latest news batch',data:{append:Boolean(_cursor),received:_page.data.length,added_unique:_added,pool:latest_news_pool.value.length,min_unique,stored_cursor:Boolean(latest_news_cursor.value),exhausted:latest_news_exhausted.value},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       if (!_page.data.length && _added === 0) {
         latest_news_exhausted.value = true
@@ -317,12 +311,7 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
 
   async function loadTopHeadlines(append = false): Promise<void> {
     if (append && loading_top_headlines.value) return
-    if (append && top_headlines.value.length >= top_headlines_pool.value.length && top_headlines_exhausted.value) {
-      // #region agent log
-      fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'D',location:'useNewsFeed.ts:loadTopHeadlines',message:'append skipped exhausted',data:{visible:top_headlines.value.length,pool:top_headlines_pool.value.length},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      return
-    }
+    if (append && top_headlines.value.length >= top_headlines_pool.value.length && top_headlines_exhausted.value) return
 
     const _feed_generation = nextFeedGeneration('top', append)
     if (!append) resetTopPaging()
@@ -331,17 +320,11 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
       : DISPLAY_PAGE_SIZE
     loading_top_headlines.value = true
     top_headlines_error.value = null
-    // #region agent log
-    fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'A',location:'useNewsFeed.ts:loadTopHeadlines',message:'top headlines reveal',data:{append,target:_target,visible:top_headlines.value.length,pool:top_headlines_pool.value.length,fetch_limit:_top_fetch_limit},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     try {
       const _received = await fillTopHeadlinesPool(_target, _feed_generation)
       if (!isCurrentGeneration('top', _feed_generation)) return
 
       top_headlines.value = revealStories(top_headlines_pool.value, _target)
-      // #region agent log
-      fetch('http://127.0.0.1:7380/ingest/4da13bf0-992f-4dfa-bae4-6a0606aa2da2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c1c023'},body:JSON.stringify({sessionId:'c1c023',runId:'post-fix',hypothesisId:'E',location:'useNewsFeed.ts:loadTopHeadlines',message:'top headlines visible',data:{append,visible:top_headlines.value.length,pool:top_headlines_pool.value.length,exhausted:top_headlines_exhausted.value,can_load_more:top_headlines.value.length<top_headlines_pool.value.length||!top_headlines_exhausted.value,visible_story_ids:top_headlines.value.map(story=>story.story_id||story.id)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       void enrichStories(_received, 'top', _feed_generation)
     } catch {
       if (isCurrentGeneration('top', _feed_generation)) {

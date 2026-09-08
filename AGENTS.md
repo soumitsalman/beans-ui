@@ -1,4 +1,4 @@
-# Project: Beans UI
+# Project: Beans App
 Beans is a news and trending stories tracking app. It reads data feed from Beans API and Espresso API.
 - Platform: Web App, optimized for mobile browser experience
 - Focus: UI ONLY | Exclude API & Backend Work

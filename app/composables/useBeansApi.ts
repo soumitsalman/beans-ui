@@ -20,9 +20,22 @@ interface ApiEnvelope<T> {
 type ApiQuery = Record<string, string | number | undefined>
 
 const DEFAULT_PAGE_SIZE = 5
+const NEWS_LANGUAGES = 'en'
 
 function normaliseList(values?: string[] | null): string[] {
   return Array.isArray(values) ? values.filter(Boolean) : []
+}
+
+function serialiseQueryList(value?: string | string[]): string | undefined {
+  if (Array.isArray(value)) return value.length ? value.join(',') : undefined
+  return value
+}
+
+function withEnglishNews(params: BeansPageParams = {}): BeansPageParams {
+  return {
+    ...params,
+    languages: NEWS_LANGUAGES
+  }
 }
 
 function normaliseSource(source?: NewsSource | null): NewsSource | undefined {
@@ -51,27 +64,22 @@ function toNewsStory(story: BeansStory): NewsStory {
   const articles = Array.isArray(story.top_articles)
     ? story.top_articles.map(toNewsArticle).filter(hasArticleIdentity)
     : []
-  const top_article = [...articles]
-    .filter(article => Boolean(article.title && article.summary))
-    .sort((left, right) => {
-      const summary_difference = (right.summary?.length ?? 0) - (left.summary?.length ?? 0)
-      return summary_difference || (right.title.length - left.title.length)
-    })[0] || articles[0]
+  const top_article = articles[0]
 
   return {
     id: story.id ?? top_article?.story_id ?? top_article?.id ?? '',
     story_id: story.id ?? top_article?.story_id,
-    title: top_article?.title || story.title?.trim() || '',
+    title: story.title?.trim() || '',
     url: top_article?.url,
-    summary: top_article?.summary,
+    summary: story.summary,
     image_url: top_article?.image_url,
     published_at: story.last_published_at ?? top_article?.published_at,
     first_published_at: story.first_published_at,
     last_published_at: story.last_published_at,
-    categories: normaliseList(story.categories).length ? normaliseList(story.categories) : top_article?.categories ?? [],
-    regions: normaliseList(story.regions).length ? normaliseList(story.regions) : top_article?.regions ?? [],
-    entities: normaliseList(story.entities).length ? normaliseList(story.entities) : top_article?.entities ?? [],
-    tags: normaliseList(story.tags).length ? normaliseList(story.tags) : top_article?.tags ?? [],
+    categories: normaliseList(story.categories),
+    regions: normaliseList(story.regions),
+    entities: normaliseList(story.entities),
+    tags: normaliseList(story.tags),
     source: top_article?.source,
     source_count: story.source_count ?? 0,
     article_count: story.article_count ?? 0,
@@ -120,6 +128,7 @@ function toQuery(params: BeansPageParams = {}): ApiQuery {
     regions: params.regions?.length ? params.regions.join(',') : undefined,
     entities: params.entities?.length ? params.entities.join(',') : undefined,
     content_type: params.content_type,
+    languages: serialiseQueryList(params.languages),
     from: params.from,
     to: params.to
   }
@@ -147,7 +156,7 @@ async function fetchBeansPage<T>(path: string, params: BeansPageParams = {}): Pr
 export function useBeansApi() {
   async function fetchTopHeadlines(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
     const page = await fetchBeansPage<BeansArticle>('news/top-headlines', {
-      ...params,
+      ...withEnglishNews(params),
       content_type: undefined,
       from: undefined,
       to: undefined
@@ -160,9 +169,21 @@ export function useBeansApi() {
   }
 
   async function fetchLatestArticles(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
-    const page = await fetchBeansPage<BeansArticle>('articles/latest', {
-      ...params,
-      content_type: 'news'
+    const page = await fetchBeansPage<BeansArticle>('news/latest', {
+      ...withEnglishNews(params),
+      content_type: undefined
+    })
+
+    return {
+      ...page,
+      data: page.data.map(articleToStory).filter(story => story.id)
+    }
+  }
+
+  async function fetchTrendingNews(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
+    const page = await fetchBeansPage<BeansArticle>('news/trending', {
+      ...withEnglishNews(params),
+      content_type: undefined
     })
 
     return {
@@ -214,7 +235,8 @@ export function useBeansApi() {
   async function fetchStoryArticles(story_id: string, params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
     const page = await fetchBeansPage<BeansArticle>(`stories/${story_id}/articles`, {
       ...params,
-      content_type: 'news'
+      languages: undefined,
+      content_type: undefined
     })
 
     return {
@@ -226,6 +248,7 @@ export function useBeansApi() {
   return {
     fetchTopHeadlines,
     fetchLatestArticles,
+    fetchTrendingNews,
     fetchSearchArticles,
     fetchArticle,
     fetchSimilarArticles,

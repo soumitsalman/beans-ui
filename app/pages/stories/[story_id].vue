@@ -73,34 +73,6 @@ function appendPropagationArticles(received: NewsArticle[]): void {
   propagation_articles.value = [...propagation_articles.value, ..._new_articles]
 }
 
-function pickLongestPreview(articles: NewsArticle[]): NewsArticle | undefined {
-  return [...articles]
-    .filter(article => Boolean(article.title && article.summary))
-    .sort((left, right) => {
-      const summary_difference = (right.summary?.length ?? 0) - (left.summary?.length ?? 0)
-      return summary_difference || (right.title.length - left.title.length)
-    })[0]
-}
-
-function enrichStoryPreview(): void {
-  if (!story.value) return
-
-  const _preview_article = pickLongestPreview([
-    ...(story.value.top_articles ?? []),
-    ...propagation_articles.value,
-    ...coverage_articles.value
-  ])
-  if (!_preview_article) return
-
-  story.value = {
-    ...story.value,
-    title: _preview_article.title,
-    summary: _preview_article.summary,
-    image_url: story.value.image_url || _preview_article.image_url,
-    source: story.value.source || _preview_article.source
-  }
-}
-
 function isCurrentGeneration(generation: number): boolean {
   return generation === _request_generation
 }
@@ -190,7 +162,6 @@ async function loadCoverage(reset = false, generation = _request_generation): Pr
     }
 
     appendCoverageArticles(_article_page.data)
-    enrichStoryPreview()
     void enrichCoverageArticles(_article_page.data, generation)
     articles_cursor.value = _article_page.data.length && _article_page.next_cursor !== _cursor
       ? _article_page.next_cursor
@@ -198,9 +169,6 @@ async function loadCoverage(reset = false, generation = _request_generation): Pr
 
     if (reset) {
       void loadPropagation(_article_page.data, articles_cursor.value, generation)
-        .then(() => {
-          if (isCurrentGeneration(generation)) enrichStoryPreview()
-        })
     }
   } catch {
     if (!isCurrentGeneration(generation)) return

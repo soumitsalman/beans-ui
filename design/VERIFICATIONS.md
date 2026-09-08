@@ -1,13 +1,16 @@
 ## Verification scope
 
-Verify the mobile-first Nuxt UI only. Beans and Espresso remain external data sources behind the existing same-origin proxies; this document does not authorize API or backend changes.
+Verify the mobile-first Nuxt UI and its public discoverability surfaces. Beans and Espresso remain external data sources behind the existing same-origin proxies; this document does not authorize API or backend changes.
 
 ## Requirements
 
 - Top Headlines and Latest News reveal 5 unique `story_id`s at a time. Internal collection fetches use `limit=20`. Reaching the last currently loaded Top Headline (scroll, last snap, or next/right arrow) reveals the next 5 unique stories (5 → 10 → 15). `/news/top-headlines` `next_cursor` currently returns an empty page, so Top Headlines continues by expanding `limit` (20, 40, … 100) and skipping already-seen stories instead of sending that cursor. A 5-article page that shares a `story_id` must not leave the carousel at 4 cards when more unique stories exist in the batch. Latest News continuation uses its working `next_cursor`.
+- News collection requests send `languages=en`. Top Headlines uses `/news/top-headlines`. Latest News uses `/news/latest` (not `/articles/latest`). Coverage and Propagation use `/stories/{story_id}/articles` and do not send `languages` or `content_type`. `/news/trending?languages=en` is the trending collection (includes trend data).
 - Top Headlines has no `More headlines` button. Continuation is only via carousel scroll and the next control. Latest News keeps its `More` control.
 - Top Headline items, Latest News items, and Coverage items render `trend.mentions`, `trend.likes`, and `trend.comments` when each value is a finite number greater than 0. Zero, null, and missing values are omitted. Visible counts are icon plus humanized number only (Coverage compact pattern); do not render the words `mentions`, `likes`, `comments`, or `shares`.
 - Viewport layout by Tailwind breakpoint: `md` and above (≥768px, including `lg`/`xl`) show 2 Top Headlines in view and 2 Latest News columns; below `md` (`sm`/`xs`, <768px) show 1 Top Headline and 1 Latest News column.
+- Public HTML exposes a canonical URL derived from `NUXT_PUBLIC_SITE_URL`, Open Graph/Twitter title, description, image, and URL metadata, plus `Organization` and `WebSite` JSON-LD. About Beans also exposes `SoftwareApplication` JSON-LD that describes it as a web news-discovery app.
+- `/robots.txt`, `/sitemap.xml`, and `/llms.txt` are public, derive their absolute URLs from `NUXT_PUBLIC_SITE_URL`, and do not expose API credentials or API-proxy endpoints for crawling.
 
 ## Success criteria
 
@@ -18,7 +21,7 @@ Verify the mobile-first Nuxt UI only. Beans and Espresso remain external data so
 - Top Headline cards use an optional full-width image followed by category/date/score, title, two regions and entities, then their source group. Latest News uses an optional image at left; its category/date/score, title, taxonomy, and two-line summary appear beside it; its source group and social counts form a separate bottom row.
 - Feed cards enrich their primary article with its detail endpoint when feed payloads omit trend data, preserving each feed's original ordering and cursor while exposing valid trend scores and engagement counts.
 - Empty, loading, and error states preserve page context, explain the state plainly, and let the user retry the affected content or continue using unaffected content.
-- News cards link to the matching story. Story detail shows the story metadata, the longest available summary paired with its title, propagation, and source coverage. The story category/date row starts with category and date and ends with humanized `article_count` then `source_count` (`justify-end`), omitting each count when it is 0 or missing.
+- News cards link to the matching story. Story detail shows the story metadata from `/stories/{id}` (`title`, `summary`, `top_articles`), propagation, and source coverage. The story category/date row starts with category and date and ends with humanized `article_count` then `source_count` (`justify-end`), omitting each count when it is 0 or missing.
 - Coverage is latest-first, independently cursor-paged in groups of five, and each article URL is actionable.
 - Coverage rows show their source label, linked title, and humanized `trend.mentions`, `trend.likes`, and `trend.comments` when each value is greater than 0, without inventing a count when a value is 0 or absent. Positive trend counts sit on the first row, right-aligned (`justify-end`) opposite the source label, as icon plus number with no word labels; the title stays on the second row.
 - Story metadata and the first Coverage page render as soon as they are available; full Propagation may continue loading independently and must not delay the usable story view.
@@ -31,15 +34,18 @@ Verify the mobile-first Nuxt UI only. Beans and Espresso remain external data so
 - Brand foreground, active navigation, primary CTAs, accent labels, and accent icons use the coffee-bean primary (`#c48654` / `--color-coffee-400`), a shade between gold and coffee, not amber.
 - Top Headlines shows 1 card below Tailwind `md` and 2 cards at `md` and above (`lg`/`xl` included). Latest News is 1 column below `md` and 2 columns at `md` and above. Carousel slides use even viewport fractions so an extra card does not peek. Latest News cards stay in their grid tracks.
 - The application shell exposes the canonical `/`, `/categories/{category_slug}`, `/stories/{story_id}`, and `/search` routes. Its header shows the current date as `Weekday, MMM dd` (no year) with a live-indicator icon that has a slight primary glow and no chip/border, the Beans mark, Search control, Beans API control, and Contact control; category tabs span the content column with `justify-between` (first tab at the start, last tab at the end when they fit) and scroll inside the tab row when they overflow; its footer exposes every specified Cafecito, Publications, API, GitHub, and About link. Home has no “Live desk” / “The story, not the noise.” hero. Feed section titles are `Trending` and `Just In`.
+- About Beans explains the publisher-snapshot experience, the broader public Beans API, the purpose of source-correlated discovery, and the Cafecito product lineup. It distinguishes original publisher reporting in Beans from Espresso Publications editorial/opinion analysis, and all external calls to action open their intended Cafecito destinations safely.
+- README and About Beans describe Beans as a publisher-news discovery interface, not a republisher, fact checker, or source of truth. They direct programmatic and AI workflows to the public Beans API documentation.
 - Search accepts a relevance query, normalized tags, and publisher-source lookup. It sends news-only, five-item cursor pages to Beans, includes `score_threshold=0` whenever it sends a relevance query, keeps source selection separate from text relevance, deduplicates matching stories, discards stale lookup/result responses after a newer search, and plainly supports loading, empty, error, retry, and load-more states.
 - A card with a story ID links to `/stories/{story_id}`. A story-less card links directly to its original article URL. Each card’s source group derives from the article and its related articles and reports a distinct-source count rather than treating article count as source count.
-- Local Nuxt development reads `CAFECITO_API_KEY` from the gitignored `.env` file into server-only runtime configuration; it is forwarded only by the existing Beans/Espresso proxies and never exposed to client code.
+- Local Nuxt development reads `CAFECITO_API_KEY` and `BEANS_API_BASE_URL` from the gitignored `.env` file into server-only runtime configuration. The API key is forwarded only by the existing Beans/Espresso proxies. The Beans proxy uses `BEANS_API_BASE_URL` (or runtime `NUXT_BEANS_API_BASE_URL`) and falls back to `https://cafecito-beans-api.fly.dev` when the var is unset or blank. Neither value is exposed to client code.
 
 ## UX failure cases
 
 - A story is repeated in a feed, or a related-source count is presented as an article count.
 - Home content is category-filtered, or a category tab leaks content outside its mapped values.
 - A feed requests more than five items, drops its cursor, reuses an exhausted cursor, or lets one feed's pagination state affect the other.
+- Latest News still requests `/articles/latest`, a Top Headlines / Latest News request omits `languages=en`, or Coverage/Propagation still sends `languages=en` or `content_type=news`.
 - A category change lets an in-flight response for the previous category replace the current category's feed, briefly leak unrelated stories, or retain its cursor.
 - Top Headlines is rendered as a vertical list, Latest News as a carousel, carousel-end loading checks an unavailable nested ref instead of the exposed carousel API, the next arrow is disabled at the last loaded snap while a cursor exists, a `More headlines` control remains on Top Headlines, end detection requires the selected index to be the last item so a multi-slide viewport never fetches, or the Latest News `More` control is absent/buried away from the end of the list while a cursor exists.
 - A Top Headlines append jumps the carousel back to the first snap, auto-retries a failed cursor page in a loop, or stops while `next_cursor` is still present after the last loaded item is in view.
@@ -53,6 +59,8 @@ Verify the mobile-first Nuxt UI only. Beans and Espresso remain external data so
 - A snapshot summary that starts with markdown image syntax (`![](url)` / `![alt](url)`) shows a leftover `!`, an empty image link, or an inline image.
 - A story card opens the wrong story, loses the selected context without a way back, or renders a source URL as non-actionable text.
 - A story-less article routes to a fabricated story URL, a canonical route is missing, or a header/footer destination is absent or points to the wrong URL.
+- About Beans implies that it republishes complete articles, presents cross-publisher correlation as proof of truth, describes Espresso Publications as original publisher reporting, omits the Beans API's broader capabilities, or exposes an incorrect external destination.
+- A canonical URL points to a non-public or wrong origin, social cards retain generic metadata on About Beans, structured data is invalid or misidentifies Beans as a publisher, or `robots.txt`, `sitemap.xml`, or `llms.txt` is missing or exposes `/api/` as crawlable content.
 - A source query is mixed into the relevance query, tags are sent as display labels instead of normalized API values, a new search reuses an old cursor, or a search result leaks non-news content.
 - A delayed source lookup or result request from an earlier search replaces the newest criteria, results, cursor, loading state, or error message.
 - An empty publisher lookup still calls `/articles/search`, or Retry after that empty lookup re-runs article search instead of `/sources` only.
@@ -68,7 +76,8 @@ Verify the mobile-first Nuxt UI only. Beans and Espresso remain external data so
 - A 404 favicon leaves a broken-media glyph instead of the default source icon.
 - A card with no resolvable source still renders a source group or a fabricated “1 source” count.
 - Story metadata stays blocked until the first Coverage page returns, or a `story_id` change keeps stale coverage, cursors, or errors.
-- A shorter Coverage summary replaces a longer `top_articles` title+summary pair.
+- Coverage articles replace the `/stories/{id}` title or summary.
+- Story mapping prefers a longer `top_articles` title or summary over the `/stories/{id}` fields.
 - Propagation dates use raw timestamps or expose title, source label, mentions, or summary text.
 - Empty Coverage copy invents an article count, or `article_count` is shown when it is 0.
 - Story-detail `article_count` or `source_count` sit beside the back control, wrap under the title, fail to right-align on the category/date row, or render when the value is 0 or missing.
@@ -78,6 +87,8 @@ Verify the mobile-first Nuxt UI only. Beans and Espresso remain external data so
 - Related articles with missing source metadata from different URLs on the same publisher domain are counted as separate sources.
 - Loading a later page cancels related-source enrichment for an already visible card in the same feed generation.
 - A local API key is ignored by Nuxt, shipped in client runtime configuration, or omitted from proxy requests despite being present in `.env`.
+- A local `BEANS_API_BASE_URL` is ignored so the Beans proxy always hits the hardcoded fly.dev host, or the base URL is shipped in client runtime configuration.
+- The Fly image prerenders `/` without API credentials, listens on a port other than 8080, or bakes `CAFECITO_API_KEY` into a layer.
 - Coverage is not latest-first, pagination repeats articles, or an article link does not open the source URL.
 - A Coverage row omits available article mentions, renders raw counts, or shows a misleading zero/placeholder when mention data is absent.
 - Coverage trend counts sit beside the source label, wrap under the title, or fail to right-align on the first row.
@@ -100,6 +111,7 @@ Verify the mobile-first Nuxt UI only. Beans and Espresso remain external data so
 | Scenario | Given | When | Then |
 | --- | --- | --- | --- |
 | Home feed composition | Mixed-category pages containing duplicate story IDs | Home loads | Top Headlines is all-category and recent; Latest News is news-only; both feeds contain unique stories. |
+| English news routes | Home, a category tab, and a story with coverage | Those views load | Top Headlines requests `/news/top-headlines?languages=en`; Latest News requests `/news/latest?languages=en`; Coverage and Propagation request `/stories/{id}/articles` with no `languages` and no `content_type`. |
 | Category filtering | Fixtures inside and outside one mapped category group | A category tab loads | Both feeds contain only stories matching the group's mapped category values. |
 | Feed layouts | At least five stories per feed and another cursor page | The page renders and the user reaches each feed's end | Top Headlines uses the exposed carousel end state to request the next five; Latest News remains a vertical list and exposes `More` below its loaded rows. |
 | Feed card layout | A Top Headline and a Latest News item with image, taxonomy, trend, source, and social data | Both card types render | The Top card follows the full-width-image hierarchy; the Latest card follows its side-image plus separate source-and-counts bottom row hierarchy. |
@@ -152,7 +164,7 @@ Verify the mobile-first Nuxt UI only. Beans and Espresso remain external data so
 | Progressive story metadata | `/stories/{story_id}` resolves while the first Coverage page is still in flight | The story route opens | Story metadata is usable immediately; Coverage keeps its own loading state. |
 | Story meta counts row | A story with category, date, article_count > 0, and source_count > 0 | Story detail renders | The first metadata row is category and date at start, article count then source count at end (`justify-end`); neither count sits beside Back; zeros are omitted. |
 | Story id replacement | Coverage or Propagation pages are still in flight | The user opens a different `story_id` | Stale appends, cursors, and errors from the previous story are discarded. |
-| Story preview pairing | `top_articles` has a longer title+summary pair than a later Coverage article | Coverage arrives | The shorter Coverage pair does not replace the longer `top_articles` pair. |
+| Story API copy | `/stories/{id}` returns a title and summary that differ from Coverage and `top_articles` | The story route loads, then Coverage arrives | The detail header keeps the story endpoint title and summary; Coverage rows do not replace them. |
 | Propagation date-only | Story articles with recent, two-day, and older dates | Propagation renders | Dates use hours, days, or `MMM dd, YYYY`; no title, source label, mentions, or summary appears. |
 | Empty Coverage copy | A story with no coverage articles and `article_count` 0 | The story view settles | Copy says no coverage is available; `article_count` is shown only when it is greater than 0. |
 | Category row without categories | A category-filtered page includes a row that omits `categories` | That category loads | The row remains; the page does not drop it for missing taxonomy. |
@@ -162,9 +174,11 @@ Verify the mobile-first Nuxt UI only. Beans and Espresso remain external data so
 | Headline social counts | Top Headlines omit `trend` while article detail has mentions/likes/comments above 0, and another headline has only zeros | Home and category Top Headlines render after enrichment | Compressed cards show icon plus humanized number for mentions, likes, and comments when each value is > 0, with no word labels, and omit each field when it is 0 or missing. |
 | Latest social counts | Latest News items with mentions/likes/comments above 0 and items with 0 or omitted trend | Home, category, and Search snapshot cards render | Icon plus humanized number appear only when > 0, with no `mentions`/`likes`/`comments`/`shares` words; zeros and missing values stay hidden. |
 | Coverage trend overlay | `/stories/{id}/articles` omits `trend` while matching `/articles/{id}` has positive mentions/likes/comments | Story Coverage loads | Rows overlay detail `trend` only; positive counts render; collection title, url, summary, and image stay; zero/missing counts stay hidden. |
+| Beans API base URL env | `.env` sets `BEANS_API_BASE_URL` to a local origin, and a later run omits it or leaves it blank | The Beans proxy is requested | Requests go to the env origin; when unset or blank they go to `https://cafecito-beans-api.fly.dev`. The URL is absent from client runtime config. |
+| Fly Docker image | `Dockerfile` + `fly.toml` `internal_port` 8080 | Image is built and the process starts | Nitro listens on `0.0.0.0:8080`. Homepage is SSR (not a builder-time prerender). API key is not in image layers; `CAFECITO_API_KEY` / base URL env vars reach server `runtimeConfig` via `NUXT_*`. |
 
 ## Verification gates
 
 - Static checks: `pnpm lint`, `pnpm typecheck`, and `pnpm build` pass.
-- Runtime smoke checks: home, category, story, search, and About routes load; Beans proxy requests preserve `limit=5`, cursors, category filters, news-only search filters, source/tag search constraints, and the server-side API-key boundary sourced from local `.env` when configured.
+- Runtime smoke checks: home, category, story, search, and About routes load; Beans proxy requests preserve `limit=5`, cursors, category filters, news-only search filters, source/tag search constraints, the server-side API-key boundary sourced from local `.env` when configured, and the Beans origin from `BEANS_API_BASE_URL` / `NUXT_BEANS_API_BASE_URL` with the fly.dev fallback when that var is unset.
 - Manual UI checks: inspect the 320px viewport, a wider mobile viewport, header/footer destinations, category tabs spanning the content column with `justify-between` when they fit and inner-nav scroll at 320px, Top Headlines initial `limit=5` and carousel-end `next_cursor` loading with no `More headlines` control, Latest News load more, mentions/likes/comments only when > 0 on headlines/latest/coverage as icon plus number with no word labels, breakpoint slide and column counts (`md`+ 2+2, below `md` 1+1), all search modes, story-less and story navigation, Coverage links, loading/empty/error states, dark-theme contrast, and coffee-bean (not amber/gold) primary accents and icons.

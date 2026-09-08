@@ -58,7 +58,7 @@ Just In
 ```
 
 ### Story Page
-- Story title, category, regions, entities, last_published_at, summary | use title and summary of which ever top article has both. article_count and source_count sit on the category/date row, right-aligned (`justify-end`), only when each value is > 0.
+- Story title, category, regions, entities, last_published_at, summary | use `title` and `summary` from `/stories/{story_id}`. article_count and source_count sit on the category/date row, right-aligned (`justify-end`), only when each value is > 0.
 - Propagation: timeline of (published_at, source_favicon) | show 5 items including the first_published_at and last_published_at. If there are more than 5 group the sources in between. The timeline spans the story column (`w-full`, equal flex columns) with no inner horizontal scroll.
 - Coverage (articles_count): List of articles in that story. Limit=5. Use Use next_cursor to fetch more when needed. Latest first. Click goes to article.url
 
@@ -92,7 +92,7 @@ Coverage
 ```
 
 ## Category Map
-technology_and_ai:
+tech-and-innovation:
   - artificial_intelligence_and_machine_learning
   - ai_ethics_and_governance
   - natural_language_processing
@@ -106,8 +106,6 @@ technology_and_ai:
   - databases_and_data_engineering
   - devops_and_site_reliability
   - programming_languages_and_compilers
-
-hardware_robotics_and_space:
   - computer_hardware_and_architecture
   - semiconductor_design_and_fabrication
   - microprocessors_and_chipsets
@@ -125,17 +123,7 @@ hardware_robotics_and_space:
   - space_industry_and_launch_systems
   - satellite_systems_and_space_operations
 
-security_privacy_and_defense:
-  - cybersecurity_and_threat_intelligence
-  - privacy_engineering_and_data_protection
-  - network_security_and_firewalls
-  - identity_and_access_management
-  - digital_forensics_and_incident_response
-  - military_and_defense
-  - homeland_security_and_safety
-  - weaponry_and_military_technology
-
-business_finance_and_work:
+business-and-markets:
   - business_and_management
   - entrepreneurship_and_startups
   - marketing_and_brand_strategy
@@ -148,19 +136,11 @@ business_finance_and_work:
   - talent_acquisition_and_recruiting
   - human_resources_and_workforce_planning
   - leadership_and_organizational_development
+  - blockchain_and_distributed_ledgers
+  - cryptocurrency_and_digital_assets
+  - decentralized_finance_and_web3
 
-transport_logistics_and_infrastructure:
-  - logistics_and_supply_chain_management
-  - transportation_and_mobility
-  - freight_shipping_and_ports
-  - warehousing_and_inventory_systems
-  - fleet_operations_and_routing
-  - aviation_and_air_transport
-  - housing_and_real_estate
-  - architecture_and_building_design
-  - construction_and_infrastructure
-
-science_health_and_medicine:
+science-and-health:
   - physics_and_physical_sciences
   - chemistry_and_materials_science
   - mathematics_and_statistics
@@ -176,7 +156,7 @@ science_health_and_medicine:
   - public_health_and_epidemiology
   - infectious_diseases_and_immunity
 
-climate_environment_and_energy:
+climate-and-energy:
   - climate_and_environmental_management
   - conservation_and_wildlife
   - earth_sciences_and_natural_resources
@@ -184,20 +164,21 @@ climate_environment_and_energy:
   - water_resources_and_management
   - energy_solar_and_renewable_systems
 
-lifestyle_family_and_wellbeing:
-  - home_and_lifestyle
-  - interior_design_and_home_improvement
-  - nutrition_food_and_supplements
-  - body_and_health
-  - elder_care_and_aging
-  - child_and_family_care
-  - reproductive_and_sexual_health
-  - family_and_relationships
-  - cannabis_and_cannabinoids
-  - alcohol_and_beverages
-  - gambling_and_betting
+world-politics-and-society:
+  - government_and_politics
+  - public_policy_and_administration
+  - elections_and_voting
+  - legal_system_and_justice
+  - law_enforcement_and_public_safety
+  - human_rights_and_civil_liberties
+  - diversity_equity_and_inclusion
+  - gender_studies_and_identity
+  - lgbtq_issues
+  - migration_and_immigration
+  - accessibility_and_disability
+  - geopolitics_and_international_relations
 
-culture_media_and_entertainment:
+culture-and-lifestyle:
   - art_and_design
   - animation_and_visual_effects
   - film_and_cinema
@@ -213,20 +194,35 @@ culture_media_and_entertainment:
   - esports_and_competitive_gaming
   - virtual_reality_and_mixed_reality
   - interactive_entertainment_and_streaming
+  - home_and_lifestyle
+  - interior_design_and_home_improvement
+  - nutrition_food_and_supplements
+  - body_and_health
+  - elder_care_and_aging
+  - child_and_family_care
+  - reproductive_and_sexual_health
+  - family_and_relationships
+  - cannabis_and_cannabinoids
+  - alcohol_and_beverages
+  - gambling_and_betting
 
-politics_law_and_world_affairs:
-  - government_and_politics
-  - public_policy_and_administration
-  - elections_and_voting
-  - legal_system_and_justice
-  - law_enforcement_and_public_safety
-  - human_rights_and_civil_liberties
-  - diversity_equity_and_inclusion
-  - gender_studies_and_identity
-  - lgbtq_issues
-  - migration_and_immigration
-  - accessibility_and_disability
-  - geopolitics_and_international_relations
-  - blockchain_and_distributed_ledgers
-  - cryptocurrency_and_digital_assets
-  - decentralized_finance_and_web3
+security-and-defense:
+  - cybersecurity_and_threat_intelligence
+  - privacy_engineering_and_data_protection
+  - network_security_and_firewalls
+  - identity_and_access_management
+  - digital_forensics_and_incident_response
+  - military_and_defense
+  - homeland_security_and_safety
+  - weaponry_and_military_technology
+
+industry-and-infrastructure:
+  - logistics_and_supply_chain_management
+  - transportation_and_mobility
+  - freight_shipping_and_ports
+  - warehousing_and_inventory_systems
+  - fleet_operations_and_routing
+  - aviation_and_air_transport
+  - housing_and_real_estate
+  - architecture_and_building_design
+  - construction_and_infrastructure

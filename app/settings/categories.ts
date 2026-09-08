@@ -7,9 +7,9 @@ export interface NewsCategory {
 
 export const CATEGORY_GROUPS: NewsCategory[] = [
   {
-    slug: 'technology',
-    label: 'Technology',
-    description: 'AI, software, data, cloud, and the systems shaping them.',
+    slug: 'tech-and-innovation',
+    label: 'Tech & Innovation',
+    description: 'AI, software, chips, robotics, devices, and space exploration.',
     category_values: [
       'artificial_intelligence_and_machine_learning',
       'ai_ethics_and_governance',
@@ -23,14 +23,7 @@ export const CATEGORY_GROUPS: NewsCategory[] = [
       'cloud_computing_and_distributed_systems',
       'databases_and_data_engineering',
       'devops_and_site_reliability',
-      'programming_languages_and_compilers'
-    ]
-  },
-  {
-    slug: 'robotics',
-    label: 'Hardware, Robotics & Space',
-    description: 'Chips, machines, mobility, aerospace, and exploration.',
-    category_values: [
+      'programming_languages_and_compilers',
       'computer_hardware_and_architecture',
       'semiconductor_design_and_fabrication',
       'microprocessors_and_chipsets',
@@ -50,24 +43,9 @@ export const CATEGORY_GROUPS: NewsCategory[] = [
     ]
   },
   {
-    slug: 'security',
-    label: 'Security',
-    description: 'Cybersecurity, privacy, safety, and defense technology.',
-    category_values: [
-      'cybersecurity_and_threat_intelligence',
-      'privacy_engineering_and_data_protection',
-      'network_security_and_firewalls',
-      'identity_and_access_management',
-      'digital_forensics_and_incident_response',
-      'military_and_defense',
-      'homeland_security_and_safety',
-      'weaponry_and_military_technology'
-    ]
-  },
-  {
-    slug: 'business',
-    label: 'Business',
-    description: 'Markets, companies, careers, and the changing economy.',
+    slug: 'business-and-markets',
+    label: 'Business & Markets',
+    description: 'Companies, careers, investing, financial markets, and digital assets.',
     category_values: [
       'business_and_management',
       'entrepreneurship_and_startups',
@@ -80,29 +58,16 @@ export const CATEGORY_GROUPS: NewsCategory[] = [
       'career_development_and_professional_skills',
       'talent_acquisition_and_recruiting',
       'human_resources_and_workforce_planning',
-      'leadership_and_organizational_development'
+      'leadership_and_organizational_development',
+      'blockchain_and_distributed_ledgers',
+      'cryptocurrency_and_digital_assets',
+      'decentralized_finance_and_web3'
     ]
   },
   {
-    slug: 'transport-logistics-and-infrastructure',
-    label: 'Logistics',
-    description: 'Supply chains, cities, construction, and movement.',
-    category_values: [
-      'logistics_and_supply_chain_management',
-      'transportation_and_mobility',
-      'freight_shipping_and_ports',
-      'warehousing_and_inventory_systems',
-      'fleet_operations_and_routing',
-      'aviation_and_air_transport',
-      'housing_and_real_estate',
-      'architecture_and_building_design',
-      'construction_and_infrastructure'
-    ]
-  },
-  {
-    slug: 'science-health-and-medicine',
-    label: 'Science',
-    description: 'Research, biology, medicine, and scientific discovery.',
+    slug: 'science-and-health',
+    label: 'Science & Health',
+    description: 'Research, biology, medicine, public health, and discovery.',
     category_values: [
       'physics_and_physical_sciences',
       'chemistry_and_materials_science',
@@ -121,9 +86,9 @@ export const CATEGORY_GROUPS: NewsCategory[] = [
     ]
   },
   {
-    slug: 'climate-environment-and-energy',
-    label: 'Climate',
-    description: 'Climate, natural systems, resources, and energy.',
+    slug: 'climate-and-energy',
+    label: 'Climate & Energy',
+    description: 'Climate, ecosystems, natural resources, and energy systems.',
     category_values: [
       'climate_and_environmental_management',
       'conservation_and_wildlife',
@@ -134,27 +99,28 @@ export const CATEGORY_GROUPS: NewsCategory[] = [
     ]
   },
   {
-    slug: 'lifestyle-family-and-wellbeing',
-    label: 'Lifestyle',
-    description: 'Home, family, health, food, and personal life.',
+    slug: 'world-politics-and-society',
+    label: 'World, Politics & Society',
+    description: 'Government, law, rights, public life, and global affairs.',
     category_values: [
-      'home_and_lifestyle',
-      'interior_design_and_home_improvement',
-      'nutrition_food_and_supplements',
-      'body_and_health',
-      'elder_care_and_aging',
-      'child_and_family_care',
-      'reproductive_and_sexual_health',
-      'family_and_relationships',
-      'cannabis_and_cannabinoids',
-      'alcohol_and_beverages',
-      'gambling_and_betting'
+      'government_and_politics',
+      'public_policy_and_administration',
+      'elections_and_voting',
+      'legal_system_and_justice',
+      'law_enforcement_and_public_safety',
+      'human_rights_and_civil_liberties',
+      'diversity_equity_and_inclusion',
+      'gender_studies_and_identity',
+      'lgbtq_issues',
+      'migration_and_immigration',
+      'accessibility_and_disability',
+      'geopolitics_and_international_relations'
     ]
   },
   {
-    slug: 'culture',
-    label: 'Culture',
-    description: 'Arts, media, communities, games, and entertainment.',
+    slug: 'culture-and-lifestyle',
+    label: 'Culture & Lifestyle',
+    description: 'Media, entertainment, communities, home, family, and wellbeing.',
     category_values: [
       'art_and_design',
       'animation_and_visual_effects',
@@ -170,29 +136,49 @@ export const CATEGORY_GROUPS: NewsCategory[] = [
       'video_games_and_game_development',
       'esports_and_competitive_gaming',
       'virtual_reality_and_mixed_reality',
-      'interactive_entertainment_and_streaming'
+      'interactive_entertainment_and_streaming',
+      'home_and_lifestyle',
+      'interior_design_and_home_improvement',
+      'nutrition_food_and_supplements',
+      'body_and_health',
+      'elder_care_and_aging',
+      'child_and_family_care',
+      'reproductive_and_sexual_health',
+      'family_and_relationships',
+      'cannabis_and_cannabinoids',
+      'alcohol_and_beverages',
+      'gambling_and_betting'
     ]
   },
   {
-    slug: 'politics',
-    label: 'Politics',
-    description: 'Government, law, public life, and global affairs.',
+    slug: 'security-and-defense',
+    label: 'Security & Defense',
+    description: 'Cybersecurity, privacy, safety, and defense technology.',
     category_values: [
-      'government_and_politics',
-      'public_policy_and_administration',
-      'elections_and_voting',
-      'legal_system_and_justice',
-      'law_enforcement_and_public_safety',
-      'human_rights_and_civil_liberties',
-      'diversity_equity_and_inclusion',
-      'gender_studies_and_identity',
-      'lgbtq_issues',
-      'migration_and_immigration',
-      'accessibility_and_disability',
-      'geopolitics_and_international_relations',
-      'blockchain_and_distributed_ledgers',
-      'cryptocurrency_and_digital_assets',
-      'decentralized_finance_and_web3'
+      'cybersecurity_and_threat_intelligence',
+      'privacy_engineering_and_data_protection',
+      'network_security_and_firewalls',
+      'identity_and_access_management',
+      'digital_forensics_and_incident_response',
+      'military_and_defense',
+      'homeland_security_and_safety',
+      'weaponry_and_military_technology'
+    ]
+  },
+  {
+    slug: 'industry-and-infrastructure',
+    label: 'Industry & Infrastructure',
+    description: 'Supply chains, transport, housing, construction, and the built world.',
+    category_values: [
+      'logistics_and_supply_chain_management',
+      'transportation_and_mobility',
+      'freight_shipping_and_ports',
+      'warehousing_and_inventory_systems',
+      'fleet_operations_and_routing',
+      'aviation_and_air_transport',
+      'housing_and_real_estate',
+      'architecture_and_building_design',
+      'construction_and_infrastructure'
     ]
   }
 ]

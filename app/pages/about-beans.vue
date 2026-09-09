@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const runtime_config = useRuntimeConfig()
+const { outboundHref } = useOutboundUrl()
 const SITE_URL = runtime_config.public.site_url.replace(/\/+$/, '')
 const PAGE_URL = `${SITE_URL}/about-beans`
 const PAGE_TITLE = 'About Beans | Publisher News Discovery'
@@ -98,7 +99,7 @@ useHead({
           Use the API when you need a broader and more diverse dataset, your own filters, semantic search, trend signals, story-propagation timelines, or MCP access for an application or AI workflow.
         </p>
         <UButton
-          to="https://developer.cafecito.tech/products/beans"
+          :to="outboundHref('https://developer.cafecito.tech/products/beans')"
           label="Explore the Beans API"
           icon="lucide:external-link"
           trailing
@@ -163,7 +164,7 @@ useHead({
               Cafecito's business-intelligence suite includes an API, social digests, and Espresso Publications. Its publications are editorial and opinion pieces that decipher varied market events and signals. Unlike Beans, they are analysis—not snapshots of original news-publisher reporting.
             </p>
             <UButton
-              to="https://cafecito.tech/espresso/"
+              :to="outboundHref('https://cafecito.tech/espresso/')"
               label="Explore Espresso"
               icon="lucide:external-link"
               trailing
@@ -208,7 +209,7 @@ useHead({
               </p>
             </div>
             <UButton
-              to="https://cafecito.tech/#products"
+              :to="outboundHref('https://cafecito.tech/#products')"
               label="All Cafecito products"
               icon="lucide:external-link"
               trailing
@@ -235,7 +236,7 @@ useHead({
         size="sm"
       />
       <UButton
-        to="https://cafecito.tech"
+        :to="outboundHref('https://cafecito.tech')"
         label="Visit Project Cafecito"
         icon="lucide:external-link"
         trailing

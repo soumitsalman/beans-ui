@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 import StorySection from '~/components/news/StorySection.vue'
-import { sourceLabel } from '~/utils/source'
+import { SEARCH_TAG_DELIMITER, normaliseTagInput, normaliseTagValue } from '~/utils/formatters'
+import { searchCriteriaFromQuery, toSearchRouteQuery } from '~/utils/searchQuery'
+
+const route = useRoute()
+const router = useRouter()
 
 const search_form = reactive({
   query: '',
-  tags: '',
-  source_query: ''
+  tags: [] as string[]
 })
 
 const {
   results,
-  source_matches,
   loading,
-  loading_sources,
   error_message,
   empty_message,
-  empty_publisher_lookup,
   has_searched,
   can_load_more,
   search,
@@ -24,17 +24,47 @@ const {
   retrySearch
 } = useSearchFeed()
 
-function sourceName(source: typeof source_matches.value[number]): string {
-  return sourceLabel({ source }) || source.id || 'Publisher'
+let _syncing_route = false
+
+function applyCriteriaToForm(query: string, tags: string[]): void {
+  search_form.query = query
+  search_form.tags = tags
 }
 
-function submitSearch(): void {
-  void search(search_form)
+async function writeSearchRoute(query: string, tags: string[]): Promise<void> {
+  const next_query = toSearchRouteQuery({ query, tags })
+  _syncing_route = true
+  await router.replace({ query: next_query })
+  _syncing_route = false
 }
+
+async function submitSearch(): Promise<void> {
+  const query = search_form.query.trim()
+  const tags = normaliseTagInput(search_form.tags)
+  applyCriteriaToForm(query, tags)
+  await writeSearchRoute(query, tags)
+  void search({ query, tags })
+}
+
+watch(
+  () => {
+    const { query, tags } = searchCriteriaFromQuery(route.query)
+    return `${query}\0${tags.join(',')}\0${route.query.sources == null ? '0' : '1'}`
+  },
+  () => {
+    if (_syncing_route) return
+
+    const { query, tags } = searchCriteriaFromQuery(route.query)
+    applyCriteriaToForm(query, tags)
+    if (route.query.sources != null) void writeSearchRoute(query, tags)
+    if (query || tags.length) void search({ query, tags })
+  },
+  { immediate: true }
+)
 
 useSeoMeta({
   title: 'Search | Beans',
-  description: 'Search current news by topic, normalized tag, or publisher source.'
+  description: 'Search current news by topic or normalized tag.'
 })
 </script>
 
@@ -48,7 +78,7 @@ useSeoMeta({
         Search the news
       </h1>
       <p class="text-sm leading-6 text-stone-400">
-        Look for a topic, normalized tag, or publisher without mixing those filters together.
+        Look for a topic or normalized tags without mixing those filters together.
       </p>
     </div>
 
@@ -70,33 +100,25 @@ useSeoMeta({
         />
       </UFormField>
 
-      <div class="grid gap-3 sm:grid-cols-2">
-        <UFormField
-          label="Tags"
-          name="tags"
-          hint="Comma separated"
-        >
-          <UInput
-            v-model="search_form.tags"
-            placeholder="machine learning, startups"
-            icon="lucide:tags"
-            autocomplete="off"
-          />
-        </UFormField>
-        <UFormField
-          label="Publisher source"
-          name="source_query"
-          hint="Matches publisher names and domains"
-        >
-          <UInput
-            v-model="search_form.source_query"
-            placeholder="Cafecito"
-            icon="lucide:radio"
-            :loading="loading_sources"
-            autocomplete="off"
-          />
-        </UFormField>
-      </div>
+      <UFormField
+        label="Tags"
+        name="tags"
+        hint="Press Space to add a tag"
+      >
+        <UInputTags
+          v-model="search_form.tags"
+          class="w-full"
+          placeholder="machine_learning startups"
+          icon="lucide:tags"
+          size="lg"
+          :delimiter="SEARCH_TAG_DELIMITER"
+          :convert-value="normaliseTagValue"
+          add-on-blur
+          add-on-paste
+          add-on-tab
+          autocomplete="off"
+        />
+      </UFormField>
 
       <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
         <p class="text-xs leading-5 text-stone-500">
@@ -112,42 +134,8 @@ useSeoMeta({
       </div>
     </UForm>
 
-    <div
-      v-if="source_matches.length"
-      class="flex flex-wrap items-center gap-2 px-1 text-xs text-stone-500"
-    >
-      <span>Publisher filter:</span>
-      <UBadge
-        v-for="source in source_matches"
-        :key="source.id || sourceName(source)"
-        color="neutral"
-        variant="soft"
-        class="max-w-48 truncate bg-stone-800/80 text-stone-300"
-      >
-        {{ sourceName(source) }}
-      </UBadge>
-    </div>
-
-    <UAlert
-      v-if="empty_publisher_lookup && !loading && !error_message"
-      color="neutral"
-      variant="subtle"
-      icon="lucide:radio"
-      :title="empty_message"
-      description="Try a different publisher name or domain. News search did not run with an unmatched source."
-    >
-      <template #actions>
-        <UButton
-          label="Retry"
-          color="neutral"
-          variant="outline"
-          size="xs"
-          @click="retrySearch"
-        />
-      </template>
-    </UAlert>
     <StorySection
-      v-else-if="has_searched"
+      v-if="has_searched"
       title="Search results"
       eyebrow="News only"
       :stories="results"

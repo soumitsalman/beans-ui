@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { CATEGORY_GROUPS } from '~/settings/categories'
 
 const route = useRoute()
+const { outboundHref } = useOutboundUrl()
 const NOW = new Date()
 const CURRENT_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
@@ -78,7 +79,7 @@ function isActive(path: string): boolean {
           </UTooltip>
           <UTooltip text="Beans API">
             <UButton
-              to="https://developer.cafecito.tech/products/beans"
+              :to="outboundHref('https://developer.cafecito.tech/products/beans')"
               icon="lucide:braces"
               color="neutral"
               variant="ghost"
@@ -91,7 +92,7 @@ function isActive(path: string): boolean {
           </UTooltip>
           <UTooltip text="Contact">
             <UButton
-              to="https://developer.cafecito.tech/contact"
+              :to="outboundHref('https://developer.cafecito.tech/contact')"
               icon="lucide:mail"
               color="neutral"
               variant="ghost"
@@ -137,7 +138,7 @@ function isActive(path: string): boolean {
         aria-label="Beans links"
       >
         <UButton
-          to="https://cafecito.tech"
+          :to="outboundHref('https://cafecito.tech')"
           label="Cafecito"
           color="neutral"
           variant="link"
@@ -147,7 +148,7 @@ function isActive(path: string): boolean {
           rel="noopener noreferrer"
         />
         <UButton
-          to="https://espresso.cafecito.tech"
+          :to="outboundHref('https://espresso.cafecito.tech')"
           label="Publications"
           color="neutral"
           variant="link"
@@ -157,7 +158,7 @@ function isActive(path: string): boolean {
           rel="noopener noreferrer"
         />
         <UButton
-          to="https://developer.cafecito.tech"
+          :to="outboundHref('https://developer.cafecito.tech')"
           label="API"
           color="neutral"
           variant="link"
@@ -167,7 +168,7 @@ function isActive(path: string): boolean {
           rel="noopener noreferrer"
         />
         <UButton
-          to="https://github.com/soumitsalman/beans-ui"
+          :to="outboundHref('https://github.com/soumitsalman/beans-ui')"
           label="Github"
           color="neutral"
           variant="link"

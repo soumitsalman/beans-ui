@@ -30,6 +30,7 @@ interface CoverageRow {
 }
 
 const props = defineProps<StoryTimelineProps>()
+const { outboundHref } = useOutboundUrl()
 
 const emit = defineEmits<{
   'retry-coverage': []
@@ -292,7 +293,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
           :is="row.article.url ? 'a' : 'div'"
           v-for="row in coverage_rows"
           :key="row.article.id"
-          :href="row.article.url || undefined"
+          :href="outboundHref(row.article.url)"
           :target="row.article.url ? '_blank' : undefined"
           :rel="row.article.url ? 'noopener noreferrer' : undefined"
           :class="[

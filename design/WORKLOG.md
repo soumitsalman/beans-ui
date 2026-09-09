@@ -1,5 +1,39 @@
 # Beans UI Working Log
 
+## 2026-09-09T13:55:41Z
+
+- Replaced Search publisher-source lookup with a two-line query/tags form. Line 1 is the semantic `q` input. Line 2 is `UInputTags` (Space/comma/paste commits a tag; backspace on an empty field removes the last tag).
+- Guard: `/articles/search` sends `q` and CSV `tags` only. `sources` is omitted, including leftover `/search?sources=` URLs which are rewritten to `q`/`tags`. `score_threshold=0` is sent only when `q` is non-empty; empty tags omit `tags`. Duplicate/display labels are normalized (lowercase, spaces → `_`).
+- Firefox/WebDriver: empty submit explains a topic or tag is required; Space creates tags; results load; tags-only omits `score_threshold` and `sources`; clearing tags drops `tags` from the URL and request; `/search?q=battery&tags=startups&sources=dead-source` hydrates the form and strips `sources`.
+- Files: `app/pages/search.vue`, `app/composables/useSearchFeed.ts`, `app/utils/formatters.ts`, `app/utils/searchQuery.ts`, `design/DATASOURCES.md`, `design/DESIGN.md`, `design/VERIFICATIONS.md`, `README.md`.
+
+Code snapshot SHA-256: `b38cd06f5c57169a37ddb56a665f5d6252f5b1e41b2c920d349fbf25fa1d498c`
+
+Hash inputs: 44 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
+## 2026-09-09T13:53:25Z
+
+- Added a centralized outbound referral helper so every user-facing link to another site appends `utm_source=beans.cafecito.tech` and `utm_medium=referral`.
+- Guard: relative/internal routes, same-origin hosts (`beans.cafecito.tech` and `NUXT_PUBLIC_SITE_URL`), mailto/tel/javascript, empty hrefs, and malformed URLs are left unchanged. Existing query strings, hashes, and present UTM values are preserved.
+- Wired the helper through story-less article cards, Coverage rows, markdown summary links, header API/Contact, footer Cafecito/Publications/API/Github, and About Beans CTAs.
+- SSR on `/`, `/about-beans`, and `/search` showed those chrome/CTA hrefs with the referral params and left `/`, `/search`, `/about-beans`, and `/categories/*` untouched. Canonical URLs stayed without UTM. Live article/coverage URLs rewritten by the helper kept their paths and gained the params.
+- Verification: helper cases, markdown link rewrite, ESLint, Nuxt typecheck, and production build pass.
+
+Code snapshot SHA-256: `b38cd06f5c57169a37ddb56a665f5d6252f5b1e41b2c920d349fbf25fa1d498c`
+
+Hash inputs: 44 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
+## 2026-09-09T13:39:12Z
+
+- Added Google Analytics 4 (`gtag.js`, `G-KPG0Y2MBV9`) so every client route visit, including SPA navigations, records a `page_view`.
+- Guard: `gtag('config')` does not send a page view; the router hook sends one event per path. Page path and location omit query strings so search text is not sent. The measurement ID is public runtime config (`NUXT_PUBLIC_GA_MEASUREMENT_ID`).
+- Browser: home, `/categories/tech-and-innovation`, `/about-beans`, `/search?q=secret-query`, and a story route each queued a `page_view` for `G-KPG0Y2MBV9`. The Search location was `/search` with no query. `gtag.js` loaded from googletagmanager.com.
+- Verification: ESLint, Nuxt typecheck, and production build pass.
+
+Code snapshot SHA-256: `395fda6597aee9eab5205d23d7c47b47ed52d3766527cb7f673103dddf4e7d89`
+
+Hash inputs: 41 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
 ## 2026-09-08T19:11:41Z
 
 - Added structured Fly-visible observability for route visits and content loading. Server access logs record sanitized request/response paths, methods, status codes, and durations; client telemetry records SPA page views and initial versus more content loads for home, category, search, and story Coverage.

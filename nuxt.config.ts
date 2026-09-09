@@ -18,7 +18,8 @@ export default defineNuxtConfig({
     espresso_api_base_url: ENV.ESPRESSO_API_BASE_URL?.trim() || 'https://cafecito-espresso-api.fly.dev',
     cafecito_api_key: ENV.CAFECITO_API_KEY,
     public: {
-      site_url: ENV.NUXT_PUBLIC_SITE_URL?.trim() || 'https://cafecito-beans-app.fly.dev'
+      site_url: ENV.NUXT_PUBLIC_SITE_URL?.trim() || 'https://cafecito-beans-app.fly.dev',
+      ga_measurement_id: ENV.NUXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || 'G-KPG0Y2MBV9'
     }
   },
 

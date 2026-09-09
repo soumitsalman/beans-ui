@@ -19,3 +19,4 @@ Primary data sources are Beans API and Espresso API
 - `trend.trend_score` is a beans platform specific subjective value
 - `trend.mentions`, `trend.likes`, `trend.comments` are lower limit values
 - Fetch `limit=20` internally and reveal 5 unique `story_id`s at a time | Use `next_cursor` to fetch more as needed when that cursor returns items | `/news/top-headlines` `next_cursor` currently returns `data: []` (cursor `ts` is 0 while collection rows omit trend), so continue by expanding `limit` instead of treating that empty cursor as end-of-feed
+- Use `/articles/search` for the Search page. Map the topic input to `q` and committed tags to `tags` (CSV of normalized terms: lowercase, spaces to `_`). Send `content_type=news`, `limit=5`, and `score_threshold=0` only when `q` is non-empty. Omit `tags` when none are selected. Do not send `sources` from the Search UI. Shareable `/search` URLs use the same `q` and `tags` query params and ignore leftover `sources`.

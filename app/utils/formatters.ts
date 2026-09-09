@@ -44,13 +44,19 @@ export function formatTaxonomyLabel(value?: string | null): string {
   return value?.replaceAll('_', ' ').toLocaleUpperCase() || ''
 }
 
-export function normaliseTagInput(value?: string | null): string[] {
-  if (!value) return []
+export const SEARCH_TAG_DELIMITER = /[\s,]+/
+
+export function normaliseTagValue(value?: string | null): string {
+  return value?.trim().toLocaleLowerCase().replaceAll(/\s+/g, '_') || ''
+}
+
+export function normaliseTagInput(value?: string | string[] | null): string[] {
+  const _items = Array.isArray(value) ? value : value ? [value] : []
 
   return [...new Set(
-    value
-      .split(',')
-      .map(tag => tag.trim().toLocaleLowerCase().replaceAll(/\s+/g, '_'))
+    _items
+      .flatMap(item => item.split(','))
+      .map(normaliseTagValue)
       .filter(Boolean)
   )]
 }

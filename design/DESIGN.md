@@ -10,12 +10,13 @@
 - Header: | {current_date as `Weekday, MMM dd` with a live-indicator icon that has a slight primary glow} (justify start) | {beans_favicon} Beans - (justify-center) | [search_button](/search) [api_button](https://developer.cafecito.tech/products/beans) [contact_button](https://developer.cafecito.tech/contact) - (justify-end) |
 - Category tabs: Now + category groups in one row across the content column (`justify-between`). Horizontal scroll only inside the tab row when they overflow; no page-level overflow.
 - Footer: [Cafecito](https://cafecito.tech) | [Publications](https://espresso.cafecito.tech) | [API](https://developer.cafecito.tech) | [Github](https://github.com/soumitsalman/beans-ui) | [About](/about-beans)
+- Outbound links to other sites append `utm_source=beans.cafecito.tech` and `utm_medium=referral` when those params are absent. Internal app routes and same-origin URLs stay unchanged.
 
 ## Pages
 - Home page: shows all news/stories/articles irrespective of category | route `/`
 - Category page: shows news/stories/articles from that category | route `/categories/{category_slug}`
 - Story page: shows details of that story like title, summary, tags, propagation, related news | route `/stories/{story_id}`
-- Search page: search news/articles using semmantic search, tags, sources | route `/search`
+- Search page: search news/articles using semantic search (`q`) and normalized tags (`tags`) | route `/search`. Line 1 is the query string. Line 2 is a tag input; Space commits a tag. Publisher `sources` is not a search filter.
 
 ### Home Page & Category Page
 - Top Headlines: Carousel titled Trending. Exclude if empty. Fetch more when user reaches end of loaded carousel. Allow arrow and gesture scrolling. Visible slides by Tailwind viewport: 1 below `md` (xs/sm), 2 at `md` and above (`md`, `lg`, `xl`). Use next_cursor to load more items when scolling reaches the last item.

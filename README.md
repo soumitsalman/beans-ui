@@ -9,7 +9,7 @@ Beans presents snapshots rather than republishing full articles. Trend signals a
 - Homepage: current and trending publisher news, organized as related stories.
 - Categories: eight broad news topics, each mapped to the Beans API taxonomy.
 - Story view: source coverage, article chronology, and available engagement signals.
-- Search: semantic topic search plus normalized-tag and publisher-source filters.
+- Search: semantic topic search plus normalized-tag filters.
 - Data: the interface is centered on the Beans API. Server proxy support for Espresso remains available for Cafecito integrations, but Espresso Publications are a separate editorial product.
 
 For programmatic access, semantic search, filters, trend signals, and MCP workflows, use the [Beans API documentation](https://developer.cafecito.tech/products/beans).
@@ -47,9 +47,10 @@ CAFECITO_API_KEY=
 BEANS_API_BASE_URL=https://cafecito-beans-api.fly.dev
 ESPRESSO_API_BASE_URL=https://cafecito-espresso-api.fly.dev
 NUXT_PUBLIC_SITE_URL=https://cafecito-beans-app.fly.dev
+NUXT_PUBLIC_GA_MEASUREMENT_ID=G-KPG0Y2MBV9
 ```
 
-The API base URLs have the defaults shown above. `CAFECITO_API_KEY` is server-only and is used by the API proxy routes. Set `NUXT_PUBLIC_SITE_URL` to the public canonical origin when deploying under a custom domain.
+The API base URLs have the defaults shown above. `CAFECITO_API_KEY` is server-only and is used by the API proxy routes. Set `NUXT_PUBLIC_SITE_URL` to the public canonical origin when deploying under a custom domain. `NUXT_PUBLIC_GA_MEASUREMENT_ID` is the Google Analytics 4 tag; it defaults to `G-KPG0Y2MBV9` and records a page view on every client route, including in-app navigations. Page path omits query strings. If Realtime shows two views per in-app click, turn off **Page changes based on browser history events** on that GA4 web stream.
 
 ## Routes
 

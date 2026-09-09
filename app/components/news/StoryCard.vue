@@ -20,10 +20,11 @@ const props = withDefaults(defineProps<StoryCardProps>(), {
   linked: true
 })
 
+const { outboundHref } = useOutboundUrl()
 const image_failed = ref(false)
 const story_url = computed(() => props.story.story_id
   ? `/stories/${props.story.story_id}`
-  : props.story.url || undefined
+  : outboundHref(props.story.url)
 )
 const is_external_link = computed(() => !props.story.story_id && Boolean(props.story.url))
 const is_linked = computed(() => props.linked && Boolean(story_url.value))

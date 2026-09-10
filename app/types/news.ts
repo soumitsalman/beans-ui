@@ -41,6 +41,8 @@ export interface BeansArticle {
 }
 
 export interface BeansStory {
+  articles_count?: number | null
+  sources_count?: number | null
   id?: string | null
   title?: string | null
   summary?: string | null
@@ -112,6 +114,7 @@ export interface NewsPage<T> {
 }
 
 export interface BeansPageParams {
+  sort?: 'trend' | 'recent'
   limit?: number
   cursor?: string | null
   q?: string

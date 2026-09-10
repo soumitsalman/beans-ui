@@ -1,26 +1,26 @@
 import { computed, ref, unref } from 'vue'
 import type { MaybeRef } from 'vue'
 import type { NewsCategory } from '~/settings/categories'
-import type { EspressoConfidence, NewsArticle, NewsStory, NewsTrend } from '~/types/news'
+import type { EspressoConfidence, NewsArticle, NewsStory } from '~/types/news'
 import { sourceIdentity } from '~/utils/source'
 import { logClientEvent } from '~/utils/telemetry'
 
 const DISPLAY_PAGE_SIZE = 5
 const FETCH_BATCH_SIZE = 20
-const MAX_FETCH_BATCH_SIZE = 100
 
 interface FeedFilters {
   categories?: string[]
 }
 
 export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
-  const { fetchArticle, fetchLatestArticles, fetchSimilarArticles, fetchStory, fetchTopHeadlines } = useBeansApi()
+  const { fetchLatestArticles, fetchPrivateStory, fetchStoryPropagation, fetchTopHeadlines } = useBeansApi()
   const { fetchConfidence } = useEspressoApi()
   const route = useRoute()
   const top_headlines = ref<NewsStory[]>([])
   const latest_news = ref<NewsStory[]>([])
   const top_headlines_pool = ref<NewsStory[]>([])
   const latest_news_pool = ref<NewsStory[]>([])
+  const top_headlines_cursor = ref<string | null>(null)
   const latest_news_cursor = ref<string | null>(null)
   const top_headlines_exhausted = ref(false)
   const latest_news_exhausted = ref(false)
@@ -37,7 +37,8 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
   )
   let _top_feed_generation = 0
   let _latest_feed_generation = 0
-  let _top_fetch_limit = FETCH_BATCH_SIZE
+  let _top_from = ''
+  let _latest_from = ''
 
   function logFeedLoad(
     feed: 'top_headlines' | 'latest_news',
@@ -70,62 +71,9 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     }
   }
 
-  function appendStories(target: NewsStory[], received: NewsStory[]): NewsStory[] {
-    const _known_story_ids = new Set<string>()
-    const _known_article_ids = new Set<string>()
-
-    for (const story of target) {
-      if (story.story_id) _known_story_ids.add(story.story_id)
-      for (const _article_id of feedArticleIdentities(story)) _known_article_ids.add(_article_id)
-    }
-
-    const _new_stories: NewsStory[] = []
-
-    for (const story of received) {
-      const _article_ids = feedArticleIdentities(story)
-      if (story.story_id && _known_story_ids.has(story.story_id)) continue
-      if (_article_ids.some(article_id => _known_article_ids.has(article_id))) continue
-      if (!story.story_id && !_article_ids.length) continue
-
-      if (story.story_id) _known_story_ids.add(story.story_id)
-      for (const _article_id of _article_ids) _known_article_ids.add(_article_id)
-      _new_stories.push(story)
-    }
-
-    return [...target, ..._new_stories]
-  }
-
   function nextCursor(value: string | null, previous: string | null, received_count: number): string | null {
     if (!received_count || !value || value === previous) return null
     return value
-  }
-
-  function hasTrend(trend?: NewsTrend | null): boolean {
-    if (!trend) return false
-
-    return [
-      trend.trend_score,
-      trend.likes,
-      trend.comments,
-      trend.mentions,
-      trend.shares,
-      trend.audiences,
-      trend.related
-    ].some(value => value != null)
-  }
-
-  function articleIdentity(article: NewsArticle): string {
-    return article.id || article.url || ''
-  }
-
-  function feedArticleIdentities(story: NewsStory): string[] {
-    const _primary_article = story.top_articles?.[0]
-    return [
-      _primary_article?.id,
-      _primary_article?.url,
-      story.story_id ? undefined : story.id,
-      story.story_id ? undefined : story.url
-    ].filter((article_id): article_id is string => Boolean(article_id))
   }
 
   function distinctSourceCount(articles: NewsArticle[]): number {
@@ -139,44 +87,22 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     return _source_ids.size
   }
 
-  function relatedArticles(story: NewsStory, similar_articles: NewsArticle[]): NewsArticle[] {
-    const _articles = [...(story.top_articles ?? []), ...similar_articles]
-    const _seen_ids = new Set<string>()
-
-    return _articles.filter((article) => {
-      const _article_id = articleIdentity(article)
-      if (!_article_id || _seen_ids.has(_article_id)) return false
-
-      _seen_ids.add(_article_id)
-      return true
-    })
-  }
-
   function mergeEnrichedStory(
     feed_story: NewsStory,
     enriched_story: NewsStory | undefined,
-    similar_articles: NewsArticle[],
-    detailed_article: NewsArticle | undefined,
+    propagation_articles: NewsArticle[],
     confidence: EspressoConfidence | undefined
   ): NewsStory {
-    const _source_articles = relatedArticles(feed_story, similar_articles)
-    const _trend = hasTrend(feed_story.trend)
-      ? feed_story.trend
-      : hasTrend(detailed_article?.trend)
-        ? detailed_article?.trend
-        : hasTrend(enriched_story?.trend)
-          ? enriched_story?.trend
-          : feed_story.trend
+    const _source_articles = [...(feed_story.top_articles ?? []), ...propagation_articles]
 
     return {
       ...feed_story,
       first_published_at: feed_story.first_published_at ?? enriched_story?.first_published_at,
       last_published_at: feed_story.last_published_at ?? enriched_story?.last_published_at,
-      trend: _trend,
       top_articles: _source_articles,
-      source_count: enriched_story?.source_count || distinctSourceCount(_source_articles) || feed_story.source_count,
+      source_count: enriched_story?.source_count ?? (distinctSourceCount(_source_articles) || feed_story.source_count),
       confidence: confidence ?? feed_story.confidence,
-      article_count: enriched_story?.article_count || feed_story.article_count
+      article_count: enriched_story?.article_count ?? feed_story.article_count
     }
   }
 
@@ -208,24 +134,19 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     const _enriched_stories = await Promise.all(
       received.map(async (story) => {
         const _primary_article = story.top_articles?.[0]
-        const [_story, _similar_articles, _detailed_article, _confidence] = await Promise.all([
+        const [_story, _propagation_articles, _confidence] = await Promise.all([
           story.story_id
-            ? fetchStory(story.story_id).catch(() => undefined)
+            ? fetchPrivateStory(story.story_id).catch(() => undefined)
             : Promise.resolve(undefined),
-          _primary_article?.id
-            ? fetchSimilarArticles(_primary_article.id, { limit: DISPLAY_PAGE_SIZE })
-                .then(page => page.data)
-                .catch(() => [])
+          story.story_id
+            ? fetchStoryPropagation(story.story_id).catch(() => [])
             : Promise.resolve([]),
-          _primary_article?.id && !hasTrend(story.trend)
-            ? fetchArticle(_primary_article.id).catch(() => undefined)
-            : Promise.resolve(undefined),
           _primary_article?.id
             ? fetchConfidence(_primary_article.id).catch(() => undefined)
             : Promise.resolve(undefined)
         ])
 
-        return mergeEnrichedStory(story, _story, _similar_articles, _detailed_article, _confidence)
+        return mergeEnrichedStory(story, _story, _propagation_articles, _confidence)
       })
     )
     if (!isCurrentGeneration(target, feed_generation)) return
@@ -246,98 +167,45 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
   function resetTopPaging(): void {
     top_headlines_pool.value = []
     top_headlines_exhausted.value = false
-    _top_fetch_limit = FETCH_BATCH_SIZE
+    top_headlines_cursor.value = null
+    _top_from = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
   }
 
   function resetLatestPaging(): void {
+    _latest_from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
     latest_news_pool.value = []
     latest_news_cursor.value = null
     latest_news_exhausted.value = false
   }
 
-  async function fillTopHeadlinesPool(
-    min_unique: number,
+  async function fillFeedPool(
+    target: 'top' | 'latest',
+    min_count: number,
     feed_generation: number
   ): Promise<NewsStory[]> {
-    let _received_for_enrich: NewsStory[] = []
+    const _pool = target === 'top' ? top_headlines_pool : latest_news_pool
+    const _cursor_ref = target === 'top' ? top_headlines_cursor : latest_news_cursor
+    const _exhausted = target === 'top' ? top_headlines_exhausted : latest_news_exhausted
+    const _fetch = target === 'top' ? fetchTopHeadlines : fetchLatestArticles
+    const _received: NewsStory[] = []
 
-    while (
-      top_headlines_pool.value.length < min_unique
-      && !top_headlines_exhausted.value
-      && isCurrentGeneration('top', feed_generation)
-    ) {
-      const _page = await fetchTopHeadlines({
-        ...filters(),
-        limit: _top_fetch_limit
-      })
-      if (!isCurrentGeneration('top', feed_generation)) return _received_for_enrich
-
-      const _before = top_headlines_pool.value.length
-      top_headlines_pool.value = appendStories(top_headlines_pool.value, _page.data)
-      const _added = top_headlines_pool.value.length - _before
-      _received_for_enrich = [..._received_for_enrich, ..._page.data]
-      const _short_page = _page.data.length < _top_fetch_limit
-
-      if (_short_page) {
-        top_headlines_exhausted.value = true
-        break
-      }
-
-      if (_added === 0) {
-        if (_top_fetch_limit >= MAX_FETCH_BATCH_SIZE) {
-          top_headlines_exhausted.value = true
-          break
-        }
-        _top_fetch_limit = Math.min(MAX_FETCH_BATCH_SIZE, _top_fetch_limit + FETCH_BATCH_SIZE)
-        continue
-      }
-
-      if (top_headlines_pool.value.length < min_unique && _top_fetch_limit < MAX_FETCH_BATCH_SIZE) {
-        _top_fetch_limit = Math.min(MAX_FETCH_BATCH_SIZE, _top_fetch_limit + FETCH_BATCH_SIZE)
-      }
-    }
-
-    return _received_for_enrich
-  }
-
-  async function fillLatestNewsPool(
-    min_unique: number,
-    feed_generation: number
-  ): Promise<NewsStory[]> {
-    let _received_for_enrich: NewsStory[] = []
-
-    while (
-      latest_news_pool.value.length < min_unique
-      && !latest_news_exhausted.value
-      && isCurrentGeneration('latest', feed_generation)
-    ) {
-      if (!latest_news_cursor.value && latest_news_pool.value.length) {
-        latest_news_exhausted.value = true
-        break
-      }
-
-      const _cursor = latest_news_cursor.value
-      const _page = await fetchLatestArticles({
+    while (_pool.value.length < min_count && !_exhausted.value && isCurrentGeneration(target, feed_generation)) {
+      const _cursor = _cursor_ref.value
+      const _page = await _fetch({
         ...filters(),
         limit: FETCH_BATCH_SIZE,
-        cursor: _cursor
+        cursor: _cursor,
+        from: target === 'top' ? _top_from : _latest_from
       })
-      if (!isCurrentGeneration('latest', feed_generation)) return _received_for_enrich
+      if (!isCurrentGeneration(target, feed_generation)) return _received
 
-      const _before = latest_news_pool.value.length
-      latest_news_pool.value = appendStories(latest_news_pool.value, _page.data)
-      const _added = latest_news_pool.value.length - _before
-      _received_for_enrich = [..._received_for_enrich, ..._page.data]
-      latest_news_cursor.value = nextCursor(_page.next_cursor, _cursor, _page.data.length)
-      if (!latest_news_cursor.value) latest_news_exhausted.value = true
-
-      if (!_page.data.length && _added === 0) {
-        latest_news_exhausted.value = true
-        break
-      }
+      _pool.value = [..._pool.value, ..._page.data]
+      _received.push(..._page.data)
+      _cursor_ref.value = nextCursor(_page.next_cursor, _cursor, _page.data.length)
+      _exhausted.value = !_cursor_ref.value
     }
 
-    return _received_for_enrich
+    return _received
   }
 
   async function loadTopHeadlines(append = false): Promise<void> {
@@ -349,11 +217,12 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     const _target = append
       ? top_headlines.value.length + DISPLAY_PAGE_SIZE
       : DISPLAY_PAGE_SIZE
+    const _cursor_present = Boolean(top_headlines_cursor.value)
     const _before_count = top_headlines.value.length
     loading_top_headlines.value = true
     top_headlines_error.value = null
     try {
-      const _received = await fillTopHeadlinesPool(_target, _feed_generation)
+      const _received = await fillFeedPool('top', _target, _feed_generation)
       if (!isCurrentGeneration('top', _feed_generation)) return
 
       top_headlines.value = revealStories(top_headlines_pool.value, _target)
@@ -365,7 +234,7 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
         _target,
         _received.length,
         top_headlines.value.length,
-        false
+        _cursor_present
       )
     } catch {
       if (isCurrentGeneration('top', _feed_generation)) {
@@ -377,7 +246,7 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
           _target,
           0,
           _before_count,
-          false
+          _cursor_present
         )
       }
     } finally {
@@ -399,7 +268,7 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     loading_latest_news.value = true
     latest_news_error.value = null
     try {
-      const _received = await fillLatestNewsPool(_target, _feed_generation)
+      const _received = await fillFeedPool('latest', _target, _feed_generation)
       if (!isCurrentGeneration('latest', _feed_generation)) return
 
       latest_news.value = revealStories(latest_news_pool.value, _target)

@@ -9,7 +9,7 @@ import { logClientEvent } from '~/utils/telemetry'
 const PAGE_SIZE = 5
 
 const route = useRoute()
-const { fetchArticle, fetchStory, fetchStoryArticles } = useBeansApi()
+const { fetchArticle, fetchStory, fetchStoryArticles, fetchStoryPropagation } = useBeansApi()
 const { fetchConfidence } = useEspressoApi()
 const story_id = computed(() => String(route.params.story_id || ''))
 const story = ref<NewsStory | null>(null)
@@ -103,8 +103,6 @@ async function enrichCoverageArticles(
 }
 
 async function loadPropagation(
-  seed: NewsArticle[],
-  cursor: string | null,
   generation = _request_generation
 ): Promise<void> {
   if (!isCurrentGeneration(generation)) return
@@ -112,27 +110,16 @@ async function loadPropagation(
   const _story_id = story_id.value
   loading_propagation.value = true
   propagation_error.value = null
-  propagation_cursor.value = cursor
-  appendPropagationArticles(seed)
+  propagation_cursor.value = null
 
   try {
-    let _cursor = cursor
-    while (_cursor) {
-      const _article_page = await fetchStoryArticles(_story_id, {
-        limit: PAGE_SIZE,
-        cursor: _cursor
-      })
-      if (!isCurrentGeneration(generation)) return
+    const _propagation_articles = await fetchStoryPropagation(_story_id)
+    if (!isCurrentGeneration(generation)) return
 
-      appendPropagationArticles(_article_page.data)
-      _cursor = _article_page.data.length && _article_page.next_cursor && _article_page.next_cursor !== _cursor
-        ? _article_page.next_cursor
-        : null
-      propagation_cursor.value = _cursor
-    }
+    propagation_articles.value = _propagation_articles
   } catch {
     if (!isCurrentGeneration(generation)) return
-    propagation_error.value = 'Story propagation could not be fully loaded.'
+    propagation_error.value = 'Story propagation could not be loaded right now.'
   } finally {
     if (isCurrentGeneration(generation)) {
       loading_propagation.value = false
@@ -170,7 +157,7 @@ async function loadCoverage(reset = false, generation = _request_generation): Pr
       : null
 
     if (reset) {
-      void loadPropagation(_article_page.data, articles_cursor.value, generation)
+      void loadPropagation(generation)
     }
   } catch {
     if (!isCurrentGeneration(generation)) return
@@ -252,7 +239,7 @@ async function loadMoreArticles(): Promise<void> {
 }
 
 function retryPropagation(): Promise<void> {
-  return loadPropagation(propagation_articles.value, propagation_cursor.value)
+  return loadPropagation()
 }
 
 onMounted(() => {

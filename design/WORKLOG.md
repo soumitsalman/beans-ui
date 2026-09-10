@@ -2,6 +2,32 @@
 
 ## 2026-09-10
 
+- Feed story cards now use the story ID from each Top Headlines and Latest News article to load `/private/stories/{id}/propagation`, supplying the complete source preview set used by the avatar group. The private story response supplies the authoritative `articles_count` and `sources_count`; story-less articles keep their existing fallback.
+- Verification: existing route enrichment remains covered by lint and typecheck.
+
+## 2026-09-10
+
+- Story detail Propagation now loads all source publication previews from `/private/stories/{id}/propagation` in one request; Coverage continues using `/stories/{id}/articles`.
+- Verification: ESLint and Nuxt typecheck pass.
+
+## 2026-09-10
+
+- Story detail now renders the story API `sources_count` and `articles_count` as Propagation header counts; Coverage no longer displays an article count label.
+- Verification: ESLint and Nuxt typecheck pass.
+
+## 2026-09-10T19:01:18Z
+
+- Switched Top Headlines and Latest News to `/private/articles/unique`: English news with `sort=trend` over two days and `sort=recent` over seven days. Removed client story/article deduplication and headline limit expansion; both feeds use independent cursors, fetch 20, and reveal five items at a time with stable time windows.
+- Removed feed article-detail trend and similar-article requests. Feed trends remain authoritative; private story detail supplies counts and unpaginated private propagation supplies all source previews. Plural and singular API count names normalize to the UI fields; authoritative zero counts are preserved. Existing Espresso confidence enrichment remains.
+- Updated feed routing and verification documentation. Files: `app/composables/useBeansApi.ts`, `app/composables/useNewsFeed.ts`, `app/types/news.ts`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: ESLint, Nuxt typecheck, production build, and temporary fixture checks passed for request routes/filters/time windows, five-item reveals, independent cursor continuation, repeated-cursor termination, complete source enrichment, counts, trend preservation, story-less items, and enrichment failure fallback. Build reports Browserslist age and plugin sourcemap warnings. Live API and browser checks were not run.
+
+Code snapshot SHA-256: `4076e5ccb56410e154a89e9a8cac40555e581e053822cc4f859bad9a91349ee6`
+
+Hash inputs: 45 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
+## 2026-09-10
+
 - Documented the selected Espresso confidence treatment: end-aligned metadata badges labelled only `High`, `Medium`, or `Low`, with an Espresso-signal tooltip and omission for null, missing, or unavailable data. The data chain is `/events/{event_id}/signals` → `/signals/{first_signal_id}` → `data.confidence`.
 - Moved story count ownership in the design: the story metadata row has no article/source counts; Coverage owns `N articles` and Propagation owns `N sources`.
 - Files: `design/DESIGN.md`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.

@@ -62,7 +62,7 @@ Just In
 ### Story Page
 - Story title, category, regions, entities, last_published_at, summary | use `title` and `summary` from `/stories/{story_id}`. The category/date row has no article or source counts. The detailed story card uses the same end-aligned `High` / `Medium` / `Low` Espresso metadata badge and tooltip as feed cards.
 - Propagation: timeline of (published_at, source_favicon) | show 5 items including the first_published_at and last_published_at. If there are more than 5 group the sources in between. Its section header owns the humanized `N sources` count, right-aligned like Coverage's count, only when `source_count` is > 0. The timeline spans the story column (`w-full`, equal flex columns) with no inner horizontal scroll.
-- Coverage (articles_count): List of articles in that story. Its section header owns the humanized `N articles` count, right-aligned, only when `article_count` is > 0. Limit=5. Use Use next_cursor to fetch more when needed. Latest first. Click goes to article.url
+- Coverage: List of articles in that story. Limit=5. Use Use next_cursor to fetch more when needed. Latest first. Click goes to article.url
 
 #### Layout
 

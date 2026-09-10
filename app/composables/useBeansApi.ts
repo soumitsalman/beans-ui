@@ -53,6 +53,11 @@ function serialiseQueryList(value?: string | string[]): string | undefined {
   return value
 }
 
+function serialiseIsoDate(value?: string): string | undefined {
+  if (!value) return undefined
+  return value.slice(0, 10)
+}
+
 function withEnglishNews(params: BeansPageParams = {}): BeansPageParams {
   return {
     ...params,
@@ -103,8 +108,8 @@ function toNewsStory(story: BeansStory): NewsStory {
     entities: normaliseList(story.entities),
     tags: normaliseList(story.tags),
     source: top_article?.source,
-    source_count: story.source_count ?? 0,
-    article_count: story.article_count ?? 0,
+    source_count: story.sources_count ?? story.source_count ?? 0,
+    article_count: story.articles_count ?? story.article_count ?? 0,
     trend: top_article?.trend,
     top_articles: articles
   }
@@ -151,8 +156,9 @@ function toQuery(params: BeansPageParams = {}): ApiQuery {
     entities: params.entities?.length ? params.entities.join(',') : undefined,
     content_type: params.content_type,
     languages: serialiseQueryList(params.languages),
-    from: params.from,
-    to: params.to
+    sort: params.sort,
+    from: serialiseIsoDate(params.from),
+    to: serialiseIsoDate(params.to)
   }
 }
 
@@ -177,11 +183,11 @@ async function fetchBeansPage<T>(path: string, params: BeansPageParams = {}): Pr
 
 export function useBeansApi() {
   async function fetchTopHeadlines(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
-    const page = await fetchBeansPage<BeansArticle>('news/top-headlines', {
+    const page = await fetchBeansPage<BeansArticle>('private/articles/unique', {
       ...withEnglishNews(params),
-      content_type: undefined,
-      from: undefined,
-      to: undefined
+      content_type: 'news',
+      sort: 'trend',
+      from: params.from ?? new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
     })
 
     return {
@@ -191,9 +197,11 @@ export function useBeansApi() {
   }
 
   async function fetchLatestArticles(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
-    const page = await fetchBeansPage<BeansArticle>('news/latest', {
+    const page = await fetchBeansPage<BeansArticle>('private/articles/unique', {
       ...withEnglishNews(params),
-      content_type: undefined
+      content_type: 'news',
+      sort: 'recent',
+      from: params.from ?? new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
     })
 
     return {
@@ -254,6 +262,18 @@ export function useBeansApi() {
     return toNewsStory(response.data ?? {})
   }
 
+  async function fetchPrivateStory(story_id: string): Promise<NewsStory> {
+    const response = await $fetch<ApiEnvelope<BeansStory>>(`/api/beans/private/stories/${story_id}`, {
+      query: { languages: NEWS_LANGUAGES }
+    })
+    return toNewsStory(response.data ?? {})
+  }
+
+  async function fetchStoryPropagation(story_id: string): Promise<NewsArticle[]> {
+    const response = await $fetch<ApiEnvelope<BeansArticle[]>>(`/api/beans/private/stories/${story_id}/propagation`)
+    return pageFrom(response).data.map(toNewsArticle)
+  }
+
   async function fetchStoryArticles(story_id: string, params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
     const page = await fetchBeansPage<BeansArticle>(`stories/${story_id}/articles`, {
       ...params,
@@ -276,7 +296,9 @@ export function useBeansApi() {
     fetchSimilarArticles,
     fetchSources,
     fetchStory,
-    fetchStoryArticles
+    fetchStoryArticles,
+    fetchPrivateStory,
+    fetchStoryPropagation
   }
 }
 

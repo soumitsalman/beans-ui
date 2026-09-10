@@ -13,6 +13,6 @@ export async function proxyApi(event: H3Event, api_base_url: string, api_key?: s
   return $fetch(`${api_base_url.replace(/\/$/, '')}/${path}`, {
     query: getQuery(event),
     headers: api_key ? { 'X-API-KEY': api_key } : undefined,
-    timeout: 20_000
+    timeout: 60_000
   })
 }

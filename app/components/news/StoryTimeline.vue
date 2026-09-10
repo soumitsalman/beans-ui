@@ -89,8 +89,8 @@ function countLabel(count: number | null | undefined, singular: string): string 
   return `${formatCount(count)} ${count === 1 ? singular : `${singular}s`}`
 }
 
-const coverage_article_count_label = computed(() => countLabel(props.article_count, 'article'))
 const propagation_source_count_label = computed(() => countLabel(props.source_count, 'source'))
+const propagation_article_count_label = computed(() => countLabel(props.article_count, 'article'))
 
 const coverage_rows = computed<CoverageRow[]>(() => {
   return props.coverage_articles.map(article => ({
@@ -156,6 +156,12 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
           class="ml-auto text-xs tabular-nums text-stone-500"
         >
           {{ propagation_source_count_label }}
+        </span>
+        <span
+          v-if="propagation_article_count_label"
+          class="text-xs tabular-nums text-stone-500"
+        >
+          {{ propagation_article_count_label }}
         </span>
       </div>
 
@@ -257,12 +263,6 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
         <h2 class="text-sm font-semibold text-stone-100">
           Coverage
         </h2>
-        <span
-          v-if="coverage_article_count_label"
-          class="ml-auto text-xs tabular-nums text-stone-500"
-        >
-          {{ coverage_article_count_label }}
-        </span>
       </div>
 
       <UAlert

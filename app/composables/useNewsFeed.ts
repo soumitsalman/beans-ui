@@ -1,7 +1,7 @@
 import { computed, ref, unref } from 'vue'
 import type { MaybeRef } from 'vue'
 import type { NewsCategory } from '~/settings/categories'
-import type { NewsArticle, NewsStory, NewsTrend } from '~/types/news'
+import type { EspressoConfidence, NewsArticle, NewsStory, NewsTrend } from '~/types/news'
 import { sourceIdentity } from '~/utils/source'
 import { logClientEvent } from '~/utils/telemetry'
 
@@ -15,6 +15,7 @@ interface FeedFilters {
 
 export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
   const { fetchArticle, fetchLatestArticles, fetchSimilarArticles, fetchStory, fetchTopHeadlines } = useBeansApi()
+  const { fetchConfidence } = useEspressoApi()
   const route = useRoute()
   const top_headlines = ref<NewsStory[]>([])
   const latest_news = ref<NewsStory[]>([])
@@ -155,7 +156,8 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     feed_story: NewsStory,
     enriched_story: NewsStory | undefined,
     similar_articles: NewsArticle[],
-    detailed_article: NewsArticle | undefined
+    detailed_article: NewsArticle | undefined,
+    confidence: EspressoConfidence | undefined
   ): NewsStory {
     const _source_articles = relatedArticles(feed_story, similar_articles)
     const _trend = hasTrend(feed_story.trend)
@@ -173,6 +175,7 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
       trend: _trend,
       top_articles: _source_articles,
       source_count: enriched_story?.source_count || distinctSourceCount(_source_articles) || feed_story.source_count,
+      confidence: confidence ?? feed_story.confidence,
       article_count: enriched_story?.article_count || feed_story.article_count
     }
   }
@@ -205,7 +208,7 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
     const _enriched_stories = await Promise.all(
       received.map(async (story) => {
         const _primary_article = story.top_articles?.[0]
-        const [_story, _similar_articles, _detailed_article] = await Promise.all([
+        const [_story, _similar_articles, _detailed_article, _confidence] = await Promise.all([
           story.story_id
             ? fetchStory(story.story_id).catch(() => undefined)
             : Promise.resolve(undefined),
@@ -216,10 +219,13 @@ export function useNewsFeed(category?: MaybeRef<NewsCategory | undefined>) {
             : Promise.resolve([]),
           _primary_article?.id && !hasTrend(story.trend)
             ? fetchArticle(_primary_article.id).catch(() => undefined)
+            : Promise.resolve(undefined),
+          _primary_article?.id
+            ? fetchConfidence(_primary_article.id).catch(() => undefined)
             : Promise.resolve(undefined)
         ])
 
-        return mergeEnrichedStory(story, _story, _similar_articles, _detailed_article)
+        return mergeEnrichedStory(story, _story, _similar_articles, _detailed_article, _confidence)
       })
     )
     if (!isCurrentGeneration(target, feed_generation)) return

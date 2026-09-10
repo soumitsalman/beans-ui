@@ -23,6 +23,7 @@
 - Latest news: List titled Just In. Exclude if empty. Columns by Tailwind viewport: 1 below `md` (xs/sm), 2 at `md` and above (`md`, `lg`, `xl`). Include a `More` button at the end of the list - fetch more items using next_cursor when clicked.
 - news item: click navigate_to_story_page("/stories/{article.story_id}") if story_id != null and story_id != missing else navigate_to_original_article(article.url)
 - news item: show sources of the the article itself and the similar articles. show <=5 favicons as avatar group + total distinct sources count
+- Confidence badge: on Trending and Just In cards, show the resolved Espresso value as a compact metadata-row badge labelled only `High`, `Medium`, or `Low`. Exclude confidence badge when confidence=null or the field is missing. Place it at the row end (`justify-end` / auto start margin). Its tooltip explains `Espresso signal confidence`; do not render the word `confidence` in the visible badge. Omit the badge when the value is `null`, absent, or unavailable.
 
 #### Layout
 
@@ -32,7 +33,7 @@ Trending
 +---------------------------------------+
 | image if exists                       |
 +---------------------------------------+
-| categories[0]     date trend_score    |
+| categories[0]     date trend_score             High |
 +---------------------------------------+   --> (click fetches more) 
 | title (Bold or Emphasized)            |
 | 2-entities 2-regions as tags          |
@@ -59,28 +60,28 @@ Just In
 ```
 
 ### Story Page
-- Story title, category, regions, entities, last_published_at, summary | use `title` and `summary` from `/stories/{story_id}`. article_count and source_count sit on the category/date row, right-aligned (`justify-end`), only when each value is > 0.
-- Propagation: timeline of (published_at, source_favicon) | show 5 items including the first_published_at and last_published_at. If there are more than 5 group the sources in between. The timeline spans the story column (`w-full`, equal flex columns) with no inner horizontal scroll.
-- Coverage (articles_count): List of articles in that story. Limit=5. Use Use next_cursor to fetch more when needed. Latest first. Click goes to article.url
+- Story title, category, regions, entities, last_published_at, summary | use `title` and `summary` from `/stories/{story_id}`. The category/date row has no article or source counts. The detailed story card uses the same end-aligned `High` / `Medium` / `Low` Espresso metadata badge and tooltip as feed cards.
+- Propagation: timeline of (published_at, source_favicon) | show 5 items including the first_published_at and last_published_at. If there are more than 5 group the sources in between. Its section header owns the humanized `N sources` count, right-aligned like Coverage's count, only when `source_count` is > 0. The timeline spans the story column (`w-full`, equal flex columns) with no inner horizontal scroll.
+- Coverage (articles_count): List of articles in that story. Its section header owns the humanized `N articles` count, right-aligned, only when `article_count` is > 0. Limit=5. Use Use next_cursor to fetch more when needed. Latest first. Click goes to article.url
 
 #### Layout
 
 ```
-[categories[0]] last_published_at          article_count sources_count
+[categories[0]] last_published_at                              High
 title (H3)
 summary
 3 regions, 3 entities
 
 ---(divider)
 
-Propagation
+Propagation                                             N sources
 
 [favicon] ----- [favicon] ----- [favicon] ----- [favicon]
 date            date            date            date
 
 ---(divider)
 
-Coverage
+Coverage                                                N articles
 
 +------------------------------------------------------------
 | source_favicon | source_label     | shares, likes, comments

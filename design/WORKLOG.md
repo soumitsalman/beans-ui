@@ -1,5 +1,11 @@
 # Beans UI Working Log
 
+## 2026-09-10
+
+- Documented the selected Espresso confidence treatment: end-aligned metadata badges labelled only `High`, `Medium`, or `Low`, with an Espresso-signal tooltip and omission for null, missing, or unavailable data. The data chain is `/events/{event_id}/signals` → `/signals/{first_signal_id}` → `data.confidence`.
+- Moved story count ownership in the design: the story metadata row has no article/source counts; Coverage owns `N articles` and Propagation owns `N sources`.
+- Files: `design/DESIGN.md`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+
 ## 2026-09-09T13:55:41Z
 
 - Replaced Search publisher-source lookup with a two-line query/tags form. Line 1 is the semantic `q` input. Line 2 is `UInputTags` (Space/comma/paste commits a tag; backspace on an empty field removes the last tag).
@@ -362,3 +368,9 @@ Code snapshot SHA-256: `64455f82bfa29dbe3233580a0fb30da0e88db31e42072de68c179d9a
 Hash inputs: 21 application files under `app/` and `server/`, plus `nuxt.config.ts` and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
 
 - Replaced the story-detail article cards with compact, linked Coverage rows: source favicon and domain followed by the article headline.
+
+## 2026-09-10
+
+- Implemented non-blocking Espresso confidence enrichment for story feeds and the story detail route. A shared end-aligned badge renders only valid `High`, `Medium`, or `Low` values, with its meaning available through a tooltip.
+- Moved count presentation from the detailed story card into the story timeline: Coverage now displays `N articles` and Propagation displays `N sources`, both end aligned.
+- Files: `app/composables/useBeansApi.ts`, `app/composables/useNewsFeed.ts`, `app/components/news/StoryConfidenceBadge.vue`, `app/components/news/StoryCard.vue`, `app/components/news/StoryTimeline.vue`, `app/pages/stories/[story_id].vue`, `app/types/news.ts`.

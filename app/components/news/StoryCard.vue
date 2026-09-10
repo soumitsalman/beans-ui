@@ -2,11 +2,12 @@
 import { computed, ref, resolveComponent, watch } from 'vue'
 import type { NewsStory } from '~/types/news'
 import MarkdownSummary from '~/components/news/MarkdownSummary.vue'
+import StoryConfidenceBadge from '~/components/news/StoryConfidenceBadge.vue'
 import StorySourceStack from '~/components/news/StorySourceStack.vue'
 import StoryTrendCounts from '~/components/news/StoryTrendCounts.vue'
-import { formatCount, formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
+import { formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
 import { hasResolvableSource } from '~/utils/source'
-import { hasPositiveCount, trendSocialCounts } from '~/utils/trend'
+import { trendSocialCounts } from '~/utils/trend'
 
 type StoryCardMode = 'compressed' | 'snapshot' | 'detailed'
 
@@ -57,15 +58,6 @@ const has_source_group = computed(() => props.story.source_count > 0
   || (props.story.top_articles ?? []).some(article => hasResolvableSource(article))
   || hasResolvableSource({ source: props.story.source, url: props.story.url })
 )
-const article_count_display = computed(() => hasPositiveCount(props.story.article_count)
-  ? formatCount(props.story.article_count)
-  : undefined
-)
-const source_count_display = computed(() => hasPositiveCount(props.story.source_count)
-  ? formatCount(props.story.source_count)
-  : undefined
-)
-const show_story_counts = computed(() => Boolean(article_count_display.value || source_count_display.value))
 
 watch(() => props.story.image_url, () => {
   image_failed.value = false
@@ -122,6 +114,10 @@ watch(() => props.story.image_url, () => {
               aria-hidden="true"
             />
           </span>
+          <StoryConfidenceBadge
+            :confidence="story.confidence"
+            class="ml-auto"
+          />
         </div>
         <h3
           v-if="story.title"
@@ -208,6 +204,10 @@ watch(() => props.story.image_url, () => {
                 aria-hidden="true"
               />
             </span>
+            <StoryConfidenceBadge
+              :confidence="story.confidence"
+              class="ml-auto"
+            />
           </div>
           <h3
             v-if="story.title"
@@ -276,23 +276,10 @@ watch(() => props.story.image_url, () => {
           >
             {{ published_label }}
           </time>
-          <div
-            v-if="show_story_counts"
-            class="ml-auto flex flex-nowrap items-center justify-end gap-x-2.5 tabular-nums"
-          >
-            <span
-              v-if="article_count_display"
-              :aria-label="`${article_count_display} ${story.article_count === 1 ? 'article' : 'articles'}`"
-            >
-              {{ article_count_display }} {{ story.article_count === 1 ? 'article' : 'articles' }}
-            </span>
-            <span
-              v-if="source_count_display"
-              :aria-label="`${source_count_display} ${story.source_count === 1 ? 'source' : 'sources'}`"
-            >
-              {{ source_count_display }} {{ story.source_count === 1 ? 'source' : 'sources' }}
-            </span>
-          </div>
+          <StoryConfidenceBadge
+            :confidence="story.confidence"
+            class="ml-auto"
+          />
         </div>
         <h1
           v-if="story.title"

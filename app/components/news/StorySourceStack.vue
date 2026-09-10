@@ -54,7 +54,7 @@ const source_items = computed<StorySource[]>(() => {
   return sources
 })
 
-const source_total = computed(() => Math.max(source_items.value.length, props.story.source_count))
+const article_total = computed(() => props.story.article_count)
 
 function sourceKey(article: StorySource) {
   return sourceIdentity(article)
@@ -80,7 +80,7 @@ function markFaviconFailed(article: StorySource) {
 
 <template>
   <div
-    v-if="source_items.length || source_total"
+    v-if="source_items.length || article_total"
     class="flex min-w-0 items-center gap-2"
   >
     <UAvatarGroup
@@ -101,10 +101,10 @@ function markFaviconFailed(article: StorySource) {
       />
     </UAvatarGroup>
     <span
-      v-if="source_total"
+      v-if="article_total"
       class="shrink-0 text-[11px] tabular-nums text-stone-500"
     >
-      {{ formatCount(source_total) }} {{ source_total === 1 ? 'source' : 'sources' }}
+      {{ formatCount(article_total) }} {{ article_total === 1 ? 'article' : 'articles' }}
     </span>
   </div>
 </template>

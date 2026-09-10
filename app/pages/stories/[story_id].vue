@@ -10,6 +10,7 @@ const PAGE_SIZE = 5
 
 const route = useRoute()
 const { fetchArticle, fetchStory, fetchStoryArticles } = useBeansApi()
+const { fetchConfidence } = useEspressoApi()
 const story_id = computed(() => String(route.params.story_id || ''))
 const story = ref<NewsStory | null>(null)
 const coverage_articles = ref<NewsArticle[]>([])
@@ -203,6 +204,19 @@ async function loadStory(): Promise<void> {
 
     story.value = _story
     loading_story.value = false
+    const _event_id = _story.top_articles?.[0]?.id
+    if (_event_id) {
+      void fetchConfidence(_event_id)
+        .then((confidence) => {
+          if (!confidence || !isCurrentGeneration(_generation) || !story.value) return
+
+          story.value = {
+            ...story.value,
+            confidence
+          }
+        })
+        .catch(() => undefined)
+    }
     void loadCoverage(true, _generation)
   } catch {
     if (!isCurrentGeneration(_generation)) return
@@ -252,19 +266,6 @@ watch(story_id, () => {
 
 <template>
   <div class="space-y-7">
-    <div>
-      <UTooltip text="Back to news">
-        <UButton
-          to="/"
-          icon="lucide:arrow-left"
-          color="neutral"
-          variant="ghost"
-          square
-          aria-label="Back to news"
-        />
-      </UTooltip>
-    </div>
-
     <div
       v-if="loading_story"
       class="space-y-3"
@@ -306,6 +307,7 @@ watch(story_id, () => {
         :first_published_at="story.first_published_at"
         :last_published_at="story.last_published_at"
         :article_count="story.article_count"
+        :source_count="story.source_count"
         :coverage_error="coverage_error"
         :propagation_error="propagation_error"
         @retry-coverage="() => loadCoverage(!coverage_articles.length)"

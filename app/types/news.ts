@@ -20,6 +20,8 @@ export interface NewsTrend {
   trend_score?: number | null
 }
 
+export type EspressoConfidence = 'high' | 'medium' | 'low'
+
 export interface BeansArticle {
   id?: string | null
   title?: string | null
@@ -87,6 +89,7 @@ export interface NewsStory {
   source_count: number
   article_count: number
   trend?: NewsTrend | null
+  confidence?: EspressoConfidence
   top_articles?: NewsArticle[]
 }
 

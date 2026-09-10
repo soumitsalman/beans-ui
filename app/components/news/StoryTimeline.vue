@@ -14,6 +14,7 @@ interface StoryTimelineProps {
   first_published_at?: string | null
   last_published_at?: string | null
   article_count?: number | null
+  source_count?: number | null
   coverage_error?: string | null
   propagation_error?: string | null
 }
@@ -82,11 +83,14 @@ const timeline_items = computed<PropagationItem[]>(() => {
   }))
 })
 
-const coverage_article_count_label = computed(() => {
-  return hasPositiveCount(props.article_count)
-    ? formatCount(props.article_count)
-    : ''
-})
+function countLabel(count: number | null | undefined, singular: string): string {
+  if (!hasPositiveCount(count)) return ''
+
+  return `${formatCount(count)} ${count === 1 ? singular : `${singular}s`}`
+}
+
+const coverage_article_count_label = computed(() => countLabel(props.article_count, 'article'))
+const propagation_source_count_label = computed(() => countLabel(props.source_count, 'source'))
 
 const coverage_rows = computed<CoverageRow[]>(() => {
   return props.coverage_articles.map(article => ({
@@ -132,7 +136,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
       v-if="timeline_items.length || loading_propagation || propagation_error"
       class="space-y-3"
     >
-      <div class="flex items-center gap-2 px-1">
+      <div class="flex w-full items-center gap-2 px-1">
         <UIcon
           name="lucide:git-fork"
           class="size-4 text-primary"
@@ -147,6 +151,12 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
           class="size-3.5 animate-spin text-stone-500"
           aria-label="Loading remaining propagation"
         />
+        <span
+          v-if="propagation_source_count_label"
+          class="ml-auto text-xs tabular-nums text-stone-500"
+        >
+          {{ propagation_source_count_label }}
+        </span>
       </div>
 
       <UAlert
@@ -238,7 +248,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
     </section>
 
     <section class="space-y-3">
-      <div class="flex items-center gap-2 px-1">
+      <div class="flex w-full items-center gap-2 px-1">
         <UIcon
           name="lucide:newspaper"
           class="size-4 text-primary"
@@ -249,7 +259,7 @@ function formatTimelineDate(value: string | null | undefined, index: number, tot
         </h2>
         <span
           v-if="coverage_article_count_label"
-          class="text-xs tabular-nums text-stone-500"
+          class="ml-auto text-xs tabular-nums text-stone-500"
         >
           {{ coverage_article_count_label }}
         </span>

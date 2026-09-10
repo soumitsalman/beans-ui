@@ -2,6 +2,7 @@ import type {
   BeansArticle,
   BeansPageParams,
   BeansStory,
+  EspressoConfidence,
   EspressoSignal,
   NewsArticle,
   NewsPage,
@@ -15,6 +16,27 @@ interface ApiEnvelope<T> {
     next_cursor?: string | null
     num_results?: number | null
   } | null
+}
+
+interface EspressoSignalReference {
+  id?: string | null
+  signal_id?: string | null
+}
+
+interface EspressoSignalDetail {
+  confidence?: string | null
+}
+
+function toConfidence(value?: string | null): EspressoConfidence | undefined {
+  const confidence = value?.toLowerCase()
+  return confidence === 'high' || confidence === 'medium' || confidence === 'low'
+    ? confidence
+    : undefined
+}
+
+function signalId(signal?: EspressoSignalReference | string | null): string | undefined {
+  if (typeof signal === 'string') return signal || undefined
+  return signal?.id || signal?.signal_id || undefined
 }
 
 type ApiQuery = Record<string, string | number | undefined>
@@ -267,7 +289,21 @@ export function useEspressoApi() {
     return pageFrom(response)
   }
 
+  async function fetchConfidence(event_id: string): Promise<EspressoConfidence | undefined> {
+    if (!event_id) return undefined
+
+    const event_response = await $fetch<ApiEnvelope<Array<EspressoSignalReference | string>>>(
+      `/api/espresso/events/${event_id}/signals`
+    )
+    const signal_id = signalId(event_response.data?.[0])
+    if (!signal_id) return undefined
+
+    const signal_response = await $fetch<ApiEnvelope<EspressoSignalDetail>>(`/api/espresso/signals/${signal_id}`)
+    return toConfidence(signal_response.data?.confidence)
+  }
+
   return {
-    fetchSignals
+    fetchSignals,
+    fetchConfidence
   }
 }

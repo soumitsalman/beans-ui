@@ -1,3 +1,13 @@
+## 2026-09-11
+
+- Story cards now show `Hot` beside the fire trend icon and `Trending` beside the trending-up icon; other trend icons remain unlabeled. The trend-score and Espresso-confidence indicators share the right-aligned metadata group in compressed, snapshot, and detailed cards.
+- Espresso confidence badges now read `High Confidence`, `Moderate Confidence`, or `Low Confidence`; their tooltip identifies the value as an Espresso signal.
+- Verification: Nuxt typecheck and production build pass. `corepack pnpm lint` remains blocked by the existing unused `appendPropagationArticles` function in `app/pages/stories/[story_id].vue`.
+
+Code snapshot SHA-256: `da7b06fa3bcea017f784fef78033613451b080e3402e96ae9a905f39ebb3ad4b`
+
+Hash inputs: application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
 # Beans UI Working Log
 
 ## 2026-09-10

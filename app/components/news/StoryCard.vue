@@ -53,6 +53,12 @@ const trend_label = computed(() => {
   if (trend_score.value >= 1000) return 'Rising trend activity'
   return 'Recent activity'
 })
+const trend_badge_label = computed(() => {
+  if (typeof trend_score.value !== 'number') return undefined
+  if (trend_score.value >= 10000) return 'Hot'
+  if (trend_score.value >= 1000) return 'Trending'
+  return undefined
+})
 const social_counts = computed(() => trendSocialCounts(props.story.trend))
 const has_source_group = computed(() => props.story.source_count > 0
   || (props.story.top_articles ?? []).some(article => hasResolvableSource(article))
@@ -103,21 +109,24 @@ watch(() => props.story.image_url, () => {
           >
             {{ published_label }}
           </time>
-          <span
-            v-if="trend_icon"
-            class="inline-flex shrink-0 items-center text-primary"
-            :aria-label="trend_label"
+          <div
+            v-if="trend_icon || story.confidence"
+            class="ml-auto flex shrink-0 items-center justify-end gap-2"
           >
-            <UIcon
-              :name="trend_icon"
-              class="size-3"
-              aria-hidden="true"
-            />
-          </span>
-          <StoryConfidenceBadge
-            :confidence="story.confidence"
-            class="ml-auto"
-          />
+            <span
+              v-if="trend_icon"
+              class="inline-flex items-center gap-1 text-primary"
+              :aria-label="trend_label"
+            >
+              <UIcon
+                :name="trend_icon"
+                class="size-3"
+                aria-hidden="true"
+              />
+              <span v-if="trend_badge_label">{{ trend_badge_label }}</span>
+            </span>
+            <StoryConfidenceBadge :confidence="story.confidence" />
+          </div>
         </div>
         <h3
           v-if="story.title"
@@ -193,21 +202,24 @@ watch(() => props.story.image_url, () => {
             >
               {{ published_label }}
             </time>
-            <span
-              v-if="trend_icon"
-              class="inline-flex shrink-0 items-center text-primary"
-              :aria-label="trend_label"
+            <div
+              v-if="trend_icon || story.confidence"
+              class="ml-auto flex shrink-0 items-center justify-end gap-2"
             >
-              <UIcon
-                :name="trend_icon"
-                class="size-3"
-                aria-hidden="true"
-              />
-            </span>
-            <StoryConfidenceBadge
-              :confidence="story.confidence"
-              class="ml-auto"
-            />
+              <span
+                v-if="trend_icon"
+                class="inline-flex items-center gap-1 text-primary"
+                :aria-label="trend_label"
+              >
+                <UIcon
+                  :name="trend_icon"
+                  class="size-3"
+                  aria-hidden="true"
+                />
+                <span v-if="trend_badge_label">{{ trend_badge_label }}</span>
+              </span>
+              <StoryConfidenceBadge :confidence="story.confidence" />
+            </div>
           </div>
           <h3
             v-if="story.title"
@@ -276,10 +288,24 @@ watch(() => props.story.image_url, () => {
           >
             {{ published_label }}
           </time>
-          <StoryConfidenceBadge
-            :confidence="story.confidence"
-            class="ml-auto"
-          />
+          <div
+            v-if="trend_icon || story.confidence"
+            class="ml-auto flex shrink-0 items-center justify-end gap-2"
+          >
+            <span
+              v-if="trend_icon"
+              class="inline-flex items-center gap-1 text-primary"
+              :aria-label="trend_label"
+            >
+              <UIcon
+                :name="trend_icon"
+                class="size-3"
+                aria-hidden="true"
+              />
+              <span v-if="trend_badge_label">{{ trend_badge_label }}</span>
+            </span>
+            <StoryConfidenceBadge :confidence="story.confidence" />
+          </div>
         </div>
         <h1
           v-if="story.title"

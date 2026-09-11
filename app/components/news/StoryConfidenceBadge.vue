@@ -6,16 +6,17 @@ const props = defineProps<{
   confidence?: EspressoConfidence
 }>()
 
-const label = computed(() => props.confidence
-  ? `${props.confidence.charAt(0).toUpperCase()}${props.confidence.slice(1)}`
-  : ''
-)
+const label = computed(() => {
+  if (props.confidence === 'medium') return 'Moderate Confidence'
+  if (props.confidence) return `${props.confidence.charAt(0).toUpperCase()}${props.confidence.slice(1)} Confidence`
+  return ''
+})
 const color = computed(() => {
   if (props.confidence === 'high') return 'success'
   if (props.confidence === 'medium') return 'warning'
   return 'error'
 })
-const tooltip = computed(() => label.value ? `${label.value} confidence news` : '')
+const tooltip = computed(() => label.value ? `${label.value} Espresso signal` : '')
 </script>
 
 <template>

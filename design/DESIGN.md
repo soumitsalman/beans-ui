@@ -3,7 +3,7 @@
 - Product Icons: ./public/*
 - Dates: humanize | N hrs ago < 24 hrs | N days ago >= 24 hrs and < 3 days | MMM dd, YYYY >= 3 days ago
 - Counts: humanize trend.likes, trend.mentions, trend.shares, sources count, articles count
-- Trend Score: humaize using icons. fire >= 10000, trending_up >= 1000. Render icon ONLY instead of trend_score value
+- Trend Score: humanize using icons. fire >= 10000 renders `Hot`; trending_up >= 1000 renders `Trending`; other icons have no visible label. Do not render the trend_score value. The trend score and confidence metadata group aligns to the row end (`justify-end`).
 - Trend Likes, Shares, Comments: render ONLY if value > 0
 - Source Favicon: Use system default if not determined
 - Article Image: Excude if not exists. Avoid system default
@@ -23,7 +23,7 @@
 - Latest news: List titled Just In. Exclude if empty. Columns by Tailwind viewport: 1 below `md` (xs/sm), 2 at `md` and above (`md`, `lg`, `xl`). Include a `More` button at the end of the list - fetch more items using next_cursor when clicked.
 - news item: click navigate_to_story_page("/stories/{article.story_id}") if story_id != null and story_id != missing else navigate_to_original_article(article.url)
 - news item: show sources of the the article itself and the similar articles. show <=5 favicons as avatar group + total distinct sources count
-- Confidence badge: on Trending and Just In cards, show the resolved Espresso value as a compact metadata-row badge labelled only `High`, `Medium`, or `Low`. Exclude confidence badge when confidence=null or the field is missing. Place it at the row end (`justify-end` / auto start margin). Its tooltip explains `Espresso signal confidence`; do not render the word `confidence` in the visible badge. Omit the badge when the value is `null`, absent, or unavailable.
+- Confidence badge: on Trending and Just In cards, show the resolved Espresso value as a compact metadata-row badge labelled `High Confidence`, `Moderate Confidence`, or `Low Confidence`. Exclude it when confidence=null or the field is missing. Group it with the trend-score icon at the row end (`justify-end`). Its tooltip identifies it as an Espresso signal; omit the badge when the value is unavailable.
 
 #### Layout
 
@@ -60,7 +60,7 @@ Just In
 ```
 
 ### Story Page
-- Story title, category, regions, entities, last_published_at, summary | use `title` and `summary` from `/stories/{story_id}`. The category/date row has no article or source counts. The detailed story card uses the same end-aligned `High` / `Medium` / `Low` Espresso metadata badge and tooltip as feed cards.
+- Story title, category, regions, entities, last_published_at, summary | use `title` and `summary` from `/stories/{story_id}`. The category/date row has no article or source counts. The detailed story card uses the same end-aligned `High Confidence` / `Moderate Confidence` / `Low Confidence` Espresso metadata badge, grouped with the trend-score icon, and tooltip as feed cards.
 - Propagation: timeline of (published_at, source_favicon) | show 5 items including the first_published_at and last_published_at. If there are more than 5 group the sources in between. Its section header owns the humanized `N sources` count, right-aligned like Coverage's count, only when `source_count` is > 0. The timeline spans the story column (`w-full`, equal flex columns) with no inner horizontal scroll.
 - Coverage: List of articles in that story. Limit=5. Use Use next_cursor to fetch more when needed. Latest first. Click goes to article.url
 

@@ -1,3 +1,14 @@
+## 2026-09-13
+
+- Fixed Google Analytics 4 so the official `gtag.js` snippet is in SSR `<head>`: async `https://www.googletagmanager.com/gtag/js?id=G-KPG0Y2MBV9` plus inline `dataLayer.push(arguments)` init. The previous client stub pushed rest-parameter arrays and could overwrite `window.gtag` after `gtag.js` loaded, so `config` never reached GA4.
+- Guard: `gtag('config')` still uses `send_page_view: false`; the router hook sends one sanitized `page_view` per path. Query strings stay off `page_path` / `page_location`. The measurement ID remains public runtime config (`NUXT_PUBLIC_GA_MEASUREMENT_ID`).
+- Browser: SSR HTML for `/` contained both Google tag scripts in `<head>`. Home, `/categories/tech-and-innovation`, `/search?q=secret-query`, and an in-app navigation to `/about-beans` each queued a `page_view` for `G-KPG0Y2MBV9` as gtag `arguments` objects (not arrays); `gtag.js` stamped them with `gtm.uniqueEventId`. Search location was `/search` with no query.
+- Verification: Nuxt typecheck passes.
+
+Code snapshot SHA-256: `e61f01547d34314e648c81c54810803b8073ee380cf60d36d6d5c1a20688383d`
+
+Hash inputs: 45 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
 ## 2026-09-11
 
 - Story cards now show `Hot` beside the fire trend icon and `Trending` beside the trending-up icon; other trend icons remain unlabeled. The trend-score and Espresso-confidence indicators share the right-aligned metadata group in compressed, snapshot, and detailed cards.

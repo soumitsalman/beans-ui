@@ -15,7 +15,7 @@ Verify the mobile-first Nuxt UI and its public discoverability surfaces. Beans a
 - Viewport layout by Tailwind breakpoint: `md` and above (≥768px, including `lg`/`xl`) show 2 Top Headlines in view and 2 Latest News columns; below `md` (`sm`/`xs`, <768px) show 1 Top Headline and 1 Latest News column.
 - Public HTML exposes a canonical URL derived from `NUXT_PUBLIC_SITE_URL`, Open Graph/Twitter title, description, image, and URL metadata, plus `Organization` and `WebSite` JSON-LD. About Beans also exposes `SoftwareApplication` JSON-LD that describes it as a web news-discovery app.
 - `/robots.txt`, `/sitemap.xml`, and `/llms.txt` are public, derive their absolute URLs from `NUXT_PUBLIC_SITE_URL`, and do not expose API credentials or API-proxy endpoints for crawling.
-- Google Analytics 4 (`gtag.js`, measurement ID `G-KPG0Y2MBV9` or `NUXT_PUBLIC_GA_MEASUREMENT_ID`) records one `page_view` for every visited client route, including SPA navigations. Page path and location use the route path only, so query strings and search text are not sent.
+- Google Analytics 4 (`gtag.js`, measurement ID `G-KPG0Y2MBV9` or `NUXT_PUBLIC_GA_MEASUREMENT_ID`) records one `page_view` for every visited client route, including SPA navigations. The official Google tag is in SSR HTML immediately in `<head>`: async `gtag.js` plus an inline `dataLayer.push(arguments)` init and `gtag('config', …)`. Page path and location use the route path only, so query strings and search text are not sent.
 - Outbound http(s) links to other sites (article URLs, Coverage rows, markdown summary links, header API/Contact, footer Cafecito/Publications/API/Github, About Beans CTAs) append `utm_source=beans.cafecito.tech` and `utm_medium=referral` when those params are absent. Internal app routes, same-origin URLs, mailto/tel/javascript, empty hrefs, and malformed URLs are not rewritten. Existing query strings, hashes, and present UTM values are preserved.
 
 ## Success criteria
@@ -99,6 +99,7 @@ Verify the mobile-first Nuxt UI and its public discoverability surfaces. Beans a
 - A local API key is ignored by Nuxt, shipped in client runtime configuration, or omitted from proxy requests despite being present in `.env`.
 - A local `BEANS_API_BASE_URL` is ignored so the Beans proxy always hits the hardcoded fly.dev host, or the base URL is shipped in client runtime configuration.
 - Google Analytics records only the first SSR document and misses later SPA route changes, or `gtag('config')` plus the router hook double-count the first page.
+- The Google tag is missing from SSR HTML, overwrites `window.gtag` after `gtag.js` loads, or queues rest-parameter arrays instead of the gtag `arguments` object so `config` never reaches GA4.
 - A Search visit sends the query string, typed search text, or cursor as `page_path` / `page_location`.
 - An outbound article, Coverage, header, footer, About, or markdown link omits the Beans referral params, or an internal/same-origin route is rewritten with them.
 - A destination query string or hash is dropped, an existing `utm_source` is overwritten, or mailto/tel/javascript/empty/malformed hrefs are mutated.

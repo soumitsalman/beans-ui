@@ -50,7 +50,7 @@ NUXT_PUBLIC_SITE_URL=https://cafecito-beans-app.fly.dev
 NUXT_PUBLIC_GA_MEASUREMENT_ID=G-KPG0Y2MBV9
 ```
 
-The API base URLs have the defaults shown above. `CAFECITO_API_KEY` is server-only and is used by the API proxy routes. Set `NUXT_PUBLIC_SITE_URL` to the public canonical origin when deploying under a custom domain. `NUXT_PUBLIC_GA_MEASUREMENT_ID` is the Google Analytics 4 tag; it defaults to `G-KPG0Y2MBV9` and records a page view on every client route, including in-app navigations. Page path omits query strings. If Realtime shows two views per in-app click, turn off **Page changes based on browser history events** on that GA4 web stream.
+The API base URLs have the defaults shown above. `CAFECITO_API_KEY` is server-only and is used by the API proxy routes. Set `NUXT_PUBLIC_SITE_URL` to the public canonical origin when deploying under a custom domain. `NUXT_PUBLIC_GA_MEASUREMENT_ID` is the Google Analytics 4 tag; it defaults to `G-KPG0Y2MBV9`. Every page includes the official `gtag.js` snippet in `<head>` and records a page view on every client route, including in-app navigations. Page path omits query strings. If Realtime shows two views per in-app click, turn off **Page changes based on browser history events** on that GA4 web stream.
 
 ## Routes
 

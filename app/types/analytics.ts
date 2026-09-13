@@ -10,10 +10,6 @@ export interface GtagPageViewParams {
   page_title: string
 }
 
-export interface GtagConfigParams {
-  send_page_view: boolean
-}
-
 declare global {
   interface Window {
     dataLayer: unknown[]

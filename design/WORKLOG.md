@@ -1,3 +1,12 @@
+## 2026-09-16
+
+- Replaced the header Contact external link with the Help improve Beans Tally popup (form `9q8zrE`). The Tally widget is loaded once in the application shell and the header button uses Tallys popup data attributes.
+- Verification: Tallys published popup embed contract specifies the `9q8zrE` data attributes; ESLint passes for `app/layouts/default.vue`.
+
+Code snapshot SHA-256: `f67dc6a4cb68280ff6ab01f53b341d6478c09a600c4572d05b756657370e98c6`
+
+Hash inputs: 45 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
 ## 2026-09-13
 
 - Fixed Google Analytics 4 so the official `gtag.js` snippet is in SSR `<head>`: async `https://www.googletagmanager.com/gtag/js?id=G-KPG0Y2MBV9` plus inline `dataLayer.push(arguments)` init. The previous client stub pushed rest-parameter arrays and could overwrite `window.gtag` after `gtag.js` loaded, so `config` never reached GA4.

@@ -4,6 +4,14 @@ import { CATEGORY_GROUPS } from '~/settings/categories'
 
 const route = useRoute()
 const { outboundHref } = useOutboundUrl()
+useHead({
+  script: [
+    {
+      src: 'https://tally.so/widgets/embed.js',
+      async: true
+    }
+  ]
+})
 const NOW = new Date()
 const CURRENT_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
@@ -90,17 +98,16 @@ function isActive(path: string): boolean {
               aria-label="Open Beans API documentation"
             />
           </UTooltip>
-          <UTooltip text="Contact">
+          <UTooltip text="Help improve Beans">
             <UButton
-              :to="outboundHref('https://developer.cafecito.tech/contact')"
+              data-tally-open="9q8zrE"
+              data-tally-emoji-text="👋"
+              data-tally-emoji-animation="wave"
               icon="lucide:mail"
               color="neutral"
               variant="ghost"
               square
-              external
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Contact Cafecito"
+              aria-label="Help improve Beans"
             />
           </UTooltip>
         </div>

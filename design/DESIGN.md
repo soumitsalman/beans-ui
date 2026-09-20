@@ -147,7 +147,7 @@ science-and-health:
   - chemistry_and_materials_science
   - mathematics_and_statistics
   - engineering_and_applied_systems
-  - nanotechnology_and_nanomataterials
+  - nanotechnology_and_nanomaterials
   - scientific_research_methods
   - academic_research
   - human_biology_and_physiology
@@ -196,6 +196,8 @@ culture-and-lifestyle:
   - esports_and_competitive_gaming
   - virtual_reality_and_mixed_reality
   - interactive_entertainment_and_streaming
+  - sports_and_athletics
+  - television_and_streaming
   - home_and_lifestyle
   - interior_design_and_home_improvement
   - nutrition_food_and_supplements

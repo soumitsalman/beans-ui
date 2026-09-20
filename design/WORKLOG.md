@@ -1,3 +1,14 @@
+## 2026-09-17
+
+- Updated the eight category groups to match `classifications.yaml`: added snake_case `sports_and_athletics` and `television_and_streaming` under Culture & Lifestyle, and corrected Science & Health `nanotechnology_and_nanomataterials` to `nanotechnology_and_nanomaterials`.
+- Guard: all 121 yaml category IDs map once, in snake_case; group slugs are unchanged. Culture feeds send the new values; Science feeds send the corrected nanomaterials value.
+- Files: `app/settings/categories.ts`, `design/DESIGN.md`.
+- Verification: Nuxt typecheck and production build pass. ESLint on `categories.ts` passes; `corepack pnpm lint` remains blocked by the existing unused `appendPropagationArticles` in `app/pages/stories/[story_id].vue`. Browser: home still shows Now plus the eight groups; Culture & Lifestyle requests include `sports_and_athletics` and `television_and_streaming` and render sports stories; Science & Health requests include `nanotechnology_and_nanomaterials` (not the old typo) and render health/research stories.
+
+Code snapshot SHA-256: `2af7b06af72bd9aaaa9e1cd478864b3c29b5ab08c461eb7200eb518d08481275`
+
+Hash inputs: 45 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
 ## 2026-09-11
 
 - Story cards now show `Hot` beside the fire trend icon and `Trending` beside the trending-up icon; other trend icons remain unlabeled. The trend-score and Espresso-confidence indicators share the right-aligned metadata group in compressed, snapshot, and detailed cards.

@@ -7,7 +7,7 @@
 - Trend Likes, Shares, Comments: render ONLY if value > 0
 - Source Favicon: Use system default if not determined
 - Article Image: Excude if not exists. Avoid system default
-- Header: | {current_date as `Weekday, MMM dd` with a live-indicator icon that has a slight primary glow} (justify start) | {beans_favicon} Beans - (justify-center) | [search_button](/search) [api_button](https://developer.cafecito.tech/products/beans) [contact_button](https://developer.cafecito.tech/contact) - (justify-end) |
+- Header: | {current_date as `Weekday, MMM dd` with a live-indicator icon that has a slight primary glow} (justify start) | {beans_favicon} Beans - (justify-center) | [search_button](/search) [api_button](https://developer.cafecito.tech/products/beans) [contact_button](Tally popup: Help improve Beans) - (justify-end) |
 - Category tabs: Now + category groups in one row across the content column (`justify-between`). Horizontal scroll only inside the tab row when they overflow; no page-level overflow.
 - Footer: [Cafecito](https://cafecito.tech) | [Publications](https://espresso.cafecito.tech) | [API](https://developer.cafecito.tech) | [Github](https://github.com/soumitsalman/beans-ui) | [About](/about-beans)
 - Outbound links to other sites append `utm_source=beans.cafecito.tech` and `utm_medium=referral` when those params are absent. Internal app routes and same-origin URLs stay unchanged.

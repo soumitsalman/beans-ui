@@ -1,14 +1,12 @@
-import type { AnalyticsPageView, GtagConfigParams, GtagPageViewParams } from '~/types/analytics'
+import type { AnalyticsPageView, GtagPageViewParams } from '~/types/analytics'
 
 const GA_SCRIPT_KEY = 'gtag-js'
+const GA_INIT_KEY = 'gtag-init'
+const GA_MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]+$/i
 
 function readMeasurementId(): string {
-  return String(useRuntimeConfig().public.ga_measurement_id || '').trim()
-}
-
-function gtag(...args: unknown[]): void {
-  window.dataLayer = window.dataLayer || []
-  window.dataLayer.push(args)
+  const measurement_id = String(useRuntimeConfig().public.ga_measurement_id || '').trim()
+  return GA_MEASUREMENT_ID_PATTERN.test(measurement_id) ? measurement_id : ''
 }
 
 export function useGoogleAnalytics() {
@@ -17,26 +15,30 @@ export function useGoogleAnalytics() {
   function install(): void {
     if (!measurement_id) return
 
-    useHead({
+    useServerHead({
       script: [
         {
           key: GA_SCRIPT_KEY,
           async: true,
-          src: `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurement_id)}`
+          src: `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurement_id)}`,
+          tagPriority: 1
+        },
+        {
+          key: GA_INIT_KEY,
+          innerHTML: [
+            'window.dataLayer = window.dataLayer || [];',
+            'function gtag(){dataLayer.push(arguments);}',
+            "gtag('js', new Date());",
+            `gtag('config', '${measurement_id}', { send_page_view: false });`
+          ].join('\n'),
+          tagPriority: 2
         }
       ]
     })
-
-    if (!import.meta.client) return
-
-    window.dataLayer = window.dataLayer || []
-    window.gtag = gtag
-    gtag('js', new Date())
-    gtag('config', measurement_id, { send_page_view: false } satisfies GtagConfigParams)
   }
 
   function trackPageView(page_view: AnalyticsPageView): void {
-    if (!import.meta.client || !measurement_id || !window.gtag) return
+    if (!import.meta.client || !measurement_id || typeof window.gtag !== 'function') return
 
     const page_path = page_view.path
     const page_location = `${window.location.origin}${page_path}`

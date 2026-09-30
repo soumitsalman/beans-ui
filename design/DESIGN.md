@@ -124,6 +124,16 @@ tech-and-innovation:
   - aircraft_systems_and_maintenance
   - space_industry_and_launch_systems
   - satellite_systems_and_space_operations
+  - artificial_intelligence
+  - software_and_data_engineering
+  - computing_infrastructure_and_hardware
+  - consumer_electronics_and_robotics
+  - cybersecurity_and_threat_intelligence
+  - privacy_engineering_and_data_protection
+  - network_security_and_firewalls
+  - identity_and_access_management
+  - digital_forensics_and_incident_response
+  - cybersecurity_and_privacy
 
 business-and-markets:
   - business_and_management
@@ -141,6 +151,8 @@ business-and-markets:
   - blockchain_and_distributed_ledgers
   - cryptocurrency_and_digital_assets
   - decentralized_finance_and_web3
+  - economics_accounting_and_finance
+  - business_marketing_and_employment
 
 science-and-health:
   - physics_and_physical_sciences
@@ -157,6 +169,9 @@ science-and-health:
   - pharmaceuticals_and_drug_development
   - public_health_and_epidemiology
   - infectious_diseases_and_immunity
+  - health_and_wellness
+  - biology_and_biotechnology
+  - physical_sciences_and_mathematics
 
 climate-and-energy:
   - climate_and_environmental_management
@@ -165,6 +180,8 @@ climate-and-energy:
   - ocean_and_marine_science
   - water_resources_and_management
   - energy_solar_and_renewable_systems
+  - earth_space_climate_and_environment
+  - agriculture_and_food_production
 
 world-politics-and-society:
   - government_and_politics
@@ -179,6 +196,10 @@ world-politics-and-society:
   - migration_and_immigration
   - accessibility_and_disability
   - geopolitics_and_international_relations
+  - politics_and_global_affairs
+  - law_crime_and_public_safety
+  - civil_rights_migration_and_society
+  - education_and_humanities
 
 culture-and-lifestyle:
   - art_and_design
@@ -209,13 +230,13 @@ culture-and-lifestyle:
   - cannabis_and_cannabinoids
   - alcohol_and_beverages
   - gambling_and_betting
+  - sports_and_recreation
+  - arts_culture_media_and_entertainment
+  - food_dining_and_travel
+  - fashion_beauty_and_consumer_affairs
+  - home_family_and_pets
 
 security-and-defense:
-  - cybersecurity_and_threat_intelligence
-  - privacy_engineering_and_data_protection
-  - network_security_and_firewalls
-  - identity_and_access_management
-  - digital_forensics_and_incident_response
   - military_and_defense
   - homeland_security_and_safety
   - weaponry_and_military_technology
@@ -230,3 +251,6 @@ industry-and-infrastructure:
   - housing_and_real_estate
   - architecture_and_building_design
   - construction_and_infrastructure
+  - industry_and_manufacturing
+  - transportation_and_logistics
+  - construction_housing_and_real_estate

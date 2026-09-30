@@ -1,3 +1,16 @@
+## 2026-09-30
+
+- Appended the 24 broad category ids from `classifications.yaml` onto the existing eight groups, stored in the snake_case form the classifier writes. Every previous category value stays in its group so older articles still match.
+- Guard: each new id appears once. Group slugs are unchanged. Agriculture sits with Climate & Energy; law and public safety sit with World, Politics & Society.
+- Moved cybersecurity and data-protection values into Tech & Innovation: threat intelligence, privacy engineering, network security, identity and access, digital forensics, and `cybersecurity_and_privacy`. Security & Defense keeps military, homeland safety, and weaponry.
+- Moved `education_and_humanities` into World, Politics & Society.
+- Files: `app/settings/categories.ts`, `design/DESIGN.md`.
+- Verification: ESLint on `categories.ts` passes. Browser: the eight tabs are unchanged. Climate & Energy shows the agriculture and Earth description. Culture & Lifestyle shows the arts, food, and home description. Tech & Innovation and Security & Defense still render trending stories.
+
+Code snapshot SHA-256: `5d9858c7bc39181082493a096d0bba61bd95742caac3de6d4f8dc4f1565b3172`
+
+Hash inputs: 45 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+
 ## 2026-09-17
 
 - Updated the eight category groups to match `classifications.yaml`: added snake_case `sports_and_athletics` and `television_and_streaming` under Culture & Lifestyle, and corrected Science & Health `nanotechnology_and_nanomataterials` to `nanotechnology_and_nanomaterials`.

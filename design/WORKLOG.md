@@ -1,5 +1,16 @@
 # Beans UI Working Log
 
+## 2026-09-30T22:04:00Z
+
+- Replaced the overflowing Coverage favicon pile with a compact chronological rail. First and last articles remain visible; middle articles are partitioned into one, up to three, or up to five selectable date-range groups at small, medium, and extra-large widths. Each group shows at most one, two, or three distinct publisher icons and its article count.
+- Opening a group shows every article in a height-limited list with publisher, time, and outbound link. The Related feed and its cursor behavior remain unchanged.
+- Files: `app/components/news/ArticleDetailSections.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`, `design/WORKLOG.md`.
+- Verification: ESLint on the component, Nuxt typecheck, production build, and `git diff --check` pass. A browser viewport inspection was unavailable in this environment, so the 320px visual acceptance scenario remains to be checked in a branch preview.
+
+Code snapshot SHA-256: `c65d504139b1ec8e3bbeecd09e3f9d360c8a0eca5018275804ad1b062fb52522`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
 ## 2026-09-30T21:13:24Z
 
 - Removed fixed left margins from the confidence and ideology badges appended to card titles. Inline text spacing still separates badges on the same line; a badge wrapping onto another line now starts flush with the title.

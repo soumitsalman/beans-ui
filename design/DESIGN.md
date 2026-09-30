@@ -33,7 +33,7 @@
 ## Article detail
 
 - Load the article snapshot from Beans `/articles/{id}` and its confidence by article ID. Keep the existing detailed snapshot content and place the image on the left as a hot link.
-- Coverage uses similar articles in pages of 100 until pagination ends. Display source favicons and publication dates as a full-width timeline, grouping intermediate articles when needed.
+- Coverage uses similar articles in pages of 100 until pagination ends. Keep the first and last articles at the ends of a compact timeline. Group every intermediate article into chronological date-range chips: one on small screens, up to three on medium screens, and up to five on extra-large screens. Each chip shows a bounded set of distinct source favicons and its article count; selecting it opens a height-limited, scrollable list of all articles in that group below the timeline. The page must remain within the viewport at 320px.
 - Related uses its own similar-article cursor in pages of five. Keep the existing source favicon, title, and positive social-count row with a `More` button.
 
 ## Search

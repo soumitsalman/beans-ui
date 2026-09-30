@@ -9,7 +9,8 @@ const props = defineProps<{ trend?: NewsTrend | null }>()
 const counts = computed(() => [
   { key: 'mentions', icon: 'lucide:message-circle', value: props.trend?.mentions },
   { key: 'comments', icon: 'lucide:messages-square', value: props.trend?.comments },
-  { key: 'likes', icon: 'lucide:thumbs-up', value: props.trend?.likes }
+  { key: 'likes', icon: 'lucide:thumbs-up', value: props.trend?.likes },
+  { key: 'articles', icon: 'lucide:files', value: props.trend?.related }
 ].filter(item => hasPositiveCount(item.value)))
 </script>
 

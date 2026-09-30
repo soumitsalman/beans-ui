@@ -1,5 +1,15 @@
 # Beans UI Working Log
 
+## 2026-09-30T22:19:18Z
+
+- Moved the related article total from its standalone text label into the shared trend-count row. It now appears as a files icon followed by a compact count beside positive mentions, comments, and likes; zero and missing values stay hidden.
+- Files: `app/components/news/ArticleCard.vue`, `app/components/news/ArticleTrendCounts.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`, `design/WORKLOG.md`.
+- Verification: ESLint on both changed Vue components, Nuxt typecheck, and `git diff --check` pass.
+
+Code snapshot SHA-256: `36456eafaa7bf7bac1f017a139eabd3cc8cfdea3727897e9b630f0d8023b5fb8`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
 ## 2026-09-30T22:04:00Z
 
 - Replaced the overflowing Coverage favicon pile with a compact chronological rail. First and last articles remain visible; middle articles are partitioned into one, up to three, or up to five selectable date-range groups at small, medium, and extra-large widths. Each group shows at most one, two, or three distinct publisher icons and its article count.

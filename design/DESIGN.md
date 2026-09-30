@@ -27,7 +27,7 @@
 - Keep the existing two-day trending and seven-day latest date windows and category filters. Source feeds show latest items only, selected by the source domain and checked against the source ID, five per page.
 - Article cards show source avatar/name and publish time, category and title, trend icon, confidence label, and an optional image linked to its image URL. Put up to two entities and two regions over the image. Append the confidence badge and then `Leans Left` or `Leans Right` to the title. Give the outlined blue/red ideology badge the same size and rounded shape as confidence. Use inline text spacing so either badge starts flush with the title when it wraps to another line. Omit either badge when its value is missing or empty.
 - Link a source avatar and name to `/sources/{id}` only when a source ID is present. Article title navigation follows the existing story-ID rule: when `story_id` exists, open `/articles/{article.id}`; otherwise open the original article URL.
-- Show up to five distinct other-publisher avatars from the similar-articles feed without a text heading. Show the `trend.related` article count only when greater than zero. Publisher avatar links also require a source ID.
+- Show up to five distinct other-publisher avatars from the similar-articles feed without a text heading. Show a files icon followed by the `trend.related` count in the same compact row as positive mentions, comments, and likes; omit each zero or missing count. Publisher avatar links also require a source ID.
 - Source pages use a header banner with the circular favicon overlapping its lower edge. Display the base URL without its scheme, preceded by a link icon; the outbound link retains its complete normalized URL.
 
 ## Article detail

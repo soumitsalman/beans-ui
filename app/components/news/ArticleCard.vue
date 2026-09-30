@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { NewsArticle, NewsPublisher } from '~/types/news'
 import StoryConfidenceBadge from '~/components/news/StoryConfidenceBadge.vue'
 import ArticleTrendCounts from '~/components/news/ArticleTrendCounts.vue'
-import { formatCount, formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
+import { formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
 import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceIdentity, sourceLabel } from '~/utils/source'
 import { hasPositiveCount } from '~/utils/trend'
 
@@ -274,12 +274,6 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           />
         </template>
       </div>
-      <span
-        v-if="hasPositiveCount(related_count)"
-        class="shrink-0 tabular-nums"
-      >
-        {{ formatCount(related_count) }} {{ related_count === 1 ? 'article' : 'articles' }}
-      </span>
       <ArticleTrendCounts
         :trend="article.trend"
         class="ml-auto"

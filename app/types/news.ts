@@ -1,13 +1,14 @@
 export interface NewsSource {
   id?: string | null
+  description?: string | null
+  base_url?: string | null
+  url?: string | null
   site_name?: string | null
   domain_name?: string | null
-  base_url?: string | null
   name?: string | null
   domain?: string | null
   favicon?: string | null
   favicon_url?: string | null
-  url?: string | null
 }
 
 export interface NewsTrend {
@@ -33,28 +34,12 @@ export interface BeansArticle {
   content?: string | null
   content_type?: string | null
   categories?: string[] | null
+  ideology?: string | null
   regions?: string[] | null
   entities?: string[] | null
   tags?: string[] | null
   source?: NewsSource | null
   trend?: NewsTrend | null
-}
-
-export interface BeansStory {
-  articles_count?: number | null
-  sources_count?: number | null
-  id?: string | null
-  title?: string | null
-  summary?: string | null
-  article_count?: number | null
-  source_count?: number | null
-  first_published_at?: string | null
-  last_published_at?: string | null
-  categories?: string[] | null
-  regions?: string[] | null
-  entities?: string[] | null
-  tags?: string[] | null
-  top_articles?: BeansArticle[] | null
 }
 
 export interface NewsArticle {
@@ -66,33 +51,21 @@ export interface NewsArticle {
   image_url?: string | null
   summary?: string | null
   categories: string[]
+  ideology?: string | null
   regions: string[]
   entities: string[]
   tags: string[]
   source?: NewsSource | null
-  trend?: NewsTrend | null
-}
-
-export interface NewsStory {
-  id: string
-  story_id?: string | null
-  title: string
-  url?: string | null
-  summary?: string | null
-  image_url?: string | null
-  published_at?: string | null
-  first_published_at?: string | null
-  last_published_at?: string | null
-  categories: string[]
-  regions: string[]
-  entities: string[]
-  tags: string[]
-  source?: NewsSource | null
-  source_count: number
-  article_count: number
   trend?: NewsTrend | null
   confidence?: EspressoConfidence
-  top_articles?: NewsArticle[]
+  other_publishers?: NewsPublisher[]
+}
+
+export interface NewsPublisher {
+  id: string
+  source?: NewsSource | null
+  url?: string | null
+  trend?: NewsTrend | null
 }
 
 export interface NewsMention {
@@ -117,6 +90,7 @@ export interface BeansPageParams {
   sort?: 'trend' | 'recent'
   limit?: number
   cursor?: string | null
+  exclude_ids?: string[]
   q?: string
   score_threshold?: number
   tags?: string[]

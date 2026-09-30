@@ -1,97 +1,44 @@
 # Beans UI Design
-- Theme & Color: Modern, Minimalist, Coffee Bean Foreground, Dark Charcoal Background, Matte Finish, Dark Mode ONLY
-- Product Icons: ./public/*
-- Dates: humanize | N hrs ago < 24 hrs | N days ago >= 24 hrs and < 3 days | MMM dd, YYYY >= 3 days ago
-- Counts: humanize trend.likes, trend.mentions, trend.shares, sources count, articles count
-- Trend Score: humanize using icons. fire >= 10000 renders `Hot`; trending_up >= 1000 renders `Trending`; other icons have no visible label. Do not render the trend_score value. The trend score and confidence metadata group aligns to the row end (`justify-end`).
-- Trend Likes, Shares, Comments: render ONLY if value > 0
-- Source Favicon: Use system default if not determined
-- Article Image: Excude if not exists. Avoid system default
-- Header: | {current_date as `Weekday, MMM dd` with a live-indicator icon that has a slight primary glow} (justify start) | {beans_favicon} Beans - (justify-center) | [search_button](/search) [api_button](https://developer.cafecito.tech/products/beans) [contact_button](Tally popup: Help improve Beans) - (justify-end) |
-- Category tabs: Now + category groups in one row across the content column (`justify-between`). Horizontal scroll only inside the tab row when they overflow; no page-level overflow.
-- Footer: [Cafecito](https://cafecito.tech) | [Publications](https://espresso.cafecito.tech) | [API](https://developer.cafecito.tech) | [Github](https://github.com/soumitsalman/beans-ui) | [About](/about-beans)
-- Outbound links to other sites append `utm_source=beans.cafecito.tech` and `utm_medium=referral` when those params are absent. Internal app routes and same-origin URLs stay unchanged.
+
+- Theme: minimalist coffee-bean foreground, dark charcoal background, matte finish, dark mode only.
+- Product icons: `./public/*`.
+- Dates: `N hrs ago` under 24 hours; `N days ago` from 24 hours to under 3 days; `MMM dd, YYYY` from 3 days onward.
+- Counts: humanize trend, publisher, article, and related counts. Render social counts only when greater than zero.
+- Trend score: show icons only: fire at 10,000+ with `Hot`, trending-up at 1,000+ with `Trending`; other scores have no visible label. Never render the numeric score. On home and category cards, place the trend indicator inline with the publish date; on other cards, keep it at the category row end.
+- Confidence: retain the `High Confidence`, `Moderate Confidence`, and `Low Confidence` Espresso labels and tooltip. Omit missing or unavailable values.
+- Source favicon: configured favicon, Google favicon fallback, then system default. Do not show an image placeholder when an article has no image.
+- Article social counts: show positive mentions, comments, and likes with icons; omit zero and missing values.
+- Header: current date as `Weekday, MMM dd` with a softly glowing live indicator; centered Beans mark; Search, API, and Help improve Beans controls at the end.
+- Category tabs: Now and category groups share one row. Scroll only within the tabs when they overflow; the page itself must not overflow horizontally.
+- Footer: Cafecito, Publications, API, GitHub, and About links.
+- External links append `utm_source=beans.cafecito.tech` and `utm_medium=referral` when absent. Internal routes and same-origin URLs stay unchanged.
 
 ## Pages
-- Home page: shows all news/stories/articles irrespective of category | route `/`
-- Category page: shows news/stories/articles from that category | route `/categories/{category_slug}`
-- Story page: shows details of that story like title, summary, tags, propagation, related news | route `/stories/{story_id}`
-- Search page: search news/articles using semantic search (`q`) and normalized tags (`tags`) | route `/search`. Line 1 is the query string. Line 2 is a tag input; Space commits a tag. Publisher `sources` is not a search filter.
 
-### Home Page & Category Page
-- Top Headlines: Carousel titled Trending. Exclude if empty. Fetch more when user reaches end of loaded carousel. Allow arrow and gesture scrolling. Visible slides by Tailwind viewport: 1 below `md` (xs/sm), 2 at `md` and above (`md`, `lg`, `xl`). Use next_cursor to load more items when scolling reaches the last item.
-- Latest news: List titled Just In. Exclude if empty. Columns by Tailwind viewport: 1 below `md` (xs/sm), 2 at `md` and above (`md`, `lg`, `xl`). Include a `More` button at the end of the list - fetch more items using next_cursor when clicked.
-- news item: click navigate_to_story_page("/stories/{article.story_id}") if story_id != null and story_id != missing else navigate_to_original_article(article.url)
-- news item: show sources of the the article itself and the similar articles. show <=5 favicons as avatar group + total distinct sources count
-- Confidence badge: on Trending and Just In cards, show the resolved Espresso value as a compact metadata-row badge labelled `High Confidence`, `Moderate Confidence`, or `Low Confidence`. Exclude it when confidence=null or the field is missing. Group it with the trend-score icon at the row end (`justify-end`). Its tooltip identifies it as an Espresso signal; omit the badge when the value is unavailable.
+- Home (`/`): all-category article feed.
+- Category (`/categories/{category_slug}`): category description and filtered article feed.
+- Article (`/articles/{id}`): article snapshot, Coverage timeline, and Related list.
+- Source (`/sources/{id}`): source snapshot and latest articles.
+- Search (`/search`): semantic query `q` and normalized tag `tags`; Space commits a tag. Publisher sources are not a search filter.
 
-#### Layout
+## Home, category, and source feeds
 
-```
-Trending
+- Home and category feeds share one vertical panel. Each batch requests one trending article and four latest articles, with IDs from the other feed in `exclude_ids`. De-duplicate by article ID in the UI. If a feed is exhausted, fill the remaining batch from the other feed. One `More` button loads the next batch.
+- Keep the existing two-day trending and seven-day latest date windows and category filters. Source feeds show latest items only, selected by the source domain and checked against the source ID, five per page.
+- Article cards show source avatar/name and publish time, category and title, trend icon, confidence label, and an optional image linked to its image URL. Put up to two entities and two regions over the image. Append the confidence badge and then `Leans Left` or `Leans Right` to the title. Give the outlined blue/red ideology badge the same size and rounded shape as confidence. Use inline text spacing so either badge starts flush with the title when it wraps to another line. Omit either badge when its value is missing or empty.
+- Link a source avatar and name to `/sources/{id}` only when a source ID is present. Article title navigation follows the existing story-ID rule: when `story_id` exists, open `/articles/{article.id}`; otherwise open the original article URL.
+- Show up to five distinct other-publisher avatars from the similar-articles feed without a text heading. Show the `trend.related` article count only when greater than zero. Publisher avatar links also require a source ID.
+- Source pages use a header banner with the circular favicon overlapping its lower edge. Display the base URL without its scheme, preceded by a link icon; the outbound link retains its complete normalized URL.
 
-+---------------------------------------+
-| image if exists                       |
-+---------------------------------------+
-| categories[0]     date trend_score             High |
-+---------------------------------------+   --> (click fetches more) 
-| title (Bold or Emphasized)            |
-| 2-entities 2-regions as tags          |
-+---------------------------------------+
-| source_favicons_group N sources       |
-+---------------------------------------+
+## Article detail
 
----[divider]---
+- Load the article snapshot from Beans `/articles/{id}` and its confidence by article ID. Keep the existing detailed snapshot content and place the image on the left as a hot link.
+- Coverage uses similar articles in pages of 100 until pagination ends. Display source favicons and publication dates as a full-width timeline, grouping intermediate articles when needed.
+- Related uses its own similar-article cursor in pages of five. Keep the existing source favicon, title, and positive social-count row with a `More` button.
 
-Just In
+## Search
 
-+-----------------------------------------------------------------------
-| image if exists | categories[0]          date trend_score
-|                 | title (Bold emphasized)
-|                 | 2-entities 2-regions
-|                 | summary 2-line truncated
-+-----------------------------------------------------------------------
-| source_favicons_group N sources |         icon+count mentions, likes, comments (no word labels)
-+-----------------------------------------------------------------------
-... more items
-+---------------+
-| More Button   |
-+---------------+
-```
-
-### Story Page
-- Story title, category, regions, entities, last_published_at, summary | use `title` and `summary` from `/stories/{story_id}`. The category/date row has no article or source counts. The detailed story card uses the same end-aligned `High Confidence` / `Moderate Confidence` / `Low Confidence` Espresso metadata badge, grouped with the trend-score icon, and tooltip as feed cards.
-- Propagation: timeline of (published_at, source_favicon) | show 5 items including the first_published_at and last_published_at. If there are more than 5 group the sources in between. Its section header owns the humanized `N sources` count, right-aligned like Coverage's count, only when `source_count` is > 0. The timeline spans the story column (`w-full`, equal flex columns) with no inner horizontal scroll.
-- Coverage: List of articles in that story. Limit=5. Use Use next_cursor to fetch more when needed. Latest first. Click goes to article.url
-
-#### Layout
-
-```
-[categories[0]] last_published_at                              High
-title (H3)
-summary
-3 regions, 3 entities
-
----(divider)
-
-Propagation                                             N sources
-
-[favicon] ----- [favicon] ----- [favicon] ----- [favicon]
-date            date            date            date
-
----(divider)
-
-Coverage                                                N articles
-
-+------------------------------------------------------------
-| source_favicon | source_label     | shares, likes, comments
-|                | title            |
-+------------------------------------------------------------
-... more items
-+---------------+
-| More Button   |
-+---------------+
-```
+- Keep the existing query/tag input, URL synchronization, five-result pagination, news-only filter, and search API parameters. Render results with the same article card and enrichment as the other feeds.
 
 ## Category Map
 tech-and-innovation:

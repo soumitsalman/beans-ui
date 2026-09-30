@@ -1,6 +1,6 @@
 export type TelemetryEventName = 'page_view' | 'content_load'
-export type TelemetrySurface = 'home' | 'category' | 'search' | 'story'
-export type TelemetryFeed = 'top_headlines' | 'latest_news' | 'search_results' | 'story_coverage'
+export type TelemetrySurface = 'home' | 'category' | 'search' | 'article' | 'source'
+export type TelemetryFeed = 'article_feed' | 'source_latest' | 'search_results' | 'article_coverage' | 'article_related'
 export type TelemetryAction = 'initial' | 'more'
 export type TelemetryOutcome = 'success' | 'error'
 

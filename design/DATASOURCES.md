@@ -1,29 +1,24 @@
 # Data Sources
-Primary data sources are Beans API and Espresso API
 
-### Beans API
-- Provides publisher contents like news, blogs, earnings_report, press_release, whitepapers etc. 
-- Provides individual published items as well as clustered group of similar items.
-- Base URL: env var `BEANS_API_BASE_URL` (default `https://cafecito-beans-api.fly.dev`; runtime override `NUXT_BEANS_API_BASE_URL`) | Set `X-API-KEY` header value from env var `CAFECITO_API_KEY` | [Swagger Spec](./beans.openapi.yaml)
-- Use default query params `content_type=news` and `languages=en` for pulling english news articles
-- Use `/private/articles/unique?content_type=news&languages=en&sort=trend&from=<YYYY-MM-DD>` for pulling in unique top news - contains trend and source data
-- Use `/private/articles/unique?content_type=news&languages=en&sort=recent&from=<YYYY-MM-DD>` for latest unique news - contains trend and source data
-- `/private/articles/unique` accepts all query params as `/articles/latest` and `/articles/search` + `sort`, `from`, `to`
-- Use `/articles/{article.id}` for details on the news article and its trend data
-- Use `/private/stories/{story_id}?languages=en` field for pulling in the story that the article belongs to. This also contains the `sources_count` and `articles_count` for all articles with that `story_id`
-- Use `/private/stories/{article.story_id}/propagation` for story propagation; it returns all source previews and publication times in one response.
-- Use `/private/stories/{article.story_id}/propagation?languages=en` for news converage
-- `/private/stories/{article.story_id}/propagation` is almost exactly as `/stories/{story_id}/articles` except that `/propagation` route returns `StoryArticlePreview` (less number of fields) data items and ignores `limit`, `cursor`
-- Story Title, Summary, and Top Articles: Use `title`, `summary`, and `top_articles` from `/stories/{id}` as returned.
-- Source Favicon: Use `source.favicon` or `https://www.google.com/s2/favicons?domain={article.url}`
-- Source Label: Use `source.site_name` or `source.domain_name` or `base_url_without_scheme_prefix(article.url)`
-- `trend.trend_score` is a beans platform specific subjective value
-- `trend.mentions`, `trend.likes`, `trend.comments` are lower limit values
-- Fetch `limit=20` internally and reveal 5 returned items at a time. Both unique news feeds use `next_cursor` for continuation; uniqueness comes from the API, with no client story-ID deduplication or expanding-limit fallback.
-- Use `/articles/search` for the Search page. Map the topic input to `q` and committed tags to `tags` (CSV of normalized terms: lowercase, spaces to `_`). Send `content_type=news`, `languages=en`, `limit=5`, and `score_threshold=0` only when `q` is non-empty. Omit `tags` when none are selected. Do not send `sources` from the Search UI. Shareable `/search` URLs use the same `q` and `tags` query params and ignore leftover `sources`.
+Primary data sources are the Beans API and Espresso API. Keep API credentials on the server and use the existing same-origin Nuxt proxies.
 
-### Espresso API
-- Base URL: env var `ESPRESSO_API_BASE_URL` (default `https://cafecito-espresso-api.fly.dev`; runtime override `NUXT_ESPRESSO_API_BASE_URL`). Use the existing same-origin Espresso proxy; do not expose the API key to client code.
-- Confidence resolution starts from an Espresso event ID. For an article/news card, use `article.id`; for a story card, use `story.top_articles[0].id`. Request `/events/{event_id}/signals`, use the first returned signal ID, then request `/signals/{first_signal_id}` and read `data.confidence`.
-- `data.confidence` is a discrete value: `high`, `medium`, `low`, `null`, or absent. Only the three named values are displayable. No returned signal, a failed signal-detail request, `null`, and a missing field all mean confidence is unavailable and the UI omits it.
-- Espresso confidence expresses the related signal's confidence; it is not a fact-check or truth score for the publisher reporting.
+## Beans API
+
+- Base URL: `BEANS_API_BASE_URL` (default `https://cafecito-beans-api.fly.dev`; runtime override `NUXT_BEANS_API_BASE_URL`). The proxy sends `CAFECITO_API_KEY` as `X-API-KEY`. See [beans.openapi.yaml](./beans.openapi.yaml) for documented public routes.
+- News requests use `content_type=news` and `languages=en`.
+- Home and category feed requests use `/private/articles/unique`: trending uses `sort=trend` and a fixed two-day `from`; latest uses `sort=recent` and a fixed seven-day `from`. Both retain their cursor and selected category filters across pages.
+- The mixed feed loads one trending article, then four latest articles. Send the latest article IDs as `exclude_ids` to trending and the trending IDs as `exclude_ids` to latest. Keep IDs from prior batches in each exclusion list. The UI de-duplicates article IDs as a fallback and fills an exhausted feed's remaining allocation from the other feed.
+- Fetch article details from `/articles/{id}`. Fetch similar articles from `/private/articles/{id}/similar`; feed publisher stacks continue by cursor until five distinct other sources are found or the cursor ends. Article detail Coverage uses pages of 100 through the final cursor; Related uses an independent five-item cursor.
+- Fetch source snapshots from `/sources/{id}`. After loading the source, fetch its news from `/articles/latest?domains={source.domain}` with `content_type=news`, `languages=en`, `limit=5`, and the unchanged cursor. Keep only articles whose `source.id` matches the route ID. If the source has no domain, fall back to `sources={id}`. Use `base_url` when returned, otherwise use the source `url`; normalize a missing URL scheme to `https://` before linking out, but hide the scheme in the displayed label.
+- Use `trend.trend_score` only for its threshold-based icon/label. `trend.related` supplies the related-article count when positive; omit zero and missing values. `trend.mentions`, `trend.likes`, and `trend.comments` are lower-bound values; display positive values only.
+- Source labels and favicons use the shared helpers in `app/utils/source.ts`, including the Google favicon and system-icon fallbacks.
+- Search continues to use `/articles/search`. Map the topic to `q` and committed tags to `tags` (CSV of normalized lowercase terms with spaces as `_`). Send `content_type=news`, `languages=en`, and `limit=5`; send `score_threshold=0` only with a non-empty `q`; omit empty `tags` and do not send `sources`. Shareable URLs use `q` and `tags` and ignore leftover `sources`.
+
+## Espresso API
+
+- Base URL: `ESPRESSO_API_BASE_URL` (default `https://cafecito-espresso-api.fly.dev`; runtime override `NUXT_ESPRESSO_API_BASE_URL`). Use the same-origin Espresso proxy; never expose the API key to client code.
+- Fetch confidence in one request to `/private/confidence?ids=id1,id2,...`, where every ID is a Beans article ID, never a `story_id`. The UI associates each result with its article ID and displays only `high`, `medium`, or `low` as the existing confidence badges. Missing values and failed requests omit the badge; confidence is not a truth or fact-check score.
+
+## Contract note
+
+`exclude_ids`, the private similar-article route, and the Espresso batch-confidence route are not described in the checked-in Beans OpenAPI spec. Proxy smoke checks on 2026-09-30 confirmed that populated `exclude_ids` values are accepted by trending and latest unique feeds; omit the parameter when the list is empty because `exclude_ids=` returns HTTP 400. `/private/articles/{id}/similar` returned the paginated article envelope, and `/private/confidence?ids=...` returned a `data` list keyed by article `id` with a discrete `confidence` value. `/sources/{id}` returned source metadata including `url` and `domain`. For BBC and PsyPost, `/articles/latest?sources={id}` returned HTTP 200 with zero items despite known news articles from those IDs. `/articles/latest?domains={source.domain}` returned five matching news articles with a next cursor for both sources; a hostname in `domains` returned zero for BBC, so use the API's source-domain value. These proxy checks do not replace a published API contract; update this note and the spec when one is available.

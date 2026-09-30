@@ -1,3 +1,69 @@
+# Beans UI Working Log
+
+## 2026-09-30T21:13:24Z
+
+- Removed fixed left margins from the confidence and ideology badges appended to card titles. Inline text spacing still separates badges on the same line; a badge wrapping onto another line now starts flush with the title.
+- Files: `app/components/news/ArticleCard.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+- Verification: At 320px, the second home card's wrapped ideology badge and title both start at x=31px, with no horizontal page overflow. ESLint on the card and Nuxt typecheck pass.
+
+Code snapshot SHA-256: `976cbe5cc61d5a4b67c2b2f7ad24b03d4f0cd45a8dc7910a8d5f9cac9984b14f`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-09-30T21:11:33Z
+
+- Moved the confidence badge from the category row to the title, before ideology. Matched the ideology badge to confidence's `sm` size, fully rounded shape, and padding while retaining its colored outline. Empty or missing confidence/ideology values leave no badge.
+- Files: `app/components/news/ArticleCard.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+- Verification: ESLint on the card and Nuxt typecheck pass. Browser checks showed ideology appended after the title, no blank confidence badge on cards without confidence, and no overflow at 320px. The live cards checked had no confidence value, so the two-badge state was checked in component structure and matching classes.
+
+Code snapshot SHA-256: `1b52ac03ce6e29cde868abcbd9da7d402358645b34bb23b78fef7afc290f89f5`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-09-30T21:06:11Z
+
+- Moved the existing outlined `Leans Left`/`Leans Right` badge from the category row to immediately after the article title in the shared card. Kept the title link separate and added a text-space separator for readable heading text.
+- Files: `app/components/news/ArticleCard.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+- Verification: ESLint and Nuxt typecheck pass. Browser inspection on home at desktop and 320px shows the badge after the title, including a wrapped title, with no horizontal overflow.
+
+Code snapshot SHA-256: `f2c53231b8887b06e8791a7736dce4cca9993e0a42c5259ba5cd49db5ef4ff49`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-09-30T21:03:45Z
+
+- Show the feed-card related article count only when `trend.related` is positive. Keep the existing other-publisher favicon group without an `Other sources` label, and keep positive social counts visible even when the related count is zero. Hide the footer when all three are absent.
+- Files: `app/components/news/ArticleCard.vue`, `design/DESIGN.md`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: ESLint on the card and Nuxt typecheck pass. Browser inspection of five home cards showed no `0 articles`, positive related counts still visible, and publisher avatars retained.
+
+Code snapshot SHA-256: `3ec5e14ea5d2bba1fecc2dc229dff154c8d0b59283843b4ced84acf4c7fef609`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-09-30T20:52:09Z
+
+- Removed the `Other publishers` card label. Home and category cards now show the trend icon beside publish time. Ideology moved beside category as an outlined blue/red `Leans Left`/`Leans Right` badge. Added the missing trend-count component import used by the shared card.
+- Source pages now place a larger circular favicon across a header banner and display a link icon plus the source URL without `http(s)://`; the outbound destination still uses the normalized complete URL.
+- Fixed empty source news panels: the live Beans API returned zero for known BBC and PsyPost source UUID filters but five matching articles with a cursor for each source's `domain`. The UI now loads metadata first, requests latest news by that domain, and accepts only rows matching the route source ID. Source-ID filtering remains the fallback when metadata has no domain.
+- Files: `app/components/news/ArticleCard.vue`, `ArticleSection.vue`, `app/pages/index.vue`, `app/pages/categories/[category_slug].vue`, `app/pages/sources/[id].vue`, `app/composables/useBeansApi.ts`, `useNewsFeed.ts`, and design documents.
+- Verification: live proxy requests confirmed the source-filter discrepancy and domain workaround. Browser inspection showed five BBC news cards with More, the profile-style favicon, scheme-free URL, and home card metadata placement. At 320px, home and source pages had no horizontal overflow. Nuxt typecheck, production build, and ESLint on changed files pass. Whole-app ESLint still reports only the existing quote-style error at `app/composables/useGoogleAnalytics.ts:31`.
+
+Code snapshot SHA-256: `92fa59dac722686f4a350dd9bee688fbbb9b3ff572f0ca2d5109358c78fd8697`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-09-30T20:29:11Z
+
+- Replaced the home and category carousel/grid with a single five-article vertical feed using a 1:4 trending/latest mix, cross-feed exclusions, independent cursors, de-duplication, and exhausted-stream fill. Search now uses the same article card. Added publisher source pages and article detail routes; removed the story route.
+- Added batch Espresso confidence and similar-article enrichment, the five-distinct-publisher card stack, source-filtered latest feeds, article Coverage and Related sections, and source URL normalization for API values without a scheme.
+- Preserved the two-day/seven-day feed windows, English/news filters, category and search contracts, story-ID navigation gate, referral parameters, and same-origin proxies. No backend changes.
+- Files: `app/`, `shared/types/telemetry.ts`, `design/DESIGN.md`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: Nuxt typecheck and production build pass; ESLint passes on changed implementation files. Whole-app ESLint has one existing error at `app/composables/useGoogleAnalytics.ts:31`. Proxy checks confirmed unique feeds, populated `exclude_ids`, batch confidence, similar articles, source detail, and source-filtered latest responses; empty `exclude_ids=` is rejected and omitted. Route smoke checks returned 200 for home/category/search/article/source and 404 for the removed story route. At 320px, the category card stacked vertically; article detail showed its linked image, Coverage timeline, and Related rows. Source detail now links a bare source URL to HTTPS. The selected source feed returned no current articles, so live card rendering there remains unverified.
+
+Code snapshot SHA-256: `328316d63915699a3f377b413e7563b7bd96cd028d27c689f1606b3060480056`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
 ## 2026-09-30
 
 - Appended the 24 broad category ids from `classifications.yaml` onto the existing eight groups, stored in the snake_case form the classifier writes. Every previous category value stays in its group so older articles still match.
@@ -51,8 +117,6 @@ Hash inputs: 45 application and configuration files under `app/`, `server/`, `sh
 Code snapshot SHA-256: `da7b06fa3bcea017f784fef78033613451b080e3402e96ae9a905f39ebb3ad4b`
 
 Hash inputs: application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-# Beans UI Working Log
 
 ## 2026-09-10
 

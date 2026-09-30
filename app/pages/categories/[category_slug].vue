@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
-import StorySection from '~/components/news/StorySection.vue'
+import { computed, onMounted } from 'vue'
+import ArticleSection from '~/components/news/ArticleSection.vue'
 import { findCategory } from '~/settings/categories'
 
 const route = useRoute()
@@ -11,30 +11,14 @@ if (!category.value) {
 }
 
 const {
-  top_headlines,
-  latest_news,
-  loading_top_headlines,
-  loading_latest_news,
-  can_load_more_top_headlines,
-  can_load_more_latest_news,
-  top_headlines_error,
-  latest_news_error,
+  articles,
+  loading,
+  can_load_more,
+  error_message,
   refreshFeed,
-  loadMoreTopHeadlines,
-  loadMoreLatestNews,
-  retryTopHeadlines,
-  retryLatestNews
+  loadMore,
+  retryFeed
 } = useNewsFeed(category)
-
-const feeds_are_empty = computed(() => !loading_top_headlines.value
-  && !loading_latest_news.value
-  && !top_headlines.value.length
-  && !latest_news.value.length
-  && !can_load_more_top_headlines.value
-  && !can_load_more_latest_news.value
-  && !top_headlines_error.value
-  && !latest_news_error.value
-)
 
 useSeoMeta({
   title: () => `${category.value?.label || 'Category'} | Beans`,
@@ -44,19 +28,10 @@ useSeoMeta({
 onMounted(() => {
   void refreshFeed()
 })
-
-watch(() => route.params.category_slug, () => {
-  if (!category.value) {
-    void navigateTo('/')
-    return
-  }
-
-  void refreshFeed(true)
-})
 </script>
 
 <template>
-  <div class="space-y-9">
+  <div class="space-y-6">
     <div class="max-w-2xl space-y-2 px-1">
       <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary/70">
         Category
@@ -69,50 +44,15 @@ watch(() => route.params.category_slug, () => {
       </p>
     </div>
 
-    <StorySection
-      v-if="loading_top_headlines || top_headlines.length || can_load_more_top_headlines || top_headlines_error"
-      title="Trending"
-      :stories="top_headlines"
-      mode="compressed"
-      variant="carousel"
-      :loading="loading_top_headlines"
-      :can_load_more="can_load_more_top_headlines"
-      :error_message="top_headlines_error"
-      empty_message="No top headlines are available in this category yet."
-      @load-more="loadMoreTopHeadlines"
-      @retry="retryTopHeadlines"
+    <ArticleSection
+      :articles="articles"
+      :loading="loading"
+      :can_load_more="can_load_more"
+      :error_message="error_message"
+      trend_with_date
+      :empty_message="`No news is available in ${category?.label || 'this category'} right now.`"
+      @load-more="loadMore"
+      @retry="retryFeed"
     />
-
-    <StorySection
-      v-if="loading_latest_news || latest_news.length || can_load_more_latest_news || latest_news_error"
-      title="Just In"
-      :stories="latest_news"
-      mode="snapshot"
-      :loading="loading_latest_news"
-      :can_load_more="can_load_more_latest_news"
-      :error_message="latest_news_error"
-      empty_message="No latest news is available in this category yet."
-      @load-more="loadMoreLatestNews"
-      @retry="retryLatestNews"
-    />
-
-    <UAlert
-      v-if="feeds_are_empty"
-      color="neutral"
-      variant="subtle"
-      icon="lucide:inbox"
-      title="No news is available in this category right now."
-      description="Try again in a moment."
-    >
-      <template #actions>
-        <UButton
-          label="Retry"
-          color="neutral"
-          variant="outline"
-          size="xs"
-          @click="() => refreshFeed()"
-        />
-      </template>
-    </UAlert>
   </div>
 </template>

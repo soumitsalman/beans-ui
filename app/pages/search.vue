@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import StorySection from '~/components/news/StorySection.vue'
+import ArticleSection from '~/components/news/ArticleSection.vue'
 import { SEARCH_TAG_DELIMITER, normaliseTagInput, normaliseTagValue } from '~/utils/formatters'
 import { searchCriteriaFromQuery, toSearchRouteQuery } from '~/utils/searchQuery'
 
@@ -13,7 +13,7 @@ const search_form = reactive({
 })
 
 const {
-  results,
+  articles,
   loading,
   error_message,
   empty_message,
@@ -134,12 +134,10 @@ useSeoMeta({
       </div>
     </UForm>
 
-    <StorySection
+    <ArticleSection
       v-if="has_searched"
       title="Search results"
-      eyebrow="News only"
-      :stories="results"
-      mode="snapshot"
+      :articles="articles"
       :loading="loading"
       :can_load_more="can_load_more"
       :error_message="error_message"

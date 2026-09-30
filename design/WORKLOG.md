@@ -1,5 +1,11 @@
 # Beans UI Working Log
 
+## 2026-09-30T23:05:00Z
+
+- Added a subtle `gap-1` between the article title and its confidence/ideology indicators, and between the indicators when both appear.
+- Files: `app/components/news/ArticleCard.vue`, `design/VERIFICATIONS.md`.
+- Verification: ESLint on `ArticleCard.vue`, Nuxt typecheck, and `git diff --check` pass.
+
 ## 2026-09-30
 
 - Article detail Coverage similar-article requests omit `languages` and `content_type`; Related requests omit `content_type` and retain `languages`. All other similar-article callers and data pulls retain their existing filters.

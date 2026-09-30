@@ -182,34 +182,38 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           {{ article.title }}
         </a>
         <span v-else>{{ article.title }}</span>
-        <template v-if="article.confidence">
-          {{ ' ' }}
-          <span class="inline-flex align-middle">
-            <StoryConfidenceBadge :confidence="article.confidence" />
-          </span>
-        </template>
-        {{ ideology ? ' ' : '' }}
-        <UTooltip
-          v-if="ideology"
-          :text="ideology_label"
+        <span
+          v-if="article.confidence || ideology"
+          class="ml-1 inline-flex items-center gap-1 align-middle"
         >
           <span
-            role="img"
-            tabindex="0"
-            :aria-label="ideology_label"
-            :class="[
-              'inline-flex shrink-0 items-center gap-0.5 align-middle font-semibold leading-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current',
-              ideology === 'left' ? 'text-blue-400' : 'text-red-400'
-            ]"
+            v-if="article.confidence"
+            class="inline-flex align-middle"
           >
-            <UIcon
-              :name="ideology === 'left' ? 'lucide:arrow-left' : 'lucide:arrow-right'"
-              class="size-3.5"
-              aria-hidden="true"
-            />
-            <span>{{ ideology === 'left' ? 'L' : 'R' }}</span>
+            <StoryConfidenceBadge :confidence="article.confidence" />
           </span>
-        </UTooltip>
+          <UTooltip
+            v-if="ideology"
+            :text="ideology_label"
+          >
+            <span
+              role="img"
+              tabindex="0"
+              :aria-label="ideology_label"
+              :class="[
+                'inline-flex shrink-0 items-center gap-0.5 align-middle font-semibold leading-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current',
+                ideology === 'left' ? 'text-blue-400' : 'text-red-400'
+              ]"
+            >
+              <UIcon
+                :name="ideology === 'left' ? 'lucide:arrow-left' : 'lucide:arrow-right'"
+                class="size-3.5"
+                aria-hidden="true"
+              />
+              <span>{{ ideology === 'left' ? 'L' : 'R' }}</span>
+            </span>
+          </UTooltip>
+        </span>
       </h2>
       <div
         v-if="show_text_tags"

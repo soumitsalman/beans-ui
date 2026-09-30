@@ -56,6 +56,9 @@ async function loadCoverage(generation = _request_generation): Promise<void> {
       const page = await fetchSimilarArticles(article.value.id, {
         limit: COVERAGE_PAGE_SIZE,
         cursor: cursor ?? undefined
+      }, {
+        include_languages: false,
+        include_content_type: false
       })
       if (!isCurrentGeneration(generation)) return
 
@@ -87,6 +90,8 @@ async function loadRelated(append = false, generation = _request_generation): Pr
     const page = await fetchSimilarArticles(article.value.id, {
       limit: RELATED_PAGE_SIZE,
       cursor: cursor ?? undefined
+    }, {
+      include_content_type: false
     })
     if (!isCurrentGeneration(generation)) return
 

@@ -248,7 +248,9 @@ Hash inputs: 38 application and configuration files under `app/`, `server/`, `sh
 - Added About Beans SoftwareApplication JSON-LD and tightened its product copy: Beans presents source-linked publisher snapshots and discovery context; it does not republish articles or claim to verify their truth.
 - Added runtime `/robots.txt`, `/sitemap.xml`, and `/llms.txt` routes. They use the public site origin, block internal `/api/` routes from crawlers, list stable category pages, and direct programmatic or freshness-sensitive work to the Beans API documentation.
 - Updated README, deployment/example configuration, and verification criteria to document the public crawlability and AI-agent surfaces.
-- Verification: local ESLint passes. The Fly-equivalent production …80 tokens truncated… SHA-256: `13bd805ed9c5c343959e651ac4ea62d14dd5e56af3c06c61c08f7935aaad995c`
+- Verification: local ESLint passes. The Fly-equivalent production output served `/about-beans`, `/robots.txt`, `/sitemap.xml`, and `/llms.txt`; canonical, Open Graph/Twitter metadata, and `Organization`/`WebSite`/`SoftwareApplication` JSON-LD rendered and parsed. Nuxt typecheck remains blocked by the existing `MarkdownSummary.vue` missing `markdown-it` declaration.
+
+Code snapshot SHA-256: `13bd805ed9c5c343959e651ac4ea62d14dd5e56af3c06c61c08f7935aaad995c`
 
 Hash inputs: 33 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
 

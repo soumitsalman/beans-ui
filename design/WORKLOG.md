@@ -1,5 +1,15 @@
 # Beans UI Working Log
 
+## 2026-09-30T22:27:45Z
+
+- Added the existing entity and region tag badges below article titles when a card has no image or its image fails. Cards with a usable image keep the tags overlaid at the image bottom; each card still caps at two regions and two entities.
+- Files: `app/components/news/ArticleCard.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`, `design/WORKLOG.md`.
+- Verification: ESLint on `ArticleCard.vue`, Nuxt typecheck, production build, and `git diff --check` pass.
+
+Code snapshot SHA-256: `9a077ffc8c661b5e317f6fe1471245d2933ab658cbdea393f812fb546aa06b22`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
 ## 2026-09-30T22:19:18Z
 
 - Moved the related article total from its standalone text label into the shared trend-count row. It now appears as a files icon followed by a compact count beside positive mentions, comments, and likes; zero and missing values stay hidden.

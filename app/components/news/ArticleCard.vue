@@ -39,6 +39,8 @@ const ideology = computed(() => {
 })
 const image_entities = computed(() => props.article.entities.filter(Boolean).slice(0, 2))
 const image_regions = computed(() => props.article.regions.filter(Boolean).slice(0, 2))
+const show_text_tags = computed(() => (!props.article.image_url || image_failed.value)
+  && Boolean(image_entities.value.length || image_regions.value.length))
 const related_count = computed(() => props.article.trend?.related)
 const show_card_footer = computed(() => Boolean(props.article.other_publishers?.length)
   || hasPositiveCount(related_count.value)
@@ -189,6 +191,33 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           Leans {{ ideology === 'left' ? 'Left' : 'Right' }}
         </UBadge>
       </h2>
+      <div
+        v-if="show_text_tags"
+        class="mt-2 flex flex-wrap gap-1.5"
+        role="group"
+        aria-label="Article entities and regions"
+      >
+        <UBadge
+          v-for="region in image_regions"
+          :key="`region-${region}`"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          class="max-w-32 truncate bg-stone-950/75 text-stone-200"
+        >
+          {{ formatTaxonomyLabel(region) }}
+        </UBadge>
+        <UBadge
+          v-for="entity in image_entities"
+          :key="`entity-${entity}`"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          class="max-w-32 truncate bg-stone-950/75 text-stone-200"
+        >
+          {{ formatTaxonomyLabel(entity) }}
+        </UBadge>
+      </div>
     </div>
 
     <a

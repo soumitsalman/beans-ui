@@ -16,6 +16,12 @@ const color = computed(() => {
   if (props.confidence === 'medium') return 'warning'
   return 'error'
 })
+const signal_icon = computed(() => {
+  if (props.confidence === 'high') return 'lucide:signal-high'
+  if (props.confidence === 'medium') return 'lucide:signal-medium'
+  return 'lucide:signal-low'
+})
+const color_class = computed(() => `text-${color.value}`)
 const tooltip = computed(() => label.value ? `${label.value} Espresso signal` : '')
 </script>
 
@@ -24,14 +30,17 @@ const tooltip = computed(() => label.value ? `${label.value} Espresso signal` : 
     v-if="label"
     :text="tooltip"
   >
-    <UBadge
-      :color="color"
-      variant="soft"
-      size="sm"
+    <span
+      role="img"
+      tabindex="0"
       :aria-label="tooltip"
-      class="shrink-0 rounded-full px-1.5 py-0.5 font-medium"
+      class="inline-flex shrink-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
     >
-      {{ label }}
-    </UBadge>
+      <UIcon
+        :name="signal_icon"
+        :class="['size-4', color_class]"
+        aria-hidden="true"
+      />
+    </span>
   </UTooltip>
 </template>

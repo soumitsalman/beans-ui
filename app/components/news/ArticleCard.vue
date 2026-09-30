@@ -37,6 +37,7 @@ const ideology = computed(() => {
   const value = props.article.ideology?.toLowerCase()
   return value === 'left' || value === 'right' ? value : undefined
 })
+const ideology_label = computed(() => ideology.value === 'left' ? 'Leans Left' : ideology.value === 'right' ? 'Leans Right' : undefined)
 const image_entities = computed(() => props.article.entities.filter(Boolean).slice(0, 2))
 const image_regions = computed(() => props.article.regions.filter(Boolean).slice(0, 2))
 const show_text_tags = computed(() => (!props.article.image_url || image_failed.value)
@@ -114,18 +115,23 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
         >
           {{ date_label }}
         </time>
-        <span
+        <UTooltip
           v-if="trend_with_date && trend_icon"
-          class="inline-flex items-center gap-1 text-primary"
-          :aria-label="trend_label"
+          :text="trend_label"
         >
-          <UIcon
-            :name="trend_icon"
-            class="size-3.5"
-            aria-hidden="true"
-          />
-          <span v-if="trend_score != null && trend_score >= 1000">{{ trend_label }}</span>
-        </span>
+          <span
+            role="img"
+            tabindex="0"
+            :aria-label="trend_label"
+            class="inline-flex items-center text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+          >
+            <UIcon
+              :name="trend_icon"
+              class="size-3.5"
+              aria-hidden="true"
+            />
+          </span>
+        </UTooltip>
       </div>
     </div>
 
@@ -137,18 +143,23 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
         {{ formatTaxonomyLabel(article.categories[0]) }}
       </span>
       <div class="ml-auto flex shrink-0 items-center justify-end gap-2">
-        <span
+        <UTooltip
           v-if="!trend_with_date && trend_icon"
-          class="inline-flex items-center gap-1 text-primary"
-          :aria-label="trend_label"
+          :text="trend_label"
         >
-          <UIcon
-            :name="trend_icon"
-            class="size-3.5"
-            aria-hidden="true"
-          />
-          <span v-if="trend_score != null && trend_score >= 1000">{{ trend_label }}</span>
-        </span>
+          <span
+            role="img"
+            tabindex="0"
+            :aria-label="trend_label"
+            class="inline-flex items-center text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+          >
+            <UIcon
+              :name="trend_icon"
+              class="size-3.5"
+              aria-hidden="true"
+            />
+          </span>
+        </UTooltip>
       </div>
     </div>
 
@@ -178,18 +189,27 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           </span>
         </template>
         {{ ideology ? ' ' : '' }}
-        <UBadge
+        <UTooltip
           v-if="ideology"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          :class="[
-            'shrink-0 rounded-full bg-transparent px-1.5 py-0.5 align-middle font-medium normal-case tracking-normal',
-            ideology === 'left' ? 'ring-blue-500/70 text-blue-400' : 'ring-red-500/70 text-red-400'
-          ]"
+          :text="ideology_label"
         >
-          Leans {{ ideology === 'left' ? 'Left' : 'Right' }}
-        </UBadge>
+          <span
+            role="img"
+            tabindex="0"
+            :aria-label="ideology_label"
+            :class="[
+              'inline-flex shrink-0 items-center gap-0.5 align-middle font-semibold leading-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current',
+              ideology === 'left' ? 'text-blue-400' : 'text-red-400'
+            ]"
+          >
+            <UIcon
+              :name="ideology === 'left' ? 'lucide:arrow-left' : 'lucide:arrow-right'"
+              class="size-3.5"
+              aria-hidden="true"
+            />
+            <span>{{ ideology === 'left' ? 'L' : 'R' }}</span>
+          </span>
+        </UTooltip>
       </h2>
       <div
         v-if="show_text_tags"

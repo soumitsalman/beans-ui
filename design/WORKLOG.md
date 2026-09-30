@@ -1,5 +1,16 @@
 # Beans UI Working Log
 
+## 2026-09-30T22:47:33Z
+
+- Replaced the confidence text badge with a low/medium/high signal-strength icon in the existing error/warning/success colors. Replaced ideology text with blue `← L` or red `→ R`, and removed visible trend labels while keeping their existing icons. Tooltips expose the full confidence, ideology, and trend labels on hover and keyboard focus; the indicators have no badge fill or outline.
+- Applied icon-only trend treatment to both article cards and the article snapshot.
+- Files: `app/components/news/StoryConfidenceBadge.vue`, `app/components/news/ArticleCard.vue`, `app/components/news/ArticleSnapshot.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`, `design/WORKLOG.md`.
+- Verification: ESLint on all three changed Vue components, Nuxt typecheck, production build, and `git diff --check` pass.
+
+Code snapshot SHA-256: `0a406633ad8350f8a7e1050f109d7512ad2e1981762f09cdf5f0a9dfe782d9cb`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
 ## 2026-09-30T22:27:45Z
 
 - Added the existing entity and region tag badges below article titles when a card has no image or its image fails. Cards with a usable image keep the tags overlaid at the image bottom; each card still caps at two regions and two entities.

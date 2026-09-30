@@ -85,18 +85,23 @@ watch(() => props.article.image_url, () => {
             {{ formatFriendlyTime(article.published_at) }}
           </time>
           <span class="ml-auto flex items-center gap-2">
-            <span
+            <UTooltip
               v-if="trend_icon"
-              class="inline-flex items-center gap-1 text-primary"
-              :aria-label="trend_label"
+              :text="trend_label"
             >
-              <UIcon
-                :name="trend_icon"
-                class="size-3.5"
-                aria-hidden="true"
-              />
-              <span v-if="trend_score != null && trend_score >= 1000">{{ trend_label }}</span>
-            </span>
+              <span
+                role="img"
+                tabindex="0"
+                :aria-label="trend_label"
+                class="inline-flex items-center text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+              >
+                <UIcon
+                  :name="trend_icon"
+                  class="size-3.5"
+                  aria-hidden="true"
+                />
+              </span>
+            </UTooltip>
             <StoryConfidenceBadge :confidence="article.confidence" />
           </span>
         </div>

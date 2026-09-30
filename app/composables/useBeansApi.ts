@@ -50,11 +50,14 @@ function serialiseIsoDate(value?: string): string | undefined {
   return value.slice(0, 10)
 }
 
-function withEnglishNews(params: BeansPageParams = {}): BeansPageParams {
+function withEnglishNews(
+  params: BeansPageParams = {},
+  filters: { include_languages?: boolean, include_content_type?: boolean } = {}
+): BeansPageParams {
   return {
     ...params,
-    languages: NEWS_LANGUAGES,
-    content_type: 'news'
+    ...(filters.include_languages === false ? {} : { languages: NEWS_LANGUAGES }),
+    ...(filters.include_content_type === false ? {} : { content_type: 'news' })
   }
 }
 
@@ -188,9 +191,13 @@ export function useBeansApi() {
     return toNewsArticle(response.data ?? {})
   }
 
-  async function fetchSimilarArticles(article_id: string, params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
+  async function fetchSimilarArticles(
+    article_id: string,
+    params: BeansPageParams = {},
+    filters: { include_languages?: boolean, include_content_type?: boolean } = {}
+  ): Promise<NewsPage<NewsArticle>> {
     const page = await fetchBeansPage<BeansArticle>(`private/articles/${article_id}/similar`, {
-      ...withEnglishNews(params)
+      ...withEnglishNews(params, filters)
     })
 
     return {

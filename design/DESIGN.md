@@ -4,8 +4,8 @@
 - Product icons: `./public/*`.
 - Dates: `N hrs ago` under 24 hours; `N days ago` from 24 hours to under 3 days; `MMM dd, YYYY` from 3 days onward.
 - Counts: humanize trend, publisher, article, and related counts. Render social counts only when greater than zero.
-- Trend score: show icons only: fire at 10,000+ with `Hot`, trending-up at 1,000+ with `Trending`; other scores have no visible label. Never render the numeric score. On home and category cards, place the trend indicator inline with the publish date; on other cards, keep it at the category row end.
-- Confidence: retain the `High Confidence`, `Moderate Confidence`, and `Low Confidence` Espresso labels and tooltip. Omit missing or unavailable values.
+- Trend score: show icons only: fire at 10,000+ with `Hot`, trending-up at 1,000+ with `Trending`, and activity below that; expose the corresponding label in a tooltip. Never render the numeric score. On home and category cards, place the trend indicator inline with the publish date; on other cards, keep it at the category row end.
+- Confidence: show the corresponding low, medium, or high signal-strength icon in the existing error, warning, or success color. Expose the full `Low Confidence`, `Moderate Confidence`, or `High Confidence` Espresso label in a tooltip. Omit missing or unavailable values.
 - Source favicon: configured favicon, Google favicon fallback, then system default. Do not show an image placeholder when an article has no image.
 - Article social counts: show positive mentions, comments, and likes with icons; omit zero and missing values.
 - Header: current date as `Weekday, MMM dd` with a softly glowing live indicator; centered Beans mark; Search, API, and Help improve Beans controls at the end.
@@ -25,15 +25,15 @@
 
 - Home and category feeds share one vertical panel. Each batch requests one trending article and four latest articles, with IDs from the other feed in `exclude_ids`. De-duplicate by article ID in the UI. If a feed is exhausted, fill the remaining batch from the other feed. One `More` button loads the next batch.
 - Keep the existing two-day trending and seven-day latest date windows and category filters. Source feeds show latest items only, selected by the source domain and checked against the source ID, five per page.
-- Article cards show source avatar/name and publish time, category and title, trend icon, confidence label, and an optional image linked to its image URL. Put up to two entities and two regions over the image. Append the confidence badge and then `Leans Left` or `Leans Right` to the title. Give the outlined blue/red ideology badge the same size and rounded shape as confidence. Use inline text spacing so either badge starts flush with the title when it wraps to another line. Omit either badge when its value is missing or empty.
+- Article cards show source avatar/name and publish time, category and title, icon-only trend, signal-strength confidence, and an optional image linked to its image URL. Put up to two entities and two regions over the image; when there is no usable image, render those tags below the title. Show ideology as a blue `← L` or red `→ R` marker after the title. Confidence, ideology, and trend labels appear in tooltips; the compact indicators have no badge fill or outline. Omit confidence or ideology indicators when their value is missing or empty.
 - Link a source avatar and name to `/sources/{id}` only when a source ID is present. Article title navigation follows the existing story-ID rule: when `story_id` exists, open `/articles/{article.id}`; otherwise open the original article URL.
-- Show up to five distinct other-publisher avatars from the similar-articles feed without a text heading. Show the `trend.related` article count only when greater than zero. Publisher avatar links also require a source ID.
+- Show up to five distinct other-publisher avatars from the similar-articles feed without a text heading. Show a files icon followed by the `trend.related` count in the same compact row as positive mentions, comments, and likes; omit each zero or missing count. Publisher avatar links also require a source ID.
 - Source pages use a header banner with the circular favicon overlapping its lower edge. Display the base URL without its scheme, preceded by a link icon; the outbound link retains its complete normalized URL.
 
 ## Article detail
 
 - Load the article snapshot from Beans `/articles/{id}` and its confidence by article ID. Keep the existing detailed snapshot content and place the image on the left as a hot link.
-- Coverage uses similar articles in pages of 100 until pagination ends. Display source favicons and publication dates as a full-width timeline, grouping intermediate articles when needed.
+- Coverage uses similar articles in pages of 100 until pagination ends. Keep the first and last articles at the ends of a compact timeline. Group every intermediate article into chronological date-range chips: one on small screens, up to three on medium screens, and up to five on extra-large screens. Each chip shows a bounded set of distinct source favicons and its article count; selecting it opens a height-limited, scrollable list of all articles in that group below the timeline. The page must remain within the viewport at 320px.
 - Related uses its own similar-article cursor in pages of five. Keep the existing source favicon, title, and positive social-count row with a `More` button.
 
 ## Search

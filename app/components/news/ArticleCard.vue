@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { NewsArticle, NewsPublisher } from '~/types/news'
 import StoryConfidenceBadge from '~/components/news/StoryConfidenceBadge.vue'
 import ArticleTrendCounts from '~/components/news/ArticleTrendCounts.vue'
-import { formatCount, formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
+import { formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
 import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceIdentity, sourceLabel } from '~/utils/source'
 import { hasPositiveCount } from '~/utils/trend'
 
@@ -37,8 +37,11 @@ const ideology = computed(() => {
   const value = props.article.ideology?.toLowerCase()
   return value === 'left' || value === 'right' ? value : undefined
 })
+const ideology_label = computed(() => ideology.value === 'left' ? 'Leans Left' : ideology.value === 'right' ? 'Leans Right' : undefined)
 const image_entities = computed(() => props.article.entities.filter(Boolean).slice(0, 2))
 const image_regions = computed(() => props.article.regions.filter(Boolean).slice(0, 2))
+const show_text_tags = computed(() => (!props.article.image_url || image_failed.value)
+  && Boolean(image_entities.value.length || image_regions.value.length))
 const related_count = computed(() => props.article.trend?.related)
 const show_card_footer = computed(() => Boolean(props.article.other_publishers?.length)
   || hasPositiveCount(related_count.value)
@@ -112,18 +115,23 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
         >
           {{ date_label }}
         </time>
-        <span
+        <UTooltip
           v-if="trend_with_date && trend_icon"
-          class="inline-flex items-center gap-1 text-primary"
-          :aria-label="trend_label"
+          :text="trend_label"
         >
-          <UIcon
-            :name="trend_icon"
-            class="size-3.5"
-            aria-hidden="true"
-          />
-          <span v-if="trend_score != null && trend_score >= 1000">{{ trend_label }}</span>
-        </span>
+          <span
+            role="img"
+            tabindex="0"
+            :aria-label="trend_label"
+            class="inline-flex items-center text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+          >
+            <UIcon
+              :name="trend_icon"
+              class="size-3.5"
+              aria-hidden="true"
+            />
+          </span>
+        </UTooltip>
       </div>
     </div>
 
@@ -135,18 +143,23 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
         {{ formatTaxonomyLabel(article.categories[0]) }}
       </span>
       <div class="ml-auto flex shrink-0 items-center justify-end gap-2">
-        <span
+        <UTooltip
           v-if="!trend_with_date && trend_icon"
-          class="inline-flex items-center gap-1 text-primary"
-          :aria-label="trend_label"
+          :text="trend_label"
         >
-          <UIcon
-            :name="trend_icon"
-            class="size-3.5"
-            aria-hidden="true"
-          />
-          <span v-if="trend_score != null && trend_score >= 1000">{{ trend_label }}</span>
-        </span>
+          <span
+            role="img"
+            tabindex="0"
+            :aria-label="trend_label"
+            class="inline-flex items-center text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+          >
+            <UIcon
+              :name="trend_icon"
+              class="size-3.5"
+              aria-hidden="true"
+            />
+          </span>
+        </UTooltip>
       </div>
     </div>
 
@@ -169,26 +182,66 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           {{ article.title }}
         </a>
         <span v-else>{{ article.title }}</span>
-        <template v-if="article.confidence">
-          {{ ' ' }}
-          <span class="inline-flex align-middle">
+        <span
+          v-if="article.confidence || ideology"
+          class="ml-1 inline-flex items-center gap-1 align-middle"
+        >
+          <span
+            v-if="article.confidence"
+            class="inline-flex align-middle"
+          >
             <StoryConfidenceBadge :confidence="article.confidence" />
           </span>
-        </template>
-        {{ ideology ? ' ' : '' }}
-        <UBadge
-          v-if="ideology"
-          color="neutral"
-          variant="outline"
-          size="sm"
-          :class="[
-            'shrink-0 rounded-full bg-transparent px-1.5 py-0.5 align-middle font-medium normal-case tracking-normal',
-            ideology === 'left' ? 'ring-blue-500/70 text-blue-400' : 'ring-red-500/70 text-red-400'
-          ]"
-        >
-          Leans {{ ideology === 'left' ? 'Left' : 'Right' }}
-        </UBadge>
+          <UTooltip
+            v-if="ideology"
+            :text="ideology_label"
+          >
+            <span
+              role="img"
+              tabindex="0"
+              :aria-label="ideology_label"
+              :class="[
+                'inline-flex shrink-0 items-center gap-0.5 align-middle font-semibold leading-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current',
+                ideology === 'left' ? 'text-blue-400' : 'text-red-400'
+              ]"
+            >
+              <UIcon
+                :name="ideology === 'left' ? 'lucide:arrow-left' : 'lucide:arrow-right'"
+                class="size-3.5"
+                aria-hidden="true"
+              />
+              <span>{{ ideology === 'left' ? 'L' : 'R' }}</span>
+            </span>
+          </UTooltip>
+        </span>
       </h2>
+      <div
+        v-if="show_text_tags"
+        class="mt-2 flex flex-wrap gap-1.5"
+        role="group"
+        aria-label="Article entities and regions"
+      >
+        <UBadge
+          v-for="region in image_regions"
+          :key="`region-${region}`"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          class="max-w-32 truncate bg-stone-950/75 text-stone-200"
+        >
+          {{ formatTaxonomyLabel(region) }}
+        </UBadge>
+        <UBadge
+          v-for="entity in image_entities"
+          :key="`entity-${entity}`"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          class="max-w-32 truncate bg-stone-950/75 text-stone-200"
+        >
+          {{ formatTaxonomyLabel(entity) }}
+        </UBadge>
+      </div>
     </div>
 
     <a
@@ -274,12 +327,6 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           />
         </template>
       </div>
-      <span
-        v-if="hasPositiveCount(related_count)"
-        class="shrink-0 tabular-nums"
-      >
-        {{ formatCount(related_count) }} {{ related_count === 1 ? 'article' : 'articles' }}
-      </span>
       <ArticleTrendCounts
         :trend="article.trend"
         class="ml-auto"

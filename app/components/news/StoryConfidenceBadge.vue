@@ -22,7 +22,7 @@ const signal_icon = computed(() => {
   return 'lucide:signal-low'
 })
 const color_class = computed(() => `text-${color.value}`)
-const tooltip = computed(() => label.value ? `${label.value} Espresso signal` : '')
+const tooltip = label
 </script>
 
 <template>
@@ -38,7 +38,7 @@ const tooltip = computed(() => label.value ? `${label.value} Espresso signal` : 
     >
       <UIcon
         :name="signal_icon"
-        :class="['size-4', color_class]"
+        :class="['size-3.5', color_class]"
         aria-hidden="true"
       />
     </span>

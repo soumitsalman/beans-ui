@@ -116,26 +116,22 @@ export const CATEGORY_GROUPS: NewsCategory[] = [
     ]
   },
   {
-    slug: 'world-politics-and-society',
-    label: 'World, Politics & Society',
-    description: 'Government, law, education, rights, public life, and global affairs.',
+    slug: 'world-and-politics',
+    label: 'World & Politics',
+    description: 'Government, law, education, public safety, military, defense, and global affairs.',
     category_values: [
       'government_and_politics',
       'public_policy_and_administration',
       'elections_and_voting',
       'legal_system_and_justice',
       'law_enforcement_and_public_safety',
-      'human_rights_and_civil_liberties',
-      'diversity_equity_and_inclusion',
-      'gender_studies_and_identity',
-      'lgbtq_issues',
-      'migration_and_immigration',
-      'accessibility_and_disability',
       'geopolitics_and_international_relations',
       'politics_and_global_affairs',
       'law_crime_and_public_safety',
-      'civil_rights_migration_and_society',
-      'education_and_humanities'
+      'education_and_humanities',
+      'military_and_defense',
+      'homeland_security_and_safety',
+      'weaponry_and_military_technology'
     ]
   },
   {
@@ -153,6 +149,13 @@ export const CATEGORY_GROUPS: NewsCategory[] = [
       'languages_and_linguistics',
       'philosophy_religion_and_spirituality',
       'anthropology_and_cultural_studies',
+      'human_rights_and_civil_liberties',
+      'diversity_equity_and_inclusion',
+      'gender_studies_and_identity',
+      'lgbtq_issues',
+      'migration_and_immigration',
+      'accessibility_and_disability',
+      'civil_rights_migration_and_society',
       'history_and_archaeology',
       'video_games_and_game_development',
       'esports_and_competitive_gaming',
@@ -176,16 +179,6 @@ export const CATEGORY_GROUPS: NewsCategory[] = [
       'food_dining_and_travel',
       'fashion_beauty_and_consumer_affairs',
       'home_family_and_pets'
-    ]
-  },
-  {
-    slug: 'security-and-defense',
-    label: 'Security & Defense',
-    description: 'Military, defense, and public safety.',
-    category_values: [
-      'military_and_defense',
-      'homeland_security_and_safety',
-      'weaponry_and_military_technology'
     ]
   },
   {

@@ -49,7 +49,6 @@ onMounted(() => {
       :loading="loading"
       :can_load_more="can_load_more"
       :error_message="error_message"
-      trend_with_date
       :empty_message="`No news is available in ${category?.label || 'this category'} right now.`"
       @load-more="loadMore"
       @retry="retryFeed"

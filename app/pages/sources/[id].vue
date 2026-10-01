@@ -19,7 +19,7 @@ const {
   refreshFeed,
   loadMore,
   retryFeed
-} = useNewsFeed(undefined, source_id, computed(() => source.value?.domain || undefined))
+} = useNewsFeed(undefined, source_id)
 let _generation = 0
 
 const source_name = computed(() => sourceLabel({ source: source.value, url: source.value?.url }) || 'Source')
@@ -98,12 +98,8 @@ watch(source_id, () => {
     </UAlert>
     <article
       v-else-if="source"
-      class="overflow-hidden rounded-lg border border-stone-800/90 bg-stone-900/60"
+      class="mt-10 rounded-lg border border-stone-800/90 bg-stone-900/60 sm:mt-12"
     >
-      <div
-        class="h-20 bg-gradient-to-r from-stone-800 via-stone-800/80 to-stone-900 sm:h-24"
-        aria-hidden="true"
-      />
       <div class="px-4 pb-5 sm:px-5">
         <UAvatar
           :src="sourceFavicon({ source, url: source.url })"
@@ -114,29 +110,31 @@ watch(source_id, () => {
           loading="eager"
           referrerpolicy="no-referrer"
         />
-        <h1 class="mt-3 min-w-0 text-xl font-semibold text-stone-100 sm:text-2xl">
-          {{ source_name }}
-        </h1>
-        <p
-          v-if="source.description"
-          class="mt-3 max-w-3xl text-sm leading-6 text-stone-400"
-        >
-          {{ source.description }}
-        </p>
-        <a
-          v-if="source_url"
-          :href="outboundHref(source_url)"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="mt-3 inline-flex max-w-full items-center gap-1.5 break-all text-sm text-primary hover:underline"
-        >
-          <UIcon
-            name="lucide:link"
-            class="size-3.5 shrink-0"
-            aria-hidden="true"
-          />
-          {{ source_display_url }}
-        </a>
+        <div class="mt-3 min-w-0">
+          <h1 class="text-xl font-semibold text-stone-100 sm:text-2xl">
+            {{ source_name }}
+          </h1>
+          <p
+            v-if="source.description"
+            class="mt-3 max-w-3xl text-sm leading-6 text-stone-400"
+          >
+            {{ source.description }}
+          </p>
+          <a
+            v-if="source_url"
+            :href="outboundHref(source_url)"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-3 inline-flex max-w-full items-center gap-1.5 break-all text-sm text-primary hover:underline"
+          >
+            <UIcon
+              name="lucide:link"
+              class="size-3.5 shrink-0"
+              aria-hidden="true"
+            />
+            {{ source_display_url }}
+          </a>
+        </div>
       </div>
     </article>
 

@@ -1,43 +1,25 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { NewsArticle, NewsPublisher } from '~/types/news'
-import StoryConfidenceBadge from '~/components/news/StoryConfidenceBadge.vue'
+import ArticleSignals from '~/components/news/ArticleSignals.vue'
+import ArticleSourceLine from '~/components/news/ArticleSourceLine.vue'
+import ArticleShareModal from '~/components/news/ArticleShareModal.vue'
 import ArticleTrendCounts from '~/components/news/ArticleTrendCounts.vue'
-import { formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
+import { formatCount, formatTaxonomyLabel } from '~/utils/formatters'
 import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceIdentity, sourceLabel } from '~/utils/source'
 import { hasPositiveCount } from '~/utils/trend'
+import { withBeansShareAttribution } from '~/utils/outboundUrl'
 
-const props = defineProps<{
-  article: NewsArticle
-  trend_with_date?: boolean
-}>()
+const props = defineProps<{ article: NewsArticle }>()
 const { outboundHref } = useOutboundUrl()
 const image_failed = ref(false)
+const share_url = computed(() => withBeansShareAttribution(props.article.url))
 const title_link = computed(() => props.article.story_id && props.article.id
   ? `/articles/${props.article.id}`
   : undefined)
 const external_article_url = computed(() => !title_link.value && props.article.url
   ? outboundHref(props.article.url)
   : undefined)
-const date_label = computed(() => formatFriendlyTime(props.article.published_at))
-const trend_score = computed(() => props.article.trend?.trend_score)
-const trend_icon = computed(() => {
-  if (typeof trend_score.value !== 'number') return undefined
-  if (trend_score.value >= 10000) return 'lucide:flame'
-  if (trend_score.value >= 1000) return 'lucide:trending-up'
-  return 'lucide:activity'
-})
-const trend_label = computed(() => {
-  if (typeof trend_score.value !== 'number') return undefined
-  if (trend_score.value >= 10000) return 'Hot'
-  if (trend_score.value >= 1000) return 'Trending'
-  return 'Recent activity'
-})
-const ideology = computed(() => {
-  const value = props.article.ideology?.toLowerCase()
-  return value === 'left' || value === 'right' ? value : undefined
-})
-const ideology_label = computed(() => ideology.value === 'left' ? 'Leans Left' : ideology.value === 'right' ? 'Leans Right' : undefined)
 const image_entities = computed(() => props.article.entities.filter(Boolean).slice(0, 2))
 const image_regions = computed(() => props.article.regions.filter(Boolean).slice(0, 2))
 const show_text_tags = computed(() => (!props.article.image_url || image_failed.value)
@@ -45,7 +27,8 @@ const show_text_tags = computed(() => (!props.article.image_url || image_failed.
 const related_count = computed(() => props.article.trend?.related)
 const show_card_footer = computed(() => Boolean(props.article.other_publishers?.length)
   || hasPositiveCount(related_count.value)
-  || [props.article.trend?.mentions, props.article.trend?.comments, props.article.trend?.likes].some(hasPositiveCount))
+  || [props.article.trend?.mentions, props.article.trend?.comments, props.article.trend?.likes].some(hasPositiveCount)
+  || Boolean(share_url.value))
 
 watch(() => props.article.image_url, () => {
   image_failed.value = false
@@ -66,101 +49,20 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
 
 <template>
   <article class="overflow-hidden rounded-lg border border-stone-800/90 bg-stone-900/60">
-    <div class="flex items-center gap-2.5 px-3.5 pt-3.5">
-      <NuxtLink
-        v-if="article.source?.id"
-        :to="`/sources/${article.source.id}`"
-        class="flex min-w-0 items-center gap-2 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-        :aria-label="`Open ${sourceLabel(article) || 'source'}`"
-      >
-        <UAvatar
-          :src="sourceFavicon(article)"
-          :alt="sourceLabel(article) || 'Source'"
-          :icon="DEFAULT_SOURCE_ICON"
+    <div class="flex items-start justify-between gap-3 px-3.5 pt-3.5">
+      <div class="min-w-0 flex-1">
+        <ArticleSourceLine :article="article" />
+        <UBadge
+          v-if="article.categories[0]"
+          color="neutral"
+          variant="soft"
           size="sm"
-          class="shrink-0 ring-1 ring-stone-800/80"
-          loading="eager"
-          referrerpolicy="no-referrer"
-        />
-        <span class="truncate text-sm font-semibold text-stone-200">
-          {{ sourceLabel(article) || 'Source' }}
-        </span>
-      </NuxtLink>
-      <div
-        v-else
-        class="flex min-w-0 items-center gap-2"
-      >
-        <UAvatar
-          :src="sourceFavicon(article)"
-          :alt="sourceLabel(article) || 'Source'"
-          :icon="DEFAULT_SOURCE_ICON"
-          size="sm"
-          class="shrink-0 ring-1 ring-stone-800/80"
-          loading="eager"
-          referrerpolicy="no-referrer"
-        />
-        <span class="truncate text-sm font-semibold text-stone-200">
-          {{ sourceLabel(article) || 'Source' }}
-        </span>
-      </div>
-
-      <div
-        v-if="date_label || (trend_with_date && trend_icon)"
-        class="ml-auto flex shrink-0 items-center gap-2 text-[11px]"
-      >
-        <time
-          v-if="date_label"
-          :datetime="article.published_at || undefined"
-          class="tabular-nums text-stone-500"
+          class="mt-1 max-w-full truncate bg-stone-800/80 text-primary/90"
         >
-          {{ date_label }}
-        </time>
-        <UTooltip
-          v-if="trend_with_date && trend_icon"
-          :text="trend_label"
-        >
-          <span
-            role="img"
-            tabindex="0"
-            :aria-label="trend_label"
-            class="inline-flex items-center text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
-          >
-            <UIcon
-              :name="trend_icon"
-              class="size-3.5"
-              aria-hidden="true"
-            />
-          </span>
-        </UTooltip>
+          {{ formatTaxonomyLabel(article.categories[0]) }}
+        </UBadge>
       </div>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-2 px-3.5 pt-2 text-[11px] text-stone-500">
-      <span
-        v-if="article.categories[0]"
-        class="max-w-full min-w-0 truncate font-medium text-primary/80"
-      >
-        {{ formatTaxonomyLabel(article.categories[0]) }}
-      </span>
-      <div class="ml-auto flex shrink-0 items-center justify-end gap-2">
-        <UTooltip
-          v-if="!trend_with_date && trend_icon"
-          :text="trend_label"
-        >
-          <span
-            role="img"
-            tabindex="0"
-            :aria-label="trend_label"
-            class="inline-flex items-center text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
-          >
-            <UIcon
-              :name="trend_icon"
-              class="size-3.5"
-              aria-hidden="true"
-            />
-          </span>
-        </UTooltip>
-      </div>
+      <ArticleSignals :article="article" />
     </div>
 
     <div class="px-3.5 pb-3 pt-1">
@@ -182,38 +84,6 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           {{ article.title }}
         </a>
         <span v-else>{{ article.title }}</span>
-        <span
-          v-if="article.confidence || ideology"
-          class="ml-1 inline-flex items-center gap-1 align-middle"
-        >
-          <span
-            v-if="article.confidence"
-            class="inline-flex align-middle"
-          >
-            <StoryConfidenceBadge :confidence="article.confidence" />
-          </span>
-          <UTooltip
-            v-if="ideology"
-            :text="ideology_label"
-          >
-            <span
-              role="img"
-              tabindex="0"
-              :aria-label="ideology_label"
-              :class="[
-                'inline-flex shrink-0 items-center gap-0.5 align-middle font-semibold leading-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current',
-                ideology === 'left' ? 'text-blue-400' : 'text-red-400'
-              ]"
-            >
-              <UIcon
-                :name="ideology === 'left' ? 'lucide:arrow-left' : 'lucide:arrow-right'"
-                class="size-3.5"
-                aria-hidden="true"
-              />
-              <span>{{ ideology === 'left' ? 'L' : 'R' }}</span>
-            </span>
-          </UTooltip>
-        </span>
       </h2>
       <div
         v-if="show_text_tags"
@@ -289,48 +159,56 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
 
     <div
       v-if="show_card_footer"
-      class="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-stone-800/80 px-3.5 py-3 text-[11px] text-stone-500"
+      class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-stone-800/80 px-3.5 py-3 text-[11px] text-stone-500"
     >
       <div
-        v-if="article.other_publishers?.length"
-        class="flex items-center"
+        v-if="article.other_publishers?.length || hasPositiveCount(related_count)"
+        class="flex shrink-0 items-center gap-2"
       >
-        <template
-          v-for="publisher in article.other_publishers"
-          :key="publisherIdentity(publisher)"
+        <UAvatarGroup
+          v-if="article.other_publishers?.length"
+          :max="5"
         >
           <NuxtLink
-            v-if="publisherHref(publisher)"
+            v-for="publisher in article.other_publishers"
+            :key="publisherIdentity(publisher)"
             :to="publisherHref(publisher)"
             :aria-label="`Open ${publisherLabel(publisher)}`"
-            class="-ml-2 first:ml-0 rounded-full focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary"
+            class="rounded-full focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary"
           >
             <UAvatar
               :src="sourceFavicon(publisher)"
               :alt="publisherLabel(publisher)"
               :icon="DEFAULT_SOURCE_ICON"
-              size="sm"
-              class="ring-2 ring-stone-950"
               loading="lazy"
               referrerpolicy="no-referrer"
             />
           </NuxtLink>
-          <UAvatar
-            v-else
-            :src="sourceFavicon(publisher)"
-            :alt="publisherLabel(publisher)"
-            :icon="DEFAULT_SOURCE_ICON"
-            size="sm"
-            class="-ml-2 first:ml-0 ring-2 ring-stone-950"
-            loading="lazy"
-            referrerpolicy="no-referrer"
+        </UAvatarGroup>
+        <span
+          v-if="hasPositiveCount(related_count)"
+          class="inline-flex items-center gap-1 tabular-nums"
+          :aria-label="`${formatCount(related_count)} related articles`"
+        >
+          <UIcon
+            name="lucide:files"
+            class="size-3 text-primary"
+            aria-hidden="true"
           />
-        </template>
+          {{ formatCount(related_count) }}
+        </span>
       </div>
-      <ArticleTrendCounts
-        :trend="article.trend"
-        class="ml-auto"
-      />
+      <div class="ml-auto flex shrink-0 items-center gap-2.5">
+        <ArticleTrendCounts
+          :trend="article.trend"
+          :show_related="false"
+        />
+        <ArticleShareModal
+          v-if="share_url"
+          :article_title="article.title"
+          :article_url="article.url"
+        />
+      </div>
     </div>
   </article>
 </template>

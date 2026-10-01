@@ -4,14 +4,19 @@ import type { NewsTrend } from '~/types/news'
 import { formatCount } from '~/utils/formatters'
 import { hasPositiveCount } from '~/utils/trend'
 
-const props = defineProps<{ trend?: NewsTrend | null }>()
+const props = withDefaults(defineProps<{
+  trend?: NewsTrend | null
+  show_related?: boolean
+}>(), {
+  show_related: true
+})
 
 const counts = computed(() => [
   { key: 'mentions', icon: 'lucide:message-circle', value: props.trend?.mentions },
   { key: 'comments', icon: 'lucide:messages-square', value: props.trend?.comments },
   { key: 'likes', icon: 'lucide:thumbs-up', value: props.trend?.likes },
   { key: 'articles', icon: 'lucide:files', value: props.trend?.related }
-].filter(item => hasPositiveCount(item.value)))
+].filter(item => (props.show_related || item.key !== 'articles') && hasPositiveCount(item.value)))
 </script>
 
 <template>

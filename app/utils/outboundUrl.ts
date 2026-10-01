@@ -35,6 +35,20 @@ export function withOutboundReferral(
   return parsed_url.toString()
 }
 
+export function withBeansShareAttribution(href?: string | null): string | undefined {
+  if (href == null) return undefined
+
+  const url_value = href.trim()
+  if (!url_value) return undefined
+
+  const parsed_url = parseAbsoluteUrl(url_value)
+  if (!parsed_url || !HTTP_PROTOCOLS.has(parsed_url.protocol)) return undefined
+
+  parsed_url.searchParams.set(UTM_SOURCE_PARAM, OUTBOUND_UTM_SOURCE)
+  parsed_url.searchParams.set(UTM_MEDIUM_PARAM, OUTBOUND_UTM_MEDIUM)
+  return parsed_url.toString()
+}
+
 function isAppRelative(value: string): boolean {
   if (value.startsWith('#') || value.startsWith('?')) return true
   if (value.startsWith('//')) return false

@@ -1,5 +1,135 @@
 # Beans UI Working Log
 
+## 2026-10-01 — Default Nuxt avatar groups
+
+- Removed visual overrides from both UAvatarGroup instances: other-publisher favicons in shared article cards and favicon samples in article coverage. Kept their existing maximum counts.
+- Files: `app/components/news/ArticleCard.vue`, `app/components/news/ArticleDetailSections.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+- Verification: focused ESLint passes. Browser inspection shows Nuxt's default 32px avatars, 6px overlap, and ring on the Daily Post Nigeria source card and multi-source coverage groups. The source and article pages have 305px document width at a 320px viewport.
+
+Code snapshot SHA-256: `9bd39d8396c064d821369208b2c107052eebb6a8e1ec2cb09fe739367d500ac1`
+
+Hash inputs: 50 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01 — Category umbrella update
+
+- Merged the Security & Defense category values into World & Politics, now labeled `World & Politics` with slug `world-and-politics`.
+- Moved rights, inclusion, identity, LGBTQ, migration, accessibility, and civil rights/society values from World & Politics to Culture & Lifestyle. Updated the design map and acceptance criteria to reflect the category assignments.
+- Files: `app/settings/categories.ts`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+
+## 2026-10-01 — Shared card avatar overlap on source feeds
+
+- Increased the shared article-card UAvatarGroup overlap to half of each 32px favicon, making two-icon source groups visibly stacked. This component serves home, category, source, and search feeds.
+- Files: `app/components/news/ArticleCard.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+- Verification: focused ESLint passes. The reported Daily Post Nigeria source card shows two 32px other-source avatars 16px apart in a 48px-wide group. Its 320px viewport has a 305px document width.
+
+Code snapshot SHA-256: `09221c6d87a7e3ef79ae02fef20428984627d6f0eb48a99cb8a842751bfb1109`
+
+Hash inputs: 50 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01 — Card publisher avatar overlap
+
+- Increased the other-publisher UAvatarGroup to 32px avatars with 12px overlap and contrasting rings. Removed the child size override so the Nuxt group controls avatar size consistently. Publisher source links remain individually accessible.
+- Files: `app/components/news/ArticleCard.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+- Verification: focused ESLint passes. Browser inspection confirms five loaded overlapping favicon links and a 112px group width. At 320px, the document width is 305px.
+
+Code snapshot SHA-256: `160ece60dd4e7180d863e1081fc5ca9bfd6139be0e83ec33a67bd5d14340f37b`
+
+Hash inputs: 50 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01 — Share and coverage refinement
+
+- Removed the share modal description and distinguished its trigger with a separate neutral soft circular control to the right of social counts. Restored small L/R characters beside ideology arrows and removed the Espresso signal tooltip suffix.
+- Flattened card publisher links into direct Nuxt UAvatarGroup children for consistent overlap and maximum handling.
+- Coverage groups now count unique source identities; single-source groups show a plain favicon/date. Multi-source groups open a bounded chronological source/favicon timeline without article titles. Related items reuse the card source/date component with separate source and publisher links.
+- Files: `app/components/news/ArticleCard.vue`, `ArticleShareModal.vue`, `ArticleSignals.vue`, `StoryConfidenceBadge.vue`, `ArticleDetailSections.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+- Verification: focused ESLint and production build pass; Nuxt typecheck exits successfully with the existing missing Vue Router language-plugin warning. Browser checks verify multi-source expansion, plain single-source nodes, source/date related rows, restored R label, description-free modal, and separate share action. Avatar links measure 28px and overlap by 6px. At 320px, the six-article story has 305px document width. External share submission and clipboard failure were not exercised.
+
+Code snapshot SHA-256: `a806012142568032d3c1994b980f63cede849c823a653f2aec0fd8035afa7e42`
+
+Hash inputs: 50 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01 — Article UI corrections
+
+- Put the source name and publish date on one row in a shared card/page component: prominent source name, muted caption date. Standardized confidence, ideology, and trend icons to 14px; ideology now uses its arrow icon with a tooltip.
+- Replaced share options with one row of six 32px circular icon controls: Copy, X, LinkedIn, Reddit, Threads, Email. Added accessible labels/tooltips; the footer share trigger is icon-only and matches the 12px primary-colored social icons. Preserved the attributed canonical publisher URL and copy failure fallback.
+- Restored the source favicon overlap above the card edge without a separate banner. Updated design and verification contracts.
+- Files: `app/components/news/ArticleSourceLine.vue`, `ArticleCard.vue`, `ArticleSnapshot.vue`, `ArticleSignals.vue`, `StoryConfidenceBadge.vue`, `ArticleShareModal.vue`, `app/pages/sources/[id].vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
+- Verification: focused ESLint and production build pass. Nuxt typecheck exits successfully with a missing Vue Router language-plugin warning. Browser inspection confirms desktop and 320px card/page layouts, accessible share destinations, six 32px share controls, and source favicon overlap. Mobile source/article document width is 305px at a 320px viewport; source avatar extends 39px above its card. Clipboard failure and external share submission were not exercised. Used installed Node binaries after the pnpm launcher attempted an unavailable store/network operation.
+
+Code snapshot SHA-256: `ee90e95fe8ef34fae5cdb5b367d90c4f3c53d3a1e8670c1705e174fc5510c9c0`
+
+Hash inputs: 50 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01
+
+- Reorganized article card and snapshot metadata/signals, added a publisher-link share modal with forced Beans attribution, raised card publisher favicons to five, and removed the source profile banner. Updated the UI and data-source contracts.
+- Files: `app/components/news/ArticleCard.vue`, `app/components/news/ArticleSignals.vue`, `app/components/news/ArticleShareModal.vue`, `app/components/news/ArticleSnapshot.vue`, `app/components/news/ArticleTrendCounts.vue`, `app/components/news/ArticleSection.vue`, `app/composables/useArticleEnrichment.ts`, `app/pages/index.vue`, `app/pages/categories/[category_slug].vue`, `app/pages/sources/[id].vue`, `app/utils/outboundUrl.ts`, `design/DESIGN.md`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: focused ESLint, Nuxt typecheck, and production build pass. Browser inspection confirmed the desktop card, article title link, share options, and banner-free source header. URL utility check confirmed UTM replacement, preservation of other query data and fragments, and invalid URL rejection. A 320px viewport and clipboard failure were not verified in this environment.
+
+Code snapshot SHA-256: `248497a0f928e9851c8c71efed12ce4215f7143e8129906ab6817471b2c4263d`
+
+Hash inputs: 49 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01
+
+- Added `en` to the English language query list, ahead of the 20 locale and alias values. Updated the data-source list and the verification guard for this omission. Earlier direct API and app-proxy comparisons showed results with `en` and empty lists without it.
+- Files: `app/composables/useBeansApi.ts`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: the configured array exactly matches the requested 21 values; ESLint on `useBeansApi.ts` and Nuxt typecheck pass.
+
+Code snapshot SHA-256: `b31582efaec507d8ea0e25af923b69e3deda3365ce53377454936d64d570c384`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01
+
+- Beans API list-valued filters now remain arrays during query serialization, producing repeated query keys instead of comma-containing single values. English languages are passed as an array; tags, sources, domains, categories, regions, entities, and exclusion IDs use the same multivalue encoding. Updated the data-source contract accordingly.
+- Files: `app/composables/useBeansApi.ts`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: checked the installed `ufo` query serializer emits one key per array item; ESLint on `useBeansApi.ts` and Nuxt typecheck pass.
+
+Code snapshot SHA-256: `a225043244f8850b86f51a2aae1e4949cfd5cca042fdd073fe5f3cc5423e75f4`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01
+
+- Corrected the English `languages` query value: requests now send the API locale strings (`en-ae` through `en-za`, plus `english`) instead of numeric IDs. Updated the data-source language list and verification wording accordingly.
+- Files: `app/composables/useBeansApi.ts`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: ESLint on `useBeansApi.ts` and Nuxt typecheck pass.
+
+Code snapshot SHA-256: `8e5ce1908a60fe0d8850f6d7c164e10e7b94b5eddd8344967da3d2100b57c4ca`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01
+
+- Article Coverage, Related, and publisher avatars now all use `/private/stories/{story_id}/articles`; Coverage pages 100 at a time, Related pages five at a time with English languages, and avatars make one 50-item request for up to three other source IDs. Source-page latest news now uses `/private/articles/unique` with `sources={id}` and `sort=recent`.
+- Files: `app/composables/useBeansApi.ts`, `app/pages/articles/[id].vue`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: ESLint on changed implementation files and Nuxt typecheck pass. Live API behavior was not rechecked.
+
+Code snapshot SHA-256: `ee148f7457ab33485522e4004d3db53663d3930ab78008d662e05846633f48ec`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01
+
+- Article detail Coverage now pages `/private/stories/{story_id}/articles` at 100 items, while Related retains its five-item `/private/articles/{article_id}/similar` feed. Feed-card source avatars make one 50-item story-articles request and select up to three unique sources, excluding the card article's source; no avatar cursor follow-up is made.
+- Files: `app/composables/useBeansApi.ts`, `app/composables/useArticleEnrichment.ts`, `app/pages/articles/[id].vue`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: ESLint on changed implementation files and Nuxt typecheck pass. Live API behavior was not rechecked.
+
+Code snapshot SHA-256: `088dd83fd04f0c7cd7b1ba987bf13c552d1e2057a4629681912de2ea2721160a`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-01
+
+- Source-page article requests now use `sources={route ID}` regardless of the source metadata domain. News requests use the full English language ID CSV (`30`–`49`) instead of `languages=en`; the data source contract lists each ID and language value. Updated source-feed verification criteria and retained the earlier live proxy result as historical, since the revised request has not been rechecked live.
+- Files: `app/composables/useBeansApi.ts`, `app/composables/useNewsFeed.ts`, `app/pages/sources/[id].vue`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+- Verification: ESLint on the three changed implementation files and Nuxt typecheck pass. `pnpm` wrapper could not open its SQLite store, so the checked-in local binaries were run directly. Live API behavior was not rechecked.
+
+Code snapshot SHA-256: `f622ff78711e69812087dfb4364ca885c41679819427ceb61bbbfc34813d894a`
+
+Hash inputs: 47 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
 ## 2026-09-30T23:05:00Z
 
 - Added a subtle `gap-1` between the article title and its confidence/ideology indicators, and between the indicators when both appear.

@@ -1,24 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { NewsArticle } from '~/types/news'
+import ArticleSignals from '~/components/news/ArticleSignals.vue'
+import ArticleSourceLine from '~/components/news/ArticleSourceLine.vue'
 import MarkdownSummary from '~/components/news/MarkdownSummary.vue'
-import StoryConfidenceBadge from '~/components/news/StoryConfidenceBadge.vue'
-import { formatFriendlyTime, formatTaxonomyLabel } from '~/utils/formatters'
-import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceLabel } from '~/utils/source'
+import { formatTaxonomyLabel } from '~/utils/formatters'
 
 const props = defineProps<{ article: NewsArticle }>()
 const { outboundHref } = useOutboundUrl()
 const image_failed = ref(false)
-const trend_score = computed(() => props.article.trend?.trend_score)
-const trend_icon = computed(() => {
-  if (typeof trend_score.value !== 'number') return undefined
-  if (trend_score.value >= 10000) return 'lucide:flame'
-  if (trend_score.value >= 1000) return 'lucide:trending-up'
-  return 'lucide:activity'
-})
-const trend_label = computed(() => trend_score.value == null
-  ? undefined
-  : trend_score.value >= 10000 ? 'Hot' : trend_score.value >= 1000 ? 'Trending' : 'Recent activity')
+const article_href = computed(() => outboundHref(props.article.url))
 
 watch(() => props.article.image_url, () => {
   image_failed.value = false
@@ -47,75 +38,23 @@ watch(() => props.article.image_url, () => {
       </a>
 
       <div class="min-w-0 flex-1 space-y-3">
-        <div class="flex flex-wrap items-center gap-2 text-[11px] text-stone-500">
-          <NuxtLink
-            v-if="article.source?.id"
-            :to="`/sources/${article.source.id}`"
-            class="flex min-w-0 items-center gap-1.5 hover:text-primary"
-          >
-            <UAvatar
-              :src="sourceFavicon(article)"
-              :alt="sourceLabel(article) || 'Source'"
-              :icon="DEFAULT_SOURCE_ICON"
-              size="xs"
-              loading="eager"
-              referrerpolicy="no-referrer"
-            />
-            <span class="truncate font-medium">{{ sourceLabel(article) || 'Source' }}</span>
-          </NuxtLink>
-          <span
-            v-else
-            class="flex min-w-0 items-center gap-1.5"
-          >
-            <UAvatar
-              :src="sourceFavicon(article)"
-              :alt="sourceLabel(article) || 'Source'"
-              :icon="DEFAULT_SOURCE_ICON"
-              size="xs"
-              loading="eager"
-              referrerpolicy="no-referrer"
-            />
-            <span class="truncate font-medium">{{ sourceLabel(article) || 'Source' }}</span>
-          </span>
-          <time
-            v-if="article.published_at"
-            :datetime="article.published_at"
-            class="tabular-nums"
-          >
-            {{ formatFriendlyTime(article.published_at) }}
-          </time>
-          <span class="ml-auto flex items-center gap-2">
-            <UTooltip
-              v-if="trend_icon"
-              :text="trend_label"
+        <div class="flex items-start justify-between gap-3 text-[11px] text-stone-500">
+          <div class="min-w-0 flex-1">
+            <ArticleSourceLine :article="article" />
+            <UBadge
+              v-if="article.categories[0]"
+              color="neutral"
+              variant="soft"
+              size="sm"
+              class="mt-1 bg-stone-800/80 text-primary/90"
             >
-              <span
-                role="img"
-                tabindex="0"
-                :aria-label="trend_label"
-                class="inline-flex items-center text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
-              >
-                <UIcon
-                  :name="trend_icon"
-                  class="size-3.5"
-                  aria-hidden="true"
-                />
-              </span>
-            </UTooltip>
-            <StoryConfidenceBadge :confidence="article.confidence" />
-          </span>
+              {{ formatTaxonomyLabel(article.categories[0]) }}
+            </UBadge>
+          </div>
+          <ArticleSignals :article="article" />
         </div>
 
         <div class="flex flex-wrap gap-1.5">
-          <UBadge
-            v-for="category in article.categories.slice(0, 1)"
-            :key="category"
-            color="neutral"
-            variant="soft"
-            class="bg-stone-800/80 text-primary/90"
-          >
-            {{ formatTaxonomyLabel(category) }}
-          </UBadge>
           <UBadge
             v-for="region in article.regions.slice(0, 3)"
             :key="`region-${region}`"
@@ -137,7 +76,16 @@ watch(() => props.article.image_url, () => {
         </div>
 
         <h1 class="text-lg font-semibold leading-snug text-stone-100 sm:text-xl">
-          {{ article.title || 'Article' }}
+          <a
+            v-if="article_href"
+            :href="article_href"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+          >
+            {{ article.title || 'Article' }}
+          </a>
+          <span v-else>{{ article.title || 'Article' }}</span>
         </h1>
         <MarkdownSummary
           v-if="article.summary"

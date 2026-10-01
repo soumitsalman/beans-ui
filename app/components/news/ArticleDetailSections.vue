@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { NewsArticle } from '~/types/news'
 import ArticleTrendCounts from '~/components/news/ArticleTrendCounts.vue'
-import { formatFriendlyTime } from '~/utils/formatters'
+import ArticleSourceLine from '~/components/news/ArticleSourceLine.vue'
 import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceIdentity, sourceLabel } from '~/utils/source'
 
 interface CoverageGroup {
@@ -10,6 +10,7 @@ interface CoverageGroup {
   articles: NewsArticle[]
   date: string
   icons: NewsArticle[]
+  source_count: number
 }
 
 interface CoverageView {
@@ -67,7 +68,7 @@ function createGroups(articles: NewsArticle[], max_groups: number, max_icons: nu
     const source_ids = new Set<string>()
     const icons = group.filter((article) => {
       const source_id = sourceIdentity(article) || article.id || article.url || ''
-      if (source_ids.has(source_id) || source_ids.size >= max_icons) return false
+      if (source_ids.has(source_id)) return false
       source_ids.add(source_id)
       return true
     })
@@ -76,7 +77,8 @@ function createGroups(articles: NewsArticle[], max_groups: number, max_icons: nu
       id: `${prefix}-${index}`,
       articles: group,
       date: first_date === last_date ? first_date : `${first_date} – ${last_date}`,
-      icons
+      icons: icons.slice(0, max_icons),
+      source_count: source_ids.size
     }
   })
 }
@@ -178,46 +180,64 @@ function articleTime(article: NewsArticle): number {
             </span>
           </a>
 
-          <UButton
+          <template
             v-for="group in view.groups"
             :key="group.id"
-            :color="selected_group_id === group.id ? 'primary' : 'neutral'"
-            variant="subtle"
-            :aria-label="`${group.date}: ${group.articles.length} articles. ${selected_group_id === group.id ? 'Hide' : 'Show'} coverage`"
-            :aria-expanded="selected_group_id === group.id"
-            :aria-controls="selected_group_id === group.id ? 'coverage-group-details' : undefined"
-            class="relative z-10 min-w-0 flex-1 flex-col gap-1 overflow-hidden px-1 py-1.5 text-center"
-            @click="toggleGroup(group.id)"
           >
-            <span class="flex max-w-full min-w-0 items-center justify-center gap-1 overflow-hidden">
-              <span class="flex shrink-0 -space-x-1.5">
+            <NuxtLink
+              v-if="group.source_count === 1"
+              :to="group.icons[0]?.source?.id ? `/sources/${group.icons[0].source.id}` : undefined"
+              :aria-label="`Coverage from ${sourceLabel(group.icons[0]) || 'Source'}: ${group.date}`"
+              class="relative z-10 flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg bg-stone-950 px-1 py-2 text-center focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <UAvatar
+                :src="sourceFavicon(group.icons[0])"
+                :alt="sourceLabel(group.icons[0]) || 'Source'"
+                :icon="DEFAULT_SOURCE_ICON"
+                size="xs"
+                class="ring-1 ring-stone-800"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+              />
+              <span
+                class="w-full truncate text-[10px] tabular-nums text-stone-500"
+                :title="group.date"
+              >{{ group.date }}</span>
+            </NuxtLink>
+            <UButton
+              v-else
+              :color="selected_group_id === group.id ? 'primary' : 'neutral'"
+              variant="subtle"
+              :aria-label="`${group.date}: ${group.source_count} sources. ${selected_group_id === group.id ? 'Hide' : 'Show'} sources timeline`"
+              :aria-expanded="selected_group_id === group.id"
+              :aria-controls="selected_group_id === group.id ? 'coverage-group-details' : undefined"
+              class="relative z-10 min-w-0 flex-1 flex-col gap-1 overflow-hidden px-1 py-1.5 text-center"
+              @click="toggleGroup(group.id)"
+            >
+              <UAvatarGroup
+                :max="view.id === 'small' ? 1 : view.id === 'medium' ? 2 : 3"
+              >
                 <UAvatar
-                  v-for="(article, icon_index) in group.icons"
-                  :key="article.id || article.url || icon_index"
+                  v-for="article in group.icons"
+                  :key="sourceIdentity(article) || article.id"
                   :src="sourceFavicon(article)"
                   :alt="sourceLabel(article) || 'Source'"
                   :icon="DEFAULT_SOURCE_ICON"
-                  size="2xs"
-                  class="ring-1 ring-stone-950"
                   loading="lazy"
                   referrerpolicy="no-referrer"
                 />
-              </span>
+              </UAvatarGroup>
               <span
-                v-if="group.articles.length > group.icons.length"
-                class="min-w-0 truncate text-[10px] tabular-nums"
-              >
-                +{{ group.articles.length - group.icons.length }}
-              </span>
-            </span>
-            <span
-              class="w-full truncate text-[10px] tabular-nums"
-              :title="group.date"
-            >{{ group.date }}</span>
-            <span class="w-full truncate text-[10px] tabular-nums opacity-70">
-              {{ group.articles.length }} {{ group.articles.length === 1 ? 'article' : 'articles' }}
-            </span>
-          </UButton>
+                v-if="group.source_count > group.icons.length"
+                class="text-[10px] tabular-nums"
+              >+{{ group.source_count - group.icons.length }}</span>
+              <span
+                class="w-full truncate text-[10px] tabular-nums"
+                :title="group.date"
+              >{{ group.date }}</span>
+              <span class="w-full truncate text-[10px] tabular-nums opacity-70">{{ group.source_count }} sources</span>
+            </UButton>
+          </template>
 
           <a
             v-if="last_article"
@@ -249,12 +269,12 @@ function articleTime(article: NewsArticle): number {
           v-if="selected_group"
           id="coverage-group-details"
           role="region"
-          :aria-label="`Coverage from ${selected_group.date}`"
+          :aria-label="`Sources timeline from ${selected_group.date}`"
           class="min-w-0 rounded-lg border border-stone-800/90 bg-stone-900/50"
         >
           <div class="flex min-w-0 items-center justify-between gap-2 border-b border-stone-800/80 px-3 py-2">
             <div class="min-w-0 truncate text-xs text-stone-300">
-              {{ selected_group.date }} · {{ selected_group.articles.length }} {{ selected_group.articles.length === 1 ? 'article' : 'articles' }}
+              {{ selected_group.date }} · {{ selected_group.source_count }} sources
             </div>
             <UButton
               icon="lucide:x"
@@ -265,37 +285,18 @@ function articleTime(article: NewsArticle): number {
               @click="selected_group_id = null"
             />
           </div>
-          <div class="max-h-72 min-w-0 overflow-y-auto divide-y divide-stone-800/80 px-3">
-            <a
+          <div class="relative max-h-72 min-w-0 overflow-y-auto px-3 py-3">
+            <div
+              class="absolute bottom-5 left-7 top-5 w-px bg-stone-700"
+              aria-hidden="true"
+            />
+            <div
               v-for="(article, article_index) in selected_group.articles"
               :key="article.id || article.url || article_index"
-              :href="article.url ? outboundHref(article.url) : undefined"
-              :target="article.url ? '_blank' : undefined"
-              :rel="article.url ? 'noopener noreferrer' : undefined"
-              class="flex min-w-0 items-start gap-2 py-2.5 text-sm text-stone-200 hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+              class="relative py-2"
             >
-              <UAvatar
-                :src="sourceFavicon(article)"
-                :alt="sourceLabel(article) || 'Source'"
-                :icon="DEFAULT_SOURCE_ICON"
-                size="xs"
-                class="mt-0.5 shrink-0 ring-1 ring-stone-800"
-                loading="lazy"
-                referrerpolicy="no-referrer"
-              />
-              <span class="min-w-0 flex-1">
-                <span class="block truncate text-[11px] text-stone-500">
-                  {{ sourceLabel(article) || 'Source' }} · {{ formatFriendlyTime(article.published_at) || 'Date unknown' }}
-                </span>
-                <span class="line-clamp-2 leading-5">{{ article.title || 'Article' }}</span>
-              </span>
-              <UIcon
-                v-if="article.url"
-                name="lucide:arrow-up-right"
-                class="mt-1 size-4 shrink-0 text-stone-600"
-                aria-hidden="true"
-              />
-            </a>
+              <ArticleSourceLine :article="article" />
+            </div>
           </div>
         </div>
       </div>
@@ -343,48 +344,39 @@ function articleTime(article: NewsArticle): number {
         v-if="related_articles.length"
         class="divide-y divide-stone-800/80 rounded-lg border border-stone-800/90 bg-stone-900/50 px-3"
       >
-        <a
+        <div
           v-for="article in related_articles"
           :key="article.id"
-          :href="outboundHref(article.url)"
-          :target="article.url ? '_blank' : undefined"
-          :rel="article.url ? 'noopener noreferrer' : undefined"
-          :class="[
-            'group flex gap-2.5 py-3 transition-colors',
-            article.url ? 'hover:bg-stone-800/40 focus-visible:outline-2 focus-visible:outline-primary' : 'cursor-default'
-          ]"
-          :aria-label="article.url ? `Open ${article.title || 'article'}` : undefined"
+          class="min-w-0 space-y-1 py-3"
         >
-          <UAvatar
-            :src="sourceFavicon(article)"
-            :alt="sourceLabel(article) || 'Source'"
-            :icon="DEFAULT_SOURCE_ICON"
-            size="xs"
-            class="mt-0.5 shrink-0 ring-1 ring-stone-800/80"
-            loading="lazy"
-            referrerpolicy="no-referrer"
-          />
-          <div class="min-w-0 flex-1">
-            <div class="flex min-w-0 items-center gap-3 text-[11px] text-stone-500">
-              <p class="min-w-0 truncate font-medium">{{ sourceLabel(article) || 'Source' }}</p>
-              <ArticleTrendCounts
-                :trend="article.trend"
-                class="ml-auto shrink-0"
-              />
-            </div>
-            <div class="mt-1 flex items-start gap-3">
-              <h3 class="line-clamp-2 flex-1 text-sm font-medium leading-5 text-stone-200 group-hover:text-primary">
-                {{ article.title || 'Article' }}
-              </h3>
-              <UIcon
-                v-if="article.url"
-                name="lucide:arrow-up-right"
-                class="mt-0.5 size-4 shrink-0 text-stone-600 group-hover:text-primary"
-                aria-hidden="true"
-              />
-            </div>
+          <div class="flex min-w-0 flex-wrap items-center justify-between gap-2">
+            <ArticleSourceLine
+              :article="article"
+              class="flex-1"
+            />
+            <ArticleTrendCounts
+              :trend="article.trend"
+              class="ml-auto shrink-0 text-[11px] text-stone-500"
+            />
           </div>
-        </a>
+          <a
+            :href="outboundHref(article.url)"
+            :target="article.url ? '_blank' : undefined"
+            :rel="article.url ? 'noopener noreferrer' : undefined"
+            class="group flex min-w-0 items-start gap-3 rounded-sm focus-visible:outline-2 focus-visible:outline-primary"
+            :aria-label="article.url ? `Open ${article.title || 'article'}` : undefined"
+          >
+            <h3 class="line-clamp-2 flex-1 text-sm font-medium leading-5 text-stone-200 group-hover:text-primary">
+              {{ article.title || 'Article' }}
+            </h3>
+            <UIcon
+              v-if="article.url"
+              name="lucide:arrow-up-right"
+              class="mt-0.5 size-4 shrink-0 text-stone-600 group-hover:text-primary"
+              aria-hidden="true"
+            />
+          </a>
+        </div>
       </div>
 
       <div

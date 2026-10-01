@@ -9,12 +9,10 @@ withDefaults(defineProps<{
   can_load_more: boolean
   error_message?: string | null
   empty_message?: string
-  trend_with_date?: boolean
 }>(), {
   title: undefined,
   error_message: null,
-  empty_message: 'Nothing is available yet.',
-  trend_with_date: false
+  empty_message: 'Nothing is available yet.'
 })
 
 const emit = defineEmits<{
@@ -59,7 +57,6 @@ const emit = defineEmits<{
         v-for="article in articles"
         :key="article.id || article.url || 'article'"
         :article="article"
-        :trend_with_date="trend_with_date"
       />
     </div>
 

@@ -7,7 +7,7 @@ import type { NewsArticle } from '~/types/news'
 const COVERAGE_PAGE_SIZE = 100
 const RELATED_PAGE_SIZE = 5
 const route = useRoute()
-const { fetchArticle, fetchSimilarArticles } = useBeansApi()
+const { fetchArticle, fetchStoryArticles } = useBeansApi()
 const { fetchConfidence } = useEspressoApi()
 const article_id = computed(() => String(route.params.id || ''))
 const article = ref<NewsArticle | null>(null)
@@ -46,19 +46,16 @@ function appendUnique(target: NewsArticle[], received: NewsArticle[]): NewsArtic
 }
 
 async function loadCoverage(generation = _request_generation): Promise<void> {
-  if (!isCurrentGeneration(generation) || !article.value || loading_coverage.value || _coverage_exhausted) return
+  if (!isCurrentGeneration(generation) || !article.value?.story_id || loading_coverage.value || _coverage_exhausted) return
 
   loading_coverage.value = true
   coverage_error.value = null
   try {
     let cursor = coverage_cursor.value
     while (isCurrentGeneration(generation) && !_coverage_exhausted) {
-      const page = await fetchSimilarArticles(article.value.id, {
+      const page = await fetchStoryArticles(article.value.story_id, {
         limit: COVERAGE_PAGE_SIZE,
         cursor: cursor ?? undefined
-      }, {
-        include_languages: false,
-        include_content_type: false
       })
       if (!isCurrentGeneration(generation)) return
 
@@ -80,18 +77,18 @@ async function loadCoverage(generation = _request_generation): Promise<void> {
 }
 
 async function loadRelated(append = false, generation = _request_generation): Promise<void> {
-  if (!isCurrentGeneration(generation) || !article.value || loading_related.value) return
+  if (!isCurrentGeneration(generation) || !article.value?.story_id || loading_related.value) return
   if (append && !related_cursor.value) return
 
   loading_related.value = true
   related_error.value = null
   const cursor = append ? related_cursor.value : null
   try {
-    const page = await fetchSimilarArticles(article.value.id, {
+    const page = await fetchStoryArticles(article.value.story_id, {
       limit: RELATED_PAGE_SIZE,
       cursor: cursor ?? undefined
     }, {
-      include_content_type: false
+      include_languages: true
     })
     if (!isCurrentGeneration(generation)) return
 

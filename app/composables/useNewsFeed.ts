@@ -27,8 +27,7 @@ interface FeedStream {
 
 export function useNewsFeed(
   category?: MaybeRef<NewsCategory | undefined>,
-  source_id?: MaybeRef<string | undefined>,
-  source_domain?: MaybeRef<string | undefined>
+  source_id?: MaybeRef<string | undefined>
 ) {
   const { fetchLatestArticles, fetchSourceArticles, fetchTopHeadlines } = useBeansApi()
   const { enrichArticles } = useArticleEnrichment()
@@ -38,7 +37,6 @@ export function useNewsFeed(
   const error_message = ref<string | null>(null)
   const active_category = computed(() => unref(category))
   const active_source_id = computed(() => unref(source_id))
-  const active_source_domain = computed(() => unref(source_domain))
   const trending_stream: FeedStream = {
     cursor: null,
     exhausted: false,
@@ -137,8 +135,7 @@ export function useNewsFeed(
     const previous_cursor = source_cursor.value
     const page = await fetchSourceArticles(id, {
       limit: PAGE_SIZE,
-      cursor: previous_cursor ?? undefined,
-      domains: active_source_domain.value ? [active_source_domain.value] : undefined
+      cursor: previous_cursor ?? undefined
     })
     if (generation !== _generation) return []
 

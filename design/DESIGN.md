@@ -5,7 +5,7 @@
 - Dates: `N hrs ago` under 24 hours; `N days ago` from 24 hours to under 3 days; `MMM dd, YYYY` from 3 days onward.
 - Counts: humanize trend, publisher, article, and related counts. Render social counts only when greater than zero.
 - Trend score: show icons only: fire at 10,000+ with `Hot`, trending-up at 1,000+ with `Trending`, and activity below that; expose the corresponding label in a tooltip. Never render the numeric score. On home and category cards, place the trend indicator inline with the publish date; on other cards, keep it at the category row end.
-- Confidence: show the corresponding low, medium, or high signal-strength icon in the existing error, warning, or success color. Expose the full `Low Confidence`, `Moderate Confidence`, or `High Confidence` Espresso label in a tooltip. Omit missing or unavailable values.
+- Confidence: show the corresponding low, medium, or high signal-strength icon in the existing error, warning, or success color. Expose the full `Low Confidence`, `Moderate Confidence`, or `High Confidence` label in a tooltip. Omit missing or unavailable values.
 - Source favicon: configured favicon, Google favicon fallback, then system default. Do not show an image placeholder when an article has no image.
 - Article social counts: show positive mentions, comments, and likes with icons; omit zero and missing values.
 - Header: current date as `Weekday, MMM dd` with a softly glowing live indicator; centered Beans mark; Search, API, and Help improve Beans controls at the end.
@@ -25,16 +25,17 @@
 
 - Home and category feeds share one vertical panel. Each batch requests one trending article and four latest articles, with IDs from the other feed in `exclude_ids`. De-duplicate by article ID in the UI. If a feed is exhausted, fill the remaining batch from the other feed. One `More` button loads the next batch.
 - Keep the existing two-day trending and seven-day latest date windows and category filters. Source feeds show latest items only, selected by the source domain and checked against the source ID, five per page.
-- Article cards show source avatar/name and publish time, category and title, icon-only trend, signal-strength confidence, and an optional image linked to its image URL. Put up to two entities and two regions over the image; when there is no usable image, render those tags below the title. Show ideology as a blue `← L` or red `→ R` marker after the title. Confidence, ideology, and trend labels appear in tooltips; the compact indicators have no badge fill or outline. Omit confidence or ideology indicators when their value is missing or empty.
+- Article cards place the prominent source name and muted caption-size publish date on one row, with category below. Confidence, ideology, and trend icons appear in that order on the right at the same small size. Keep the title and optional linked image below; put up to two entities and two regions over the image, or below the title when no usable image exists. Ideology retains a small L/R character beside its arrow. Confidence tooltips show only the confidence label. Confidence, ideology, and trend labels appear in tooltips; omit missing confidence and ideology.
 - Link a source avatar and name to `/sources/{id}` only when a source ID is present. Article title navigation follows the existing story-ID rule: when `story_id` exists, open `/articles/{article.id}`; otherwise open the original article URL.
-- Show up to five distinct other-publisher avatars from the similar-articles feed without a text heading. Show a files icon followed by the `trend.related` count in the same compact row as positive mentions, comments, and likes; omit each zero or missing count. Publisher avatar links also require a source ID.
-- Source pages use a header banner with the circular favicon overlapping its lower edge. Display the base URL without its scheme, preceded by a link icon; the outbound link retains its complete normalized URL.
+- Show up to five distinct other-publisher avatars through Nuxt UAvatarGroup from one story-articles request. Let UAvatarGroup provide its default avatar size, overlap, and ring. Place the avatars and positive `trend.related` count at the footer's left; align positive mentions, comments, likes, and the share button at the right. Omit zero and missing counts. Publisher avatar links require a source ID.
+- The share trigger is a separate circular, neutral-colored soft button to the right of the informational social-count group. Its small icon remains icon-only, with a tooltip; the button background distinguishes the clickable action. The share modal offers Copy, X, LinkedIn, Reddit, Threads, and Email as six circular icon-only buttons in one row, with tooltips and accessible labels; omit the modal description. Every option uses the publisher's canonical `article.url`, replacing `utm_source` and `utm_medium` with `beans.cafecito.tech` and `referral` while preserving other query parameters and fragments. Hide the share button when the article URL is unusable.
+- Source pages show the circular favicon overlapping the top edge of the publisher card, with details below and no separate banner or lighter banner background. Display the base URL without its scheme, preceded by a link icon; the outbound link retains its complete normalized URL.
 
 ## Article detail
 
-- Load the article snapshot from Beans `/articles/{id}` and its confidence by article ID. Keep the existing detailed snapshot content and place the image on the left as a hot link.
-- Coverage uses similar articles in pages of 100 until pagination ends. Keep the first and last articles at the ends of a compact timeline. Group every intermediate article into chronological date-range chips: one on small screens, up to three on medium screens, and up to five on extra-large screens. Each chip shows a bounded set of distinct source favicons and its article count; selecting it opens a height-limited, scrollable list of all articles in that group below the timeline. The page must remain within the viewport at 320px.
-- Related uses its own similar-article cursor in pages of five. Keep the existing source favicon, title, and positive social-count row with a `More` button.
+- Load the article snapshot from Beans `/articles/{id}` and its confidence by article ID. Reuse the card's source/date row, prominent source-name color, muted date caption, and equal-size confidence, ideology, trend icon group. Link the title to the publisher URL in a new tab, keep the summary directly after it at three lines, and place the image on the left as a hot link.
+- Coverage uses similar articles in pages of 100 until pagination ends. Keep the first and last articles at the ends of a compact timeline. Group every intermediate article into chronological date-range chips: one on small screens, up to three on medium screens, and up to five on extra-large screens. Each multi-source chip shows a bounded UAvatarGroup sample with default styling and its unique-source count; selecting it opens a height-limited chronological source/favicon timeline below, without article titles. A group with one unique source renders a single favicon and date directly on the timeline, without a chip or count. The page must remain within the viewport at 320px.
+- Related uses its own similar-article cursor in pages of five. Reuse the card source/favicon and publish-date row for each related item, followed by its linked title and existing positive social counts, with a `More` button.
 
 ## Search
 
@@ -130,23 +131,19 @@ climate-and-energy:
   - earth_space_climate_and_environment
   - agriculture_and_food_production
 
-world-politics-and-society:
+world-and-politics:
   - government_and_politics
   - public_policy_and_administration
   - elections_and_voting
   - legal_system_and_justice
   - law_enforcement_and_public_safety
-  - human_rights_and_civil_liberties
-  - diversity_equity_and_inclusion
-  - gender_studies_and_identity
-  - lgbtq_issues
-  - migration_and_immigration
-  - accessibility_and_disability
   - geopolitics_and_international_relations
   - politics_and_global_affairs
   - law_crime_and_public_safety
-  - civil_rights_migration_and_society
   - education_and_humanities
+  - military_and_defense
+  - homeland_security_and_safety
+  - weaponry_and_military_technology
 
 culture-and-lifestyle:
   - art_and_design
@@ -159,6 +156,13 @@ culture-and-lifestyle:
   - languages_and_linguistics
   - philosophy_religion_and_spirituality
   - anthropology_and_cultural_studies
+  - human_rights_and_civil_liberties
+  - diversity_equity_and_inclusion
+  - gender_studies_and_identity
+  - lgbtq_issues
+  - migration_and_immigration
+  - accessibility_and_disability
+  - civil_rights_migration_and_society
   - history_and_archaeology
   - video_games_and_game_development
   - esports_and_competitive_gaming
@@ -182,11 +186,6 @@ culture-and-lifestyle:
   - food_dining_and_travel
   - fashion_beauty_and_consumer_affairs
   - home_family_and_pets
-
-security-and-defense:
-  - military_and_defense
-  - homeland_security_and_safety
-  - weaponry_and_military_technology
 
 industry-and-infrastructure:
   - logistics_and_supply_chain_management

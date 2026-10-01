@@ -23,10 +23,13 @@ interface ConfidenceRecord {
 }
 
 type ConfidencePayload = ConfidenceRecord[] | Record<string, ConfidenceRecord | string | null>
-type ApiQuery = Record<string, string | number | undefined>
+type ApiQuery = Record<string, string | number | string[] | undefined>
 
 const DEFAULT_PAGE_SIZE = 5
-const NEWS_LANGUAGES = 'en'
+const NEWS_LANGUAGES = [
+  'en', 'en-ae', 'en-at', 'en-au', 'en-be', 'en-ca', 'en-de', 'en-en', 'en-gb', 'en-ie', 'en-in',
+  'en-mt', 'en-nz', 'en-pk', 'en-se', 'en-sg', 'en-sv', 'en-uk', 'en-us', 'en-za', 'english'
+]
 
 function toConfidence(value?: string | number | null): EspressoConfidence | undefined {
   if (typeof value !== 'string') return undefined
@@ -40,9 +43,10 @@ function normaliseList(values?: string[] | null): string[] {
   return Array.isArray(values) ? values.filter(Boolean) : []
 }
 
-function serialiseQueryList(value?: string | string[]): string | undefined {
-  if (Array.isArray(value)) return value.length ? value.join(',') : undefined
-  return value
+function serialiseQueryList(value?: string | string[]): string[] | undefined {
+  if (Array.isArray(value)) return value.length ? value.filter(Boolean) : undefined
+  const values = value?.split(',').filter(Boolean)
+  return values?.length ? values : undefined
 }
 
 function serialiseIsoDate(value?: string): string | undefined {
@@ -50,14 +54,11 @@ function serialiseIsoDate(value?: string): string | undefined {
   return value.slice(0, 10)
 }
 
-function withEnglishNews(
-  params: BeansPageParams = {},
-  filters: { include_languages?: boolean, include_content_type?: boolean } = {}
-): BeansPageParams {
+function withEnglishNews(params: BeansPageParams = {}): BeansPageParams {
   return {
     ...params,
-    ...(filters.include_languages === false ? {} : { languages: NEWS_LANGUAGES }),
-    ...(filters.include_content_type === false ? {} : { content_type: 'news' })
+    languages: NEWS_LANGUAGES,
+    content_type: 'news'
   }
 }
 
@@ -84,15 +85,15 @@ function toQuery(params: BeansPageParams = {}): ApiQuery {
   return {
     limit: params.limit ?? DEFAULT_PAGE_SIZE,
     cursor: params.cursor ?? undefined,
-    exclude_ids: params.exclude_ids?.length ? params.exclude_ids.join(',') : undefined,
+    exclude_ids: serialiseQueryList(params.exclude_ids),
     q: params.q,
     score_threshold: params.score_threshold,
-    tags: params.tags?.length ? params.tags.join(',') : undefined,
-    sources: params.sources?.length ? params.sources.join(',') : undefined,
-    domains: params.domains?.length ? params.domains.join(',') : undefined,
-    categories: params.categories?.length ? params.categories.join(',') : undefined,
-    regions: params.regions?.length ? params.regions.join(',') : undefined,
-    entities: params.entities?.length ? params.entities.join(',') : undefined,
+    tags: serialiseQueryList(params.tags),
+    sources: serialiseQueryList(params.sources),
+    domains: serialiseQueryList(params.domains),
+    categories: serialiseQueryList(params.categories),
+    regions: serialiseQueryList(params.regions),
+    entities: serialiseQueryList(params.entities),
     content_type: params.content_type,
     languages: serialiseQueryList(params.languages),
     sort: params.sort,
@@ -191,13 +192,14 @@ export function useBeansApi() {
     return toNewsArticle(response.data ?? {})
   }
 
-  async function fetchSimilarArticles(
-    article_id: string,
+  async function fetchStoryArticles(
+    story_id: string,
     params: BeansPageParams = {},
-    filters: { include_languages?: boolean, include_content_type?: boolean } = {}
+    filters: { include_languages?: boolean } = {}
   ): Promise<NewsPage<NewsArticle>> {
-    const page = await fetchBeansPage<BeansArticle>(`private/articles/${article_id}/similar`, {
-      ...withEnglishNews(params, filters)
+    const page = await fetchBeansPage<BeansArticle>(`private/stories/${story_id}/articles`, {
+      ...params,
+      ...(filters.include_languages ? { languages: NEWS_LANGUAGES } : {})
     })
 
     return {
@@ -212,9 +214,11 @@ export function useBeansApi() {
   }
 
   async function fetchSourceArticles(source_id: string, params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
-    const page = await fetchBeansPage<BeansArticle>('articles/latest', {
+    const page = await fetchBeansPage<BeansArticle>('private/articles/unique', {
       ...withEnglishNews(params),
-      sources: params.domains?.length ? undefined : [source_id]
+      sort: 'recent',
+      sources: [source_id],
+      domains: undefined
     })
 
     return {
@@ -228,7 +232,7 @@ export function useBeansApi() {
     fetchLatestArticles,
     fetchSearchArticles,
     fetchArticle,
-    fetchSimilarArticles,
+    fetchStoryArticles,
     fetchSource,
     fetchSourceArticles
   }

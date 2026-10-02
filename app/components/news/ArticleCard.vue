@@ -169,21 +169,25 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           v-if="article.other_publishers?.length"
           :max="5"
         >
-          <NuxtLink
+          <UTooltip
             v-for="publisher in article.other_publishers"
             :key="publisherIdentity(publisher)"
-            :to="publisherHref(publisher)"
-            :aria-label="`Open ${publisherLabel(publisher)}`"
-            class="rounded-full focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary"
+            :text="publisherLabel(publisher)"
           >
-            <UAvatar
-              :src="sourceFavicon(publisher)"
-              :alt="publisherLabel(publisher)"
-              :icon="DEFAULT_SOURCE_ICON"
-              loading="lazy"
-              referrerpolicy="no-referrer"
-            />
-          </NuxtLink>
+            <NuxtLink
+              :to="publisherHref(publisher)"
+              :aria-label="`Open ${publisherLabel(publisher)}`"
+              class="rounded-full focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <UAvatar
+                :src="sourceFavicon(publisher)"
+                :alt="publisherLabel(publisher)"
+                :icon="DEFAULT_SOURCE_ICON"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+              />
+            </NuxtLink>
+          </UTooltip>
         </UAvatarGroup>
         <span
           v-if="hasPositiveCount(related_count)"

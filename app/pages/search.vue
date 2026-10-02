@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import ArticleSection from '~/components/news/ArticleSection.vue'
-import { SEARCH_TAG_DELIMITER, normaliseTagInput, normaliseTagValue } from '~/utils/formatters'
+import { normaliseTagInput } from '~/utils/formatters'
 import { searchCriteriaFromQuery, toSearchRouteQuery } from '~/utils/searchQuery'
 
 const route = useRoute()
@@ -9,7 +9,8 @@ const router = useRouter()
 
 const search_form = reactive({
   query: '',
-  tags: [] as string[]
+  tags: '',
+  sources: ''
 })
 
 const {
@@ -26,13 +27,14 @@ const {
 
 let _syncing_route = false
 
-function applyCriteriaToForm(query: string, tags: string[]): void {
+function applyCriteriaToForm(query: string, tags: string[], sources: string[]): void {
   search_form.query = query
-  search_form.tags = tags
+  search_form.tags = tags.join(', ')
+  search_form.sources = sources.join(', ')
 }
 
-async function writeSearchRoute(query: string, tags: string[]): Promise<void> {
-  const next_query = toSearchRouteQuery({ query, tags })
+async function writeSearchRoute(query: string, tags: string[], sources: string[]): Promise<void> {
+  const next_query = toSearchRouteQuery({ query, tags, sources })
   _syncing_route = true
   await router.replace({ query: next_query })
   _syncing_route = false
@@ -41,23 +43,23 @@ async function writeSearchRoute(query: string, tags: string[]): Promise<void> {
 async function submitSearch(): Promise<void> {
   const query = search_form.query.trim()
   const tags = normaliseTagInput(search_form.tags)
-  applyCriteriaToForm(query, tags)
-  await writeSearchRoute(query, tags)
-  void search({ query, tags })
+  const { sources } = searchCriteriaFromQuery({ sources: search_form.sources })
+  applyCriteriaToForm(query, tags, sources)
+  await writeSearchRoute(query, tags, sources)
+  void search({ query, tags, sources })
 }
 
 watch(
   () => {
-    const { query, tags } = searchCriteriaFromQuery(route.query)
-    return `${query}\0${tags.join(',')}\0${route.query.sources == null ? '0' : '1'}`
+    const { query, tags, sources } = searchCriteriaFromQuery(route.query)
+    return `${query}\0${tags.join(',')}\0${sources.join(',')}`
   },
   () => {
     if (_syncing_route) return
 
-    const { query, tags } = searchCriteriaFromQuery(route.query)
-    applyCriteriaToForm(query, tags)
-    if (route.query.sources != null) void writeSearchRoute(query, tags)
-    if (query || tags.length) void search({ query, tags })
+    const { query, tags, sources } = searchCriteriaFromQuery(route.query)
+    applyCriteriaToForm(query, tags, sources)
+    if (query || tags.length || sources.length) void search({ query, tags, sources })
   },
   { immediate: true }
 )
@@ -72,13 +74,7 @@ useSeoMeta({
   <div class="space-y-7">
     <div class="max-w-2xl space-y-2 px-1">
       <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary/70">
-        Discovery
-      </p>
-      <h1 class="text-2xl font-semibold text-stone-100 sm:text-3xl">
-        Search the news
-      </h1>
-      <p class="text-sm leading-6 text-stone-400">
-        Look for a topic or normalized tags without mixing those filters together.
+        Discover News
       </p>
     </div>
 
@@ -88,42 +84,50 @@ useSeoMeta({
       @submit="submitSearch"
     >
       <UFormField
-        label="Topic"
         name="query"
       >
         <UInput
           v-model="search_form.query"
-          placeholder="Semantic search, for example: battery manufacturing"
+          class="w-full"
+          placeholder="What can we help you find today?"
           icon="lucide:search"
           size="lg"
           autocomplete="off"
         />
       </UFormField>
 
-      <UFormField
-        label="Tags"
-        name="tags"
-        hint="Press Space to add a tag"
-      >
-        <UInputTags
-          v-model="search_form.tags"
-          class="w-full"
-          placeholder="machine_learning startups"
-          icon="lucide:tags"
-          size="lg"
-          :delimiter="SEARCH_TAG_DELIMITER"
-          :convert-value="normaliseTagValue"
-          add-on-blur
-          add-on-paste
-          add-on-tab
-          autocomplete="off"
-        />
-      </UFormField>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <UFormField
+          label="Tags"
+          name="tags"
+          class="min-w-0"
+        >
+          <UInput
+            v-model="search_form.tags"
+            class="w-full"
+            placeholder="machine_learning, startups"
+            icon="lucide:tags"
+            size="lg"
+            autocomplete="off"
+          />
+        </UFormField>
+        <UFormField
+          label="Sources"
+          name="sources"
+          class="min-w-0"
+        >
+          <UInput
+            v-model="search_form.sources"
+            class="w-full"
+            placeholder="bbc, apnews"
+            icon="lucide:globe"
+            size="lg"
+            autocomplete="off"
+          />
+        </UFormField>
+      </div>
 
-      <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
-        <p class="text-xs leading-5 text-stone-500">
-          Results are limited to published news and load five at a time.
-        </p>
+      <div class="flex justify-end pt-1">
         <UButton
           type="submit"
           label="Search"

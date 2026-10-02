@@ -138,9 +138,10 @@ watch(source_id, () => {
       </div>
     </article>
 
+    <USeparator v-if="source && !loading_source" />
+
     <ArticleSection
       v-if="source && !loading_source"
-      title="Latest news"
       :articles="articles"
       :loading="loading"
       :can_load_more="can_load_more"

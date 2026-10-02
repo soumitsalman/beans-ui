@@ -214,12 +214,22 @@ export function useBeansApi() {
   }
 
   async function fetchSourceArticles(source_id: string, params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
-    const page = await fetchBeansPage<BeansArticle>('private/articles/unique', {
+    const source_params: BeansPageParams = {
       ...withEnglishNews(params),
       sort: 'recent',
       sources: [source_id],
       domains: undefined
-    })
+    }
+    let page = await fetchBeansPage<BeansArticle>('private/articles/unique', source_params)
+
+    if (!page.data.length) {
+      source_params.content_type = undefined
+      page = await fetchBeansPage<BeansArticle>('private/articles/unique', source_params)
+    }
+    if (!page.data.length) {
+      source_params.languages = undefined
+      page = await fetchBeansPage<BeansArticle>('private/articles/unique', source_params)
+    }
 
     return {
       ...page,

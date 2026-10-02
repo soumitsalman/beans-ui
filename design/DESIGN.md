@@ -19,12 +19,12 @@
 - Category (`/categories/{category_slug}`): category description and filtered article feed.
 - Article (`/articles/{id}`): article snapshot, Coverage timeline, and Related list.
 - Source (`/sources/{id}`): source snapshot and latest articles.
-- Search (`/search`): semantic query `q` and normalized tag `tags`; Space commits a tag. Publisher sources are not a search filter.
+- Search (`/search`): semantic query `q`, comma-separated normalized `tags`, and comma-separated source domains. Topic spans the container; Tags and Sources share two columns from `md` and stack below it.
 
 ## Home, category, and source feeds
 
 - Home and category feeds share one vertical panel. Each batch requests one trending article and four latest articles, with IDs from the other feed in `exclude_ids`. De-duplicate by article ID in the UI. If a feed is exhausted, fill the remaining batch from the other feed. One `More` button loads the next batch.
-- Keep the existing two-day trending and seven-day latest date windows and category filters. Source feeds show latest items only, selected by the source domain and checked against the source ID, five per page.
+- Keep the existing two-day trending and seven-day latest date windows and category filters. Source feeds show latest items only, selected and checked by the source ID, five per page. Start with English news; on an empty API data array, omit content type, then omit language if still empty. Source pages separate the publisher snapshot and feed with a Nuxt USeparator instead of the Latest news heading.
 - Article cards place the prominent source name and muted caption-size publish date on one row, with category below. Confidence, ideology, and trend icons appear in that order on the right at the same small size. Keep the title and optional linked image below; put up to two entities and two regions over the image, or below the title when no usable image exists. Ideology retains a small L/R character beside its arrow. Confidence tooltips show only the confidence label. Confidence, ideology, and trend labels appear in tooltips; omit missing confidence and ideology.
 - Link a source avatar and name to `/sources/{id}` only when a source ID is present. Article title navigation follows the existing story-ID rule: when `story_id` exists, open `/articles/{article.id}`; otherwise open the original article URL.
 - Show up to five distinct other-publisher avatars through Nuxt UAvatarGroup from one story-articles request. Let UAvatarGroup provide its default avatar size, overlap, and ring. Place the avatars and positive `trend.related` count at the footer's left; align positive mentions, comments, likes, and the share button at the right. Omit zero and missing counts. Publisher avatar links require a source ID.
@@ -34,12 +34,12 @@
 ## Article detail
 
 - Load the article snapshot from Beans `/articles/{id}` and its confidence by article ID. Reuse the card's source/date row, prominent source-name color, muted date caption, and equal-size confidence, ideology, trend icon group. Link the title to the publisher URL in a new tab, keep the summary directly after it at three lines, and place the image on the left as a hot link.
-- Coverage uses similar articles in pages of 100 until pagination ends. Keep the first and last articles at the ends of a compact timeline. Group every intermediate article into chronological date-range chips: one on small screens, up to three on medium screens, and up to five on extra-large screens. Each multi-source chip shows a bounded UAvatarGroup sample with default styling and its unique-source count; selecting it opens a height-limited chronological source/favicon timeline below, without article titles. A group with one unique source renders a single favicon and date directly on the timeline, without a chip or count. The page must remain within the viewport at 320px.
+- Coverage uses similar articles in pages of 100 until pagination ends. Keep the first and last articles at the ends of a compact timeline. Group every intermediate article into chronological date-range chips: one on small screens, up to three on medium screens, and up to five on extra-large screens. Each multi-source chip shows a bounded UAvatarGroup sample with default styling and its unique-source count; selecting it opens a circular source orbit below, with the selected group's article count in the center. Use the open-orbit reference for up to eight articles and the avatar-wreath reference above eight; deduplicate sources and page wreaths at twelve sources so every source remains accessible. Use the existing dark coffee theme, source links, favicon fallbacks, and source-name/article-count tooltips. A group with one unique source renders a single favicon and date directly on the timeline, without a chip or count. The page must remain within the viewport at 320px.
 - Related uses its own similar-article cursor in pages of five. Reuse the card source/favicon and publish-date row for each related item, followed by its linked title and existing positive social counts, with a `More` button.
 
 ## Search
 
-- Keep the existing query/tag input, URL synchronization, five-result pagination, news-only filter, and search API parameters. Render results with the same article card and enrichment as the other feeds.
+- Keep the topic/tag/source inputs, URL synchronization, five-result pagination, news-only filter, and search API parameters. Render results with the same article card and enrichment as the other feeds.
 
 ## Category Map
 tech-and-innovation:

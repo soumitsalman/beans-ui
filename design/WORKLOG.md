@@ -1,5 +1,36 @@
 # Beans UI Working Log
 
+## 2026-10-02 — Selected coverage source orbit
+
+- Replaced the selected multi-source cluster's vertical timeline on `/articles/{id}` with source favicons arranged around its article count, following `avatar-circle-samples/open-orbit.svg` and `avatar-wreath.svg` in the existing dark coffee theme.
+- Up to eight articles use the open orbit; larger clusters use a wreath. Repeated publishers share one avatar while contributing to the center article total. Above twelve unique sources, previous/next controls page through every source and reset when changing groups or reopening. Source links, tooltips, and favicon/system fallbacks remain available.
+- Files: `app/components/news/ArticleDetailSections.vue`, `app/components/news/CoverageSourceOrbit.vue`, `app/types/coverage.ts`, `app/utils/coverageOrbit.ts`, and coverage guidance in DESIGN/VERIFICATIONS. Existing coverage chips, first/last events, Related, and API fetching remain unchanged.
+- Verification: focused ESLint, Nuxt typecheck, and production build passed with home API prerender disabled. Mock-backed browser checks covered an eight-article open orbit, a 331-article/25-source wreath, all source pages, final-page disabled navigation, close/reopen reset, cluster switching, fallback icons, and no page overflow at 320px/768px/1280px. Live API coverage was not checked. Graphify query was attempted but this checkout has no graph file; direct component inspection traced the implementation.
+
+## 2026-10-02 — Search source placeholder
+
+- Changed the Sources example to `bbc, apnews`, matching values returned by the live `/articles/search` domain filter. The API returned articles for `domains=bbc` and `domains=apnews`, and none for `domains=bbc.co.uk`, `domains=bbc.com`, or a full BBC URL in the checked requests.
+- Files: `app/pages/search.vue`, `design/DATASOURCES.md`.
+
+## 2026-10-02 — Source feed empty-result fallback
+
+- Updated `/sources/{id}` (the checkout has no `/stories/{id}` page) to fetch English news first; empty API data retries without content type, then without language if still empty. Stops at the first non-empty response, retains source/sort/limit/cursor, and preserves the existing error/retry behavior and source-ID validation.
+- Replaced Latest news with a Nuxt USeparator above the source feed.
+- Files: `app/composables/useBeansApi.ts`, `app/pages/sources/[id].vue`, and source guidance in DATASOURCES/DESIGN/VERIFICATIONS.
+- Verification: mocked API checks passed for all three fallback stages, early stopping, all-empty results, initial/fallback errors, source and cursor retention, final response cursor, and parameter immutability. Focused ESLint and Nuxt typecheck passed. Browser layout and live API behavior were not verified; the proxy smoke attempt could not connect because no local server was running. Graphify query was unavailable because this checkout has no graph.
+
+Code snapshot SHA-256: `180bc786b4be3c6313912449258f91b15011ed2e75b26908e21a9574ed91347e`
+
+Hash inputs: 50 application/configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; Vue/TypeScript/CSS files plus both configuration files, hashed as path + NUL + file bytes + NUL in lexical path order.
+
+## 2026-10-02 — Search discovery form
+
+- Replaced Discovery with Discover News; removed the introductory heading/description and result-limit note.
+- Made Topic full width with “What do you want to find”; changed Tags to comma-separated text and added comma-separated Sources with example news domains.
+- Tags/Sources stack below md and use two columns at md and wider. Sources persist in URLs and map to the existing search API `domains` filter, including domain-only searches, pagination, and retry.
+- Files: `app/pages/search.vue`, `app/utils/searchQuery.ts`, `app/composables/useSearchFeed.ts`, and search guidance in DESIGN/DATASOURCES/VERIFICATIONS.
+- Verification: focused ESLint, Nuxt typecheck, production build, and direct comma-list normalization/URL round-trip assertions passed. Browser layout and live domain-filtered results were not verified. Used installed binaries because pnpm's package-manager bootstrap failed on its cache database.
+
 ## 2026-10-01 — Default Nuxt avatar groups
 
 - Removed visual overrides from both UAvatarGroup instances: other-publisher favicons in shared article cards and favicon samples in article coverage. Kept their existing maximum counts.

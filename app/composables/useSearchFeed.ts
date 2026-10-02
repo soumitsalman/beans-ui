@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import type { NewsArticle } from '~/types/news'
 import { useArticleEnrichment } from '~/composables/useArticleEnrichment'
+import { normaliseSourceInput } from '~/utils/searchQuery'
 import { normaliseTagInput } from '~/utils/formatters'
 import { logClientEvent } from '~/utils/telemetry'
 
@@ -10,11 +11,13 @@ const RELEVANCE_SCORE_THRESHOLD = 0
 interface SearchCriteria {
   query: string
   tags: string[]
+  sources: string[]
 }
 
 interface SearchInput {
   query?: string | null
   tags?: string | string[] | null
+  sources?: string | string[] | null
 }
 
 function appendArticles(target: NewsArticle[], received: NewsArticle[]): NewsArticle[] {
@@ -30,13 +33,14 @@ function appendArticles(target: NewsArticle[], received: NewsArticle[]): NewsArt
 
 function submittedCriteriaLabel(criteria: SearchCriteria | null): string {
   if (!criteria) return ''
-  return [criteria.query, criteria.tags.length ? criteria.tags.join(', ') : ''].filter(Boolean).join(' · ')
+  return [criteria.query, criteria.tags.length ? criteria.tags.join(', ') : '', criteria.sources.join(', ')].filter(Boolean).join(' · ')
 }
 
 function searchCriteria(input: SearchInput): SearchCriteria {
   return {
     query: input.query?.trim() || '',
-    tags: normaliseTagInput(input.tags)
+    tags: normaliseTagInput(input.tags),
+    sources: normaliseSourceInput(input.sources)
   }
 }
 
@@ -78,6 +82,7 @@ export function useSearchFeed() {
       const page = await fetchSearchArticles({
         q: criteria.query || undefined,
         tags: criteria.tags,
+        domains: criteria.sources,
         limit: PAGE_SIZE,
         cursor,
         score_threshold: criteria.query ? RELEVANCE_SCORE_THRESHOLD : undefined
@@ -141,12 +146,13 @@ export function useSearchFeed() {
     last_attempt_append.value = false
     last_input.value = {
       query: input.query,
+      sources: Array.isArray(input.sources) ? [...input.sources] : input.sources,
       tags: Array.isArray(input.tags) ? [...input.tags] : input.tags
     }
 
     const criteria = searchCriteria(input)
-    if (!criteria.query && !criteria.tags.length) {
-      error_message.value = 'Enter a topic or tag to search.'
+    if (!criteria.query && !criteria.tags.length && !criteria.sources.length) {
+      error_message.value = 'Enter a topic, tag, or source domain to search.'
       loading.value = false
       return
     }

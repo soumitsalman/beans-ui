@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { NewsArticle } from '~/types/news'
 import ArticleTrendCounts from '~/components/news/ArticleTrendCounts.vue'
 import ArticleSourceLine from '~/components/news/ArticleSourceLine.vue'
+import CoverageSourceOrbit from '~/components/news/CoverageSourceOrbit.vue'
 import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceIdentity, sourceLabel } from '~/utils/source'
 
 interface CoverageGroup {
@@ -208,7 +209,7 @@ function articleTime(article: NewsArticle): number {
               v-else
               :color="selected_group_id === group.id ? 'primary' : 'neutral'"
               variant="subtle"
-              :aria-label="`${group.date}: ${group.source_count} sources. ${selected_group_id === group.id ? 'Hide' : 'Show'} sources timeline`"
+              :aria-label="`${group.date}: ${group.source_count} sources. ${selected_group_id === group.id ? 'Hide' : 'Show'} sources orbit`"
               :aria-expanded="selected_group_id === group.id"
               :aria-controls="selected_group_id === group.id ? 'coverage-group-details' : undefined"
               class="relative z-10 min-w-0 flex-1 flex-col gap-1 overflow-hidden px-1 py-1.5 text-center"
@@ -269,7 +270,7 @@ function articleTime(article: NewsArticle): number {
           v-if="selected_group"
           id="coverage-group-details"
           role="region"
-          :aria-label="`Sources timeline from ${selected_group.date}`"
+          :aria-label="`Sources orbit from ${selected_group.date}`"
           class="min-w-0 rounded-lg border border-stone-800/90 bg-stone-900/50"
         >
           <div class="flex min-w-0 items-center justify-between gap-2 border-b border-stone-800/80 px-3 py-2">
@@ -285,19 +286,7 @@ function articleTime(article: NewsArticle): number {
               @click="selected_group_id = null"
             />
           </div>
-          <div class="relative max-h-72 min-w-0 overflow-y-auto px-3 py-3">
-            <div
-              class="absolute bottom-5 left-7 top-5 w-px bg-stone-700"
-              aria-hidden="true"
-            />
-            <div
-              v-for="(article, article_index) in selected_group.articles"
-              :key="article.id || article.url || article_index"
-              class="relative py-2"
-            >
-              <ArticleSourceLine :article="article" />
-            </div>
-          </div>
+          <CoverageSourceOrbit :articles="selected_group.articles" />
         </div>
       </div>
 

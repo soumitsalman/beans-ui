@@ -24,6 +24,7 @@ export interface NewsTrend {
 export type EspressoConfidence = 'high' | 'medium' | 'low'
 
 export interface BeansArticle {
+  author?: string | null
   id?: string | null
   title?: string | null
   url?: string | null
@@ -43,6 +44,7 @@ export interface BeansArticle {
 }
 
 export interface NewsArticle {
+  author?: string | null
   id: string
   title: string
   url?: string | null

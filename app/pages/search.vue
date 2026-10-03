@@ -6,6 +6,7 @@ import { searchCriteriaFromQuery, toSearchRouteQuery } from '~/utils/searchQuery
 
 const route = useRoute()
 const router = useRouter()
+const { trackEvent } = useGoogleAnalytics()
 
 const search_form = reactive({
   query: '',
@@ -45,6 +46,7 @@ async function submitSearch(): Promise<void> {
   const tags = normaliseTagInput(search_form.tags)
   const { sources } = searchCriteriaFromQuery({ sources: search_form.sources })
   applyCriteriaToForm(query, tags, sources)
+  trackEvent('search_submit', { has_topic: Boolean(query), tag_count: tags.length, source_count: sources.length })
   await writeSearchRoute(query, tags, sources)
   void search({ query, tags, sources })
 }
@@ -64,10 +66,11 @@ watch(
   { immediate: true }
 )
 
-useSeoMeta({
+usePageMetadata({
   title: 'Search | Beans',
   description: 'Search current news by topic or normalized tag.'
 })
+useSeoMeta({ robots: 'noindex, follow' })
 </script>
 
 <template>

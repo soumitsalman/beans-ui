@@ -1,5 +1,87 @@
 # Beans UI Working Log
 
+## 2026-10-03 — Footer Feedback popup
+
+- Replaced the footer Contact link with a Feedback button using the same Tally form and popup attributes as the header Help improve Beans control. Shared the form ID between both controls; Privacy and Terms remain external links.
+- Verification: focused ESLint, Nuxt typecheck, production build, and discovery integration checks passed. Browser inspection confirmed the footer renders a Feedback button with the same form ID as the header; clicking it opened a Tally iframe at `/popup/9q8zrE`. graphifyy remains unavailable; direct component inspection was used.
+
+## 2026-10-03 — Remove article back link
+
+- Removed the Back to news button above the article snapshot on `/articles/{id}`. The article snapshot now starts the loaded detail page.
+- Verification: focused ESLint, Nuxt typecheck, and whitespace checks.
+
+## 2026-10-03 — Article-detail tag placement
+
+- Moved region and entity badges below the three-line summary in the article snapshot. If a summary is absent, badges follow the title; if both badge lists are empty, no tag row renders.
+- Verification: focused ESLint, Nuxt typecheck, production build, and discovery integration checks passed. Mock-backed article-page DOM inspection confirmed title → summary → region/entity tags → share actions. graphifyy remains unavailable; direct component inspection was used.
+
+## 2026-10-03 — Softer share-action foreground
+
+- Changed the shared Copy and social-action buttons to a #ccc foreground, with a subtle #ddd hover state. The same component supplies the ArticleCard share dialog and the article-detail footer.
+- Verification: focused ESLint, Nuxt typecheck, production build, and discovery integration checks passed. Mock-backed browser inspection confirmed `rgb(204, 204, 204)` on Copy and all five social actions in the feed-card dialog, and on the article-detail Copy button. The shared component renders all six detail actions. graphifyy remains unavailable; direct component/data-flow inspection was used.
+
+## 2026-10-03 — Single-day coverage timeline
+
+- Coverage published entirely on one valid UTC calendar day now renders a single centered favicon group and date label, replacing the separate first/middle/last nodes. Publisher icons are deduplicated and capped at five with a remaining-source count; selecting the group opens the existing orbit with every coverage article and source.
+- Added `sharedCoverageDate` for full calendar-date comparison, including year. Empty, invalid or missing dates do not collapse. Different days retain the existing responsive chronological timeline; coverage changes reset selection.
+- Verification: focused ESLint, Nuxt typecheck, production build, discovery HTTP regressions and whitespace checks pass. Direct date checks cover UTC offsets, midnight/year boundaries, empty/missing/invalid dates and singleton coverage. Mock-backed browser checks confirm one Oct 2 group for 36 articles/seven sources, five icons plus +2, expansion retaining all articles/sources, and no overflow at 320px/1280px (305px/1265px document/scroll widths). A two-day fixture retains first/latest endpoints and responsive middle groups. Reproduce with `BEANS_COVERAGE_FIXTURE=same-day` or `multi-day` before `node scripts/verify-discovery.mjs --serve`. Viewport restored. graphifyy is unavailable; direct component/data-flow inspection was used.
+
+## 2026-10-03 — Direct article-detail sharing
+
+- Removed the snapshot's extra Original reporting/Published paragraph and its date formatter. The compact publisher/date row and original title link remain; supplied credit/publication data remain in structured metadata.
+- Added an ArticleCard-style divided footer with six circular Copy, X, LinkedIn, Reddit, Threads and Email actions aligned right. Detail actions share Beans coverage when available, otherwise the attributed original URL. Shared `ArticleShareActions.vue` renders the same controls in existing feed-card modals, which retain their destination chooser.
+- Verification: focused ESLint, Nuxt typecheck, production build, discovery HTTP regressions and whitespace checks pass. Browser inspection at 320px confirms all six actions, the divider/right alignment, absent extra attribution sentence and no overflow (305px document/scroll widths). Clipboard access was denied; the selectable correct coverage URL fallback fits and emits no false success event. X produces one coverage-share event. Feed-card modal still switches to the correctly attributed original URL. Viewport restored. graphifyy is unavailable; direct component/data-flow inspection was used.
+
+## 2026-10-03 — Stronger image-summary contrast
+
+- Applied the approved gradient sketch: a separate image-wide gradient is opaque at the bottom, 85% opaque at 35% of image height, and transparent at 70%. Summary text and Markdown links use near-white stone tones through the shared renderer's optional image treatment. The upper image remains visible; summaries retain their two-line limit and position above tags.
+- The gradient ignores pointer events so the image link remains usable. Image-free/failed-image cards and article detail retain their normal summary colors. No panel or new image asset was added.
+- Verification: focused ESLint, Nuxt typecheck, production build, existing discovery HTTP regressions and whitespace checks pass. Browser inspection at 320px confirms the rendered gradient stops, near-white summary/link colors, two-line 40px summary height, normal fallback colors and no horizontal overflow (305px document/scroll width). Viewport restored. graphifyy is unavailable; direct component inspection was used.
+
+## 2026-10-03 — Two-line card summaries
+
+- ArticleCard renders available, trimmed summary content through the existing MarkdownSummary component, cropped at two lines. With a usable image, the summary overlays a dark gradient above entities/regions. Without an image, it appears below the title and before those tags. Missing summaries leave no empty block.
+- Kept the image link separate from the summary overlay so Markdown links do not create nested anchors. Added a mounted image check for failures that occur before SSR hydration attaches error listeners; failed images move the summary and tags into the text layout.
+- Updated design/failure criteria and expanded existing mock fixtures with long Markdown summaries, missing summaries and a failed image. Verification: focused ESLint, Nuxt typecheck, production build, HTTP discovery regressions and whitespace checks pass. Browser checks at 320px confirm 40px/two-line cropping of 180px text, correct summary/tag order, no nested links, missing-summary omission and failed-image fallback; document/scroll widths match at 305px. Viewport restored. graphifyy is unavailable; direct component/data-flow inspection was used.
+
+## 2026-10-03 — Remove archives and simplify page headers
+
+- Deleted the archive page/route and removed category archive controls, sitemap/llms entries and the archive-specific page-key behavior. `/archive` now returns 404.
+- Removed the Category eyebrow and source-page Back to news button. Added a visible Trending News home heading using the category heading's wrapper and typography. Updated design, audit and verification records to reflect archive removal.
+- Verification: lint, Nuxt typecheck, production build, discovery HTTP regressions and `git diff --check` pass. Mock-backed browser checks confirm identical home/category heading classes, no category archive link/eyebrow, no source back button and no horizontal overflow at 320px (305px document/scroll widths). Temporary viewport restored. graphifyy is unavailable; direct source inspection was used. No deployment performed.
+
+## 2026-10-03 — Minimalist news-reader direction
+
+- Removed the home product introduction, example/follow/archive controls and long discovery guide. Now renders news cards and More; descriptive SEO metadata and an accessible heading remain. Now loads five trending articles per batch across all categories using its two-day window, retaining SSR hydration and cursor continuation. Category feeds retain their existing mixed selection.
+- Removed Archive, RSS and How it works from the footer. Merged methodology, source/signal limitations, corrections and sharing guidance into About through `HowBeansWorks.vue`. `/methodology` permanently redirects to `/about-beans#how-it-works`; sitemap and llms links reflect the consolidated destination. Existing archive/feed endpoints remain accessible without reader-facing promotions.
+- Updated design/data-source guidance, verification expectations and traffic/GEO audit records so home word-count heuristics do not override the minimalist reader experience. No original publisher content or backend API was changed. `graphifyy` remains unavailable; direct component/data-flow inspection was used.
+- Verification: lint, typecheck, production build, analytics checks and discovery HTTP regressions pass. Browser checks confirm five initial cards, ten after More, trending-only continuation with no category filter, merged About content, the methodology redirect, simplified footer and no horizontal overflow at 320px. Temporary browser viewport restored after checks.
+
+## 2026-10-03 — Final traffic/GEO verification
+
+- Finished the remaining local code work and verified it against all 26 GEO recommendations: 19 addressed locally, 3 partial because authoritative attribution/identity data is missing, and 4 external editorial/reputation actions. The crosswalk records those boundaries; deployment and a fresh crawl remain necessary.
+- Final `pnpm lint`, `pnpm typecheck` and `pnpm build` passed. Analytics checks and the discovery HTTP suite passed against the production build. Final verification-script ESLint and `git diff --check` passed after adding browser request tracing.
+- Final mock-backed browser checks confirmed five initial cards without a client feed refetch, ten after More, populated article/source/category routes, 20-to-16 archive pagination, search and methodology navigation, successful copying of both share destinations, preserved publisher parameters/fragments, modal status reset, and one event per copy/social action. Skip activation focuses the main region without adding a page view. Captured growth events omit raw search text and use destination-specific page titles.
+- At 320px, inspected routes and the share modal have no horizontal page overflow. Category layout also fits 768px and 1280px (document/scroll widths 753/753 and 1265/1265). Restored the browser viewport and stopped temporary fixture servers after verification.
+- Web Vitals LCP/CLS events were observed locally. Automated/background browser timings are not a reliable field baseline, and real-user INP, traffic, indexing, seven-day returns and a new GEO score remain unmeasured. No deployment or external publication was performed. See `VERIFICATIONS.md` and `GEO-AUDIT-VERIFICATION.md` for evidence and release gates.
+
+## 2026-10-02 — Traffic implementation and GEO remediation
+
+- Implemented the code audit: preferred Beans origin and Fly-host redirect; SSR initial feeds/details with hydrated cursors and deferred enrichment; route metadata/JSON-LD; confirmed 404/410 vs retryable 503; search noindex; dynamic sitemap, crawlable archive and RSS; coverage/original sharing; methodology and home positioning; privacy-conscious growth events and Web Vitals collection.
+- Completion audit found and fixed missing component imports in archive/detail sharing, an over-specific escaped-title test, a Node fetch Host-header test limitation, and navigation telemetry that could miss views or carry the previous title. Pageview tracking now waits for the destination's metadata, deduplicates route/query navigation and ignores fragment-only changes. Publisher events use explicit original-reporting links.
+- Read all GEO recommendations and visually checked the action-list pages. Added HTTPS/security headers, public HTML ETag revalidation, private/no-store search/error responses, a 30-second public presentation-feed cache, keyboard skip navigation, responsive WebP logo assets, reserved article-image space, supplied original author attribution and publication citations, verified Cafecito policy/contact/team links, and substantive home guidance. Upstream Beans/Espresso APIs and backend services were not modified.
+- Original header PNG: 1,139,566 bytes. New 24/48/72px WebP variants: 174/466/832 bytes. The fixture warm home response measured 36.1 ms with no upstream feed requests; this is a local mechanism check, not a field performance claim.
+- Added `design/GEO-AUDIT-VERIFICATION.md`, mapping all 26 recommendations to implementations, evidence and external dependencies. Do not fabricate missing author biographies, modification dates, public profiles, testimonials, certifications, original research or backlinks. Verified current official contact, privacy and terms pages over HTTP; the policies explicitly cover Beans.
+- Verification so far: production build, lint, typecheck, analytics unit checks, and expanded fixture HTTP checks pass. HTTP checks cover rendered content, metadata/schema, error statuses, archive pagination, sitemap/RSS, preferred-origin redirects, security headers, ETag/304, cache isolation, image dimensions and home content. Browser checks confirmed mobile layouts, feed continuation without duplicate initial requests, source/category/article navigation, both share destinations and clipboard-denied fallback. Final browser/performance evidence is recorded in `VERIFICATIONS.md` after the final build.
+- `graphifyy` was requested but is not installed and no graph was available; direct code/data-flow inspection was used. No deployment or external publication was performed. Field Web Vitals, indexing changes, return rates and GEO rescore require a deployed site and observation period.
+
+## 2026-10-02 — Discoverability and traffic audit
+
+- Audited https://beans.cafecito.tech through live browser inspection, initial HTML/HTTP checks and local Nuxt code review. Split the prioritized action list into `design/TRAFFIC-AUDIT-CODE.md` and `design/TRAFFIC-AUDIT-NON-CODE.md`; no application or backend implementation was requested or performed.
+- Confirmed the Fly-domain canonical/sitemap configuration, missing initial news/story/source content, generic social previews, publisher-only share URLs, nine static sitemap entries, button-only pagination and an HTTP 200 response for an all-zero article ID. Flagged one apparently unrelated coverage item and count-definition differences for human review.
+- Documented success checks, sequencing, growth metrics and evidence limits; consulted official Google Search guidance. Search Console/GA reports and Core Web Vitals were not accessed, so current traffic/indexing/performance remain unmeasured. graphifyy/graphify and graph artifacts were unavailable; direct inspection traced the relevant code.
+- Files: `design/TRAFFIC-AUDIT-CODE.md`, `design/TRAFFIC-AUDIT-NON-CODE.md`, `design/WORKLOG.md`. Verification: browser and HTTP evidence; documentation review; `git diff --check`. No build/test run required for this documentation-only audit.
+
 ## 2026-10-02 — Selected coverage source orbit
 
 - Replaced the selected multi-source cluster's vertical timeline on `/articles/{id}` with source favicons arranged around its article count, following `avatar-circle-samples/open-orbit.svg` and `avatar-wreath.svg` in the existing dark coffee theme.

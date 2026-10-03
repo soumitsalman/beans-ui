@@ -24,6 +24,8 @@ export default defineEventHandler((event) => {
 
 - [Live news](${site_url}/)
 - [About Beans](${site_url}/about-beans)
+- [How Beans works](${site_url}/about-beans#how-it-works)
+- [RSS feed](${site_url}/feed.xml)
 - [Sitemap](${site_url}/sitemap.xml)
 - [Robots directives](${site_url}/robots.txt)
 

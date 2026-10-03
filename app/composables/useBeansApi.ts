@@ -7,6 +7,7 @@ import type {
   NewsPage,
   NewsSource
 } from '~/types/news'
+import { NEWS_LANGUAGES } from '#shared/news'
 
 interface ApiEnvelope<T> {
   data?: T
@@ -26,10 +27,6 @@ type ConfidencePayload = ConfidenceRecord[] | Record<string, ConfidenceRecord | 
 type ApiQuery = Record<string, string | number | string[] | undefined>
 
 const DEFAULT_PAGE_SIZE = 5
-const NEWS_LANGUAGES = [
-  'en', 'en-ae', 'en-at', 'en-au', 'en-be', 'en-ca', 'en-de', 'en-en', 'en-gb', 'en-ie', 'en-in',
-  'en-mt', 'en-nz', 'en-pk', 'en-se', 'en-sg', 'en-sv', 'en-uk', 'en-us', 'en-za', 'english'
-]
 
 function toConfidence(value?: string | number | null): EspressoConfidence | undefined {
   if (typeof value !== 'string') return undefined
@@ -64,6 +61,7 @@ function withEnglishNews(params: BeansPageParams = {}): BeansPageParams {
 
 function toNewsArticle(article: BeansArticle): NewsArticle {
   return {
+    author: article.author?.trim() || undefined,
     id: article.id ?? '',
     title: article.title?.trim() || '',
     url: article.url,

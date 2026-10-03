@@ -3,6 +3,14 @@ export interface AnalyticsPageView {
   title?: string
 }
 
+export interface AnalyticsPageMetadata {
+  path: string
+  title: string
+}
+
+export type GrowthEventName = 'coverage_open' | 'share_coverage' | 'share_original' | 'search_submit' | 'publisher_click' | 'web_vitals'
+export type GrowthEventParams = Record<string, string | number | boolean | undefined>
+
 export interface GtagPageViewParams {
   send_to: string
   page_path: string

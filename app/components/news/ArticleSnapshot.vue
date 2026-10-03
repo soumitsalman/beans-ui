@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { NewsArticle } from '~/types/news'
 import ArticleSignals from '~/components/news/ArticleSignals.vue'
+import ArticleShareModal from '~/components/news/ArticleShareModal.vue'
 import ArticleSourceLine from '~/components/news/ArticleSourceLine.vue'
 import MarkdownSummary from '~/components/news/MarkdownSummary.vue'
 import { formatTaxonomyLabel } from '~/utils/formatters'
@@ -32,6 +33,8 @@ watch(() => props.article.image_url, () => {
           :alt="article.title"
           class="size-full object-cover"
           loading="eager"
+          width="640"
+          height="360"
           referrerpolicy="no-referrer"
           @error="image_failed = true"
         >
@@ -54,7 +57,28 @@ watch(() => props.article.image_url, () => {
           <ArticleSignals :article="article" />
         </div>
 
-        <div class="flex flex-wrap gap-1.5">
+        <h1 class="text-lg font-semibold leading-snug text-stone-100 sm:text-xl">
+          <a
+            v-if="article_href"
+            data-publisher-link
+            :href="article_href"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
+          >
+            {{ article.title || 'Article' }}
+          </a>
+          <span v-else>{{ article.title || 'Article' }}</span>
+        </h1>
+        <MarkdownSummary
+          v-if="article.summary"
+          :summary="article.summary"
+          :line_limit="3"
+        />
+        <div
+          v-if="article.regions.length || article.entities.length"
+          class="flex flex-wrap gap-1.5"
+        >
           <UBadge
             v-for="region in article.regions.slice(0, 3)"
             :key="`region-${region}`"
@@ -74,25 +98,17 @@ watch(() => props.article.image_url, () => {
             {{ formatTaxonomyLabel(entity) }}
           </UBadge>
         </div>
-
-        <h1 class="text-lg font-semibold leading-snug text-stone-100 sm:text-xl">
-          <a
-            v-if="article_href"
-            :href="article_href"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-          >
-            {{ article.title || 'Article' }}
-          </a>
-          <span v-else>{{ article.title || 'Article' }}</span>
-        </h1>
-        <MarkdownSummary
-          v-if="article.summary"
-          :summary="article.summary"
-          :line_limit="3"
-        />
       </div>
+    </div>
+    <div class="flex justify-end border-t border-stone-800/80 px-3.5 py-3">
+      <ArticleShareModal
+        :article_title="article.title"
+        :article_url="article.url"
+        :article_id="article.id"
+        :has_coverage="Boolean(article.story_id)"
+        inline
+        class="min-w-0 max-w-full"
+      />
     </div>
   </article>
 </template>

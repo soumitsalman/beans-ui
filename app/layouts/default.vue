@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { CATEGORY_GROUPS } from '~/settings/categories'
+import { CAFECITO_LINKS } from '~/settings/site'
 
 const route = useRoute()
 const { outboundHref } = useOutboundUrl()
+const main_content = useTemplateRef<HTMLElement>('main-content')
+const TALLY_FORM_ID = '9q8zrE'
 useHead({
   script: [
     {
@@ -35,10 +38,21 @@ const navigation_items = computed(() => [
 function isActive(path: string): boolean {
   return route.path === path
 }
+
+async function skipToContent(): Promise<void> {
+  await nextTick()
+  main_content.value?.focus({ preventScroll: true })
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-stone-950 text-stone-100">
+    <UButton
+      to="#main-content"
+      label="Skip to content"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50"
+      @click="skipToContent"
+    />
     <header class="sticky top-0 z-30 border-b border-stone-800/90 bg-stone-950/95 backdrop-blur">
       <div class="mx-auto flex h-15 max-w-6xl items-center gap-1 px-3 sm:px-6">
         <time
@@ -67,7 +81,11 @@ function isActive(path: string): boolean {
             aria-label="Beans home"
           >
             <img
-              src="/beans-dark.png"
+              src="/beans-icon-48.webp"
+              srcset="/beans-icon-24.webp 24w, /beans-icon-48.webp 48w, /beans-icon-72.webp 72w"
+              sizes="24px"
+              width="24"
+              height="24"
               alt=""
               class="size-6 shrink-0 rounded-sm"
             >
@@ -100,7 +118,7 @@ function isActive(path: string): boolean {
           </UTooltip>
           <UTooltip text="Help improve Beans">
             <UButton
-              data-tally-open="9q8zrE"
+              :data-tally-open="TALLY_FORM_ID"
               data-tally-emoji-text="👋"
               data-tally-emoji-animation="wave"
               icon="lucide:mail"
@@ -135,7 +153,12 @@ function isActive(path: string): boolean {
       </nav>
     </header>
 
-    <main class="mx-auto w-full max-w-6xl px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
+    <main
+      id="main-content"
+      ref="main-content"
+      tabindex="-1"
+      class="mx-auto w-full max-w-6xl scroll-mt-28 px-4 pb-12 pt-6 sm:px-6 sm:pt-8"
+    >
       <slot />
     </main>
 
@@ -144,6 +167,25 @@ function isActive(path: string): boolean {
         class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-1 gap-y-1"
         aria-label="Beans links"
       >
+        <UButton
+          :data-tally-open="TALLY_FORM_ID"
+          data-tally-emoji-text="👋"
+          data-tally-emoji-animation="wave"
+          label="Feedback"
+          color="neutral"
+          variant="link"
+          size="xs"
+        />
+        <UButton
+          v-for="item in [{ label: 'Privacy', to: CAFECITO_LINKS.privacy }, { label: 'Terms', to: CAFECITO_LINKS.terms }]"
+          :key="item.label"
+          :to="item.to"
+          :label="item.label"
+          color="neutral"
+          variant="link"
+          size="xs"
+          external
+        />
         <UButton
           :to="outboundHref('https://cafecito.tech')"
           label="Cafecito"

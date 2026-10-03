@@ -1,49 +1,12 @@
 <script setup lang="ts">
-const runtime_config = useRuntimeConfig()
+import HowBeansWorks from '~/components/news/HowBeansWorks.vue'
+import { CAFECITO_LINKS } from '~/settings/site'
+
 const { outboundHref } = useOutboundUrl()
-const SITE_URL = runtime_config.public.site_url.replace(/\/+$/, '')
-const PAGE_URL = `${SITE_URL}/about-beans`
-const PAGE_TITLE = 'About Beans | Publisher News Discovery'
-const PAGE_DESCRIPTION = 'Beans is a news discovery app from Project Cafecito. It groups publisher reporting into current and trending stories, preserves source context, and links to original coverage.'
-const structured_data = JSON.stringify({
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  'name': 'Beans',
-  'applicationCategory': 'NewsApplication',
-  'applicationSubCategory': 'News discovery',
-  'operatingSystem': 'Web',
-  'url': PAGE_URL,
-  'image': `${SITE_URL}/beans-banner.png`,
-  'description': PAGE_DESCRIPTION,
-  'provider': {
-    '@type': 'Organization',
-    'name': 'Project Cafecito',
-    'url': 'https://cafecito.tech'
-  }
-})
-
-useSeoMeta({
-  title: PAGE_TITLE,
-  description: PAGE_DESCRIPTION,
-  ogTitle: PAGE_TITLE,
-  ogDescription: PAGE_DESCRIPTION,
-  ogUrl: PAGE_URL,
-  ogImage: `${SITE_URL}/beans-banner.png`,
-  ogImageAlt: 'Beans news and trending stories',
-  twitterTitle: PAGE_TITLE,
-  twitterDescription: PAGE_DESCRIPTION,
-  twitterImage: `${SITE_URL}/beans-banner.png`,
-  twitterImageAlt: 'Beans news and trending stories'
-})
-
-useHead({
-  script: [
-    {
-      key: 'beans-software-application-json-ld',
-      type: 'application/ld+json',
-      innerHTML: structured_data
-    }
-  ]
+usePageMetadata({
+  title: 'About Beans | Publisher News Discovery',
+  description: 'Beans is a news discovery app from Project Cafecito. Compare publisher reporting, explore coverage, and follow original sources for context.',
+  breadcrumbs: [{ name: 'Beans', path: '/' }, { name: 'About Beans', path: '/about-beans' }]
 })
 </script>
 
@@ -57,7 +20,7 @@ useHead({
         About Beans
       </h1>
       <p class="max-w-2xl text-sm leading-6 text-stone-400 sm:text-base">
-        A news discovery app for seeing what publishers are reporting and what is gaining attention.
+        A news reader that brings publisher reporting together so you can follow what is gaining attention.
       </p>
     </div>
 
@@ -78,6 +41,12 @@ useHead({
         <p class="text-sm leading-6 text-stone-400">
           Trending stories use engagement signals and cross-publisher coverage to show what is receiving attention. Related reporting is grouped so you can inspect the sources and supporting coverage around a developing story.
         </p>
+        <UButton
+          :to="CAFECITO_LINKS.team"
+          label="Meet the Project Cafecito team"
+          variant="link"
+          external
+        />
       </div>
     </UCard>
 
@@ -132,6 +101,8 @@ useHead({
         </p>
       </div>
     </UCard>
+
+    <HowBeansWorks />
 
     <section
       class="space-y-3"

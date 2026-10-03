@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import ArticleSection from '~/components/news/ArticleSection.vue'
 import { findCategory } from '~/settings/categories'
 
@@ -15,27 +15,26 @@ const {
   loading,
   can_load_more,
   error_message,
-  refreshFeed,
+  initialiseFeed,
   loadMore,
   retryFeed
 } = useNewsFeed(category)
 
-useSeoMeta({
-  title: () => `${category.value?.label || 'Category'} | Beans`,
-  description: () => category.value?.description || 'A focused news category.'
-})
+usePageMetadata(() => ({
+  title: `${category.value?.label || 'Category'} news | Beans`,
+  description: category.value?.description || 'A focused news category.',
+  kind: 'CollectionPage',
+  breadcrumbs: [{ name: 'Beans', path: '/' }, { name: category.value?.label || 'Category', path: route.path }]
+}))
 
-onMounted(() => {
-  void refreshFeed()
-})
+await initialiseFeed()
+if (import.meta.server && error_message.value && !articles.value.length) setResponseStatus(useRequestEvent()!, 503)
+useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noindex, follow' : 'index, follow, max-image-preview:large' })
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="max-w-2xl space-y-2 px-1">
-      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary/70">
-        Category
-      </p>
       <h1 class="text-2xl font-semibold text-stone-100 sm:text-3xl">
         {{ category?.label }}
       </h1>

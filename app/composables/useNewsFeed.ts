@@ -1,9 +1,10 @@
-import { computed, ref, unref, watch } from 'vue'
+import { computed, onMounted, onScopeDispose, ref, unref } from 'vue'
 import type { MaybeRef } from 'vue'
 import type { NewsCategory } from '~/settings/categories'
 import type { BeansPageParams, NewsArticle } from '~/types/news'
 import { useArticleEnrichment } from '~/composables/useArticleEnrichment'
 import { logClientEvent } from '~/utils/telemetry'
+import type { FeedSnapshot, FeedStreamSnapshot } from '~/types/discovery'
 
 const PAGE_SIZE = 5
 const TRENDING_PER_BATCH = 1
@@ -27,7 +28,8 @@ interface FeedStream {
 
 export function useNewsFeed(
   category?: MaybeRef<NewsCategory | undefined>,
-  source_id?: MaybeRef<string | undefined>
+  source_id?: MaybeRef<string | undefined>,
+  feed_mode: 'mixed' | 'trending' = 'mixed'
 ) {
   const { fetchLatestArticles, fetchSourceArticles, fetchTopHeadlines } = useBeansApi()
   const { enrichArticles } = useArticleEnrichment()
@@ -53,8 +55,9 @@ export function useNewsFeed(
   const source_exhausted = ref(false)
   const can_load_more = computed(() => active_source_id.value
     ? !source_exhausted.value
-    : !trending_stream.exhausted || !latest_stream.exhausted)
+    : feed_mode === 'trending' ? !trending_stream.exhausted : !trending_stream.exhausted || !latest_stream.exhausted)
   let _generation = 0
+  let _initialising = false
 
   function filters(): FeedFilters {
     return {
@@ -170,6 +173,8 @@ export function useNewsFeed(
     try {
       if (active_source_id.value) {
         batch.push(...await fetchSourceBatch(generation))
+      } else if (feed_mode === 'trending') {
+        await fetchMixedStream('trending', PAGE_SIZE, batch, generation)
       } else {
         let trending_error = false
         let latest_error = false
@@ -206,7 +211,7 @@ export function useNewsFeed(
 
       if (generation !== _generation) return
       articles.value = append ? [...articles.value, ...batch] : batch
-      if (batch.length) {
+      if (import.meta.client && !_initialising && batch.length) {
         void enrichArticles(batch).then((enriched) => {
           if (generation !== _generation) return
           const by_id = new Map(enriched.map(article => [article.id, article]))
@@ -248,8 +253,50 @@ export function useNewsFeed(
     else await refreshFeed()
   }
 
-  watch(active_category, () => {
-    void refreshFeed()
+  function snapshotStream(state: FeedStream): FeedStreamSnapshot {
+    return { ...state, ids: [...state.ids] }
+  }
+
+  function restoreStream(target: FeedStream, snapshot: FeedStreamSnapshot): void {
+    Object.assign(target, snapshot, { ids: new Set(snapshot.ids) })
+  }
+
+  async function initialiseFeed(): Promise<void> {
+    _initialising = true
+    const { data } = await useAsyncData(`feed:${route.path}`, async (): Promise<FeedSnapshot> => {
+      await refreshFeed()
+      return {
+        articles: articles.value,
+        error_message: error_message.value,
+        trending: snapshotStream(trending_stream),
+        latest: snapshotStream(latest_stream),
+        source_cursor: source_cursor.value,
+        source_exhausted: source_exhausted.value
+      }
+    })
+    if (data.value) {
+      articles.value = data.value.articles
+      error_message.value = data.value.error_message
+      restoreStream(trending_stream, data.value.trending)
+      restoreStream(latest_stream, data.value.latest)
+      source_cursor.value = data.value.source_cursor
+      source_exhausted.value = data.value.source_exhausted
+    }
+    _initialising = false
+  }
+
+  onMounted(() => {
+    const generation = _generation
+    if (articles.value.length) {
+      void enrichArticles(articles.value).then((enriched) => {
+        if (generation !== _generation) return
+        const by_id = new Map(enriched.map(article => [article.id, article]))
+        articles.value = articles.value.map(article => by_id.get(article.id) ?? article)
+      }).catch(() => undefined)
+    }
+  })
+  onScopeDispose(() => {
+    _generation++
   })
 
   return {
@@ -257,6 +304,7 @@ export function useNewsFeed(
     loading,
     error_message,
     can_load_more,
+    initialiseFeed,
     refreshFeed,
     loadMore,
     retryFeed

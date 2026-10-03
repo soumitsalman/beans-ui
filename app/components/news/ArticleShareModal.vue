@@ -1,15 +1,24 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import ArticleShareActions from '~/components/news/ArticleShareActions.vue'
 import { withBeansShareAttribution } from '~/utils/outboundUrl'
 
 const props = defineProps<{
   article_title: string
   article_url?: string | null
+  article_id?: string
+  has_coverage?: boolean
+  inline?: boolean
 }>()
 
 const is_open = ref(false)
 const copy_status = ref('')
-const share_url = computed(() => withBeansShareAttribution(props.article_url))
+const { trackEvent } = useGoogleAnalytics()
+const SITE_URL = useRuntimeConfig().public.site_url.replace(/\/+$/, '')
+const share_mode = ref(props.has_coverage && props.article_id ? 'coverage' : 'original')
+const original_url = computed(() => withBeansShareAttribution(props.article_url))
+const coverage_url = computed(() => props.has_coverage && props.article_id ? `${SITE_URL}/articles/${encodeURIComponent(props.article_id)}` : undefined)
+const share_url = computed(() => share_mode.value === 'coverage' ? coverage_url.value : original_url.value)
 const share_options = computed(() => {
   if (!share_url.value) return []
   const url = share_url.value
@@ -37,19 +46,56 @@ async function copyShareUrl(): Promise<void> {
 
   try {
     await navigator.clipboard.writeText(share_url.value)
+    trackShare('copy')
     copy_status.value = 'Link copied.'
   } catch {
     copy_status.value = 'Copy failed. Select the URL above to copy it.'
   }
+}
+
+function trackShare(channel: string): void {
+  trackEvent(share_mode.value === 'coverage' ? 'share_coverage' : 'share_original', { article_id: props.article_id, channel })
+}
+
+function setShareMode(mode: string): void {
+  share_mode.value = mode
+  copy_status.value = ''
 }
 </script>
 
 <template>
   <div
     v-if="share_url"
-    class="inline-flex items-center"
+    :class="inline ? 'flex flex-col items-end gap-2' : 'inline-flex items-center'"
   >
-    <UTooltip text="Share article">
+    <template v-if="inline">
+      <UInput
+        v-if="copy_status && copy_status !== 'Link copied.'"
+        :model-value="share_url"
+        readonly
+        aria-label="Share URL"
+        class="w-full"
+        @focus="($event.target as HTMLInputElement).select()"
+      />
+      <ArticleShareActions
+        :options="share_options"
+        align_end
+        @copy="copyShareUrl"
+        @share="trackShare"
+      />
+      <p
+        v-if="copy_status"
+        role="status"
+        aria-live="polite"
+        class="text-xs text-stone-400"
+      >
+        {{ copy_status }}
+      </p>
+    </template>
+    <UTooltip
+      v-else
+      text="Share article"
+    >
       <UButton
         icon="lucide:share-2"
         color="neutral"
@@ -61,6 +107,7 @@ async function copyShareUrl(): Promise<void> {
       />
     </UTooltip>
     <UModal
+      v-if="!inline"
       v-model:open="is_open"
       title="Share article"
       :ui="{ content: 'sm:max-w-md' }"
@@ -68,43 +115,41 @@ async function copyShareUrl(): Promise<void> {
     >
       <template #body>
         <div class="space-y-4">
+          <div
+            v-if="coverage_url && original_url"
+            class="flex flex-wrap gap-2"
+          >
+            <UButton
+              label="Share Beans coverage"
+              :variant="share_mode === 'coverage' ? 'soft' : 'ghost'"
+              :aria-pressed="share_mode === 'coverage'"
+              size="sm"
+              @click="setShareMode('coverage')"
+            />
+            <UButton
+              label="Share original article"
+              color="neutral"
+              :variant="share_mode === 'original' ? 'soft' : 'ghost'"
+              :aria-pressed="share_mode === 'original'"
+              size="sm"
+              @click="setShareMode('original')"
+            />
+          </div>
+          <p class="text-xs text-stone-400">
+            {{ share_mode === 'coverage' ? 'Share the source comparison on Beans.' : 'Share the original publisher’s article.' }}
+          </p>
           <UInput
             :model-value="share_url"
             readonly
-            aria-label="Share URL with Beans attribution"
+            aria-label="Share URL"
             class="w-full"
             @focus="($event.target as HTMLInputElement).select()"
           />
-          <div class="flex flex-nowrap items-center justify-center gap-2">
-            <UTooltip text="Copy link">
-              <UButton
-                icon="lucide:copy"
-                color="neutral"
-                variant="outline"
-                class="size-8 shrink-0 justify-center rounded-full p-0"
-                :ui="{ leadingIcon: 'size-4' }"
-                aria-label="Copy link"
-                @click="copyShareUrl"
-              />
-            </UTooltip>
-            <UTooltip
-              v-for="option in share_options"
-              :key="option.label"
-              :text="option.label"
-            >
-              <UButton
-                :to="option.href"
-                target="_blank"
-                rel="noopener noreferrer"
-                :icon="option.icon"
-                color="neutral"
-                variant="outline"
-                class="size-8 shrink-0 justify-center rounded-full p-0"
-                :ui="{ leadingIcon: 'size-4' }"
-                :aria-label="option.label"
-              />
-            </UTooltip>
-          </div>
+          <ArticleShareActions
+            :options="share_options"
+            @copy="copyShareUrl"
+            @share="trackShare"
+          />
           <p
             v-if="copy_status"
             role="status"

@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import ArticleSection from '~/components/news/ArticleSection.vue'
 import type { NewsSource } from '~/types/news'
 import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceLabel } from '~/utils/source'
+import { resourceError } from '~/utils/resourceError'
 
 const route = useRoute()
 const source_id = computed(() => String(route.params.id || ''))
 const source = ref<NewsSource | null>(null)
-const loading_source = ref(true)
+const loading_source = ref(false)
 const source_error = ref<string | null>(null)
 const { fetchSource } = useBeansApi()
 const { outboundHref } = useOutboundUrl()
@@ -16,6 +17,7 @@ const {
   loading,
   can_load_more,
   error_message,
+  initialiseFeed,
   refreshFeed,
   loadMore,
   retryFeed
@@ -34,10 +36,14 @@ function normaliseSourceUrl(value?: string | null): string | undefined {
   return `https://${url}`
 }
 
-useSeoMeta({
-  title: () => `${source_name.value} | Beans`,
-  description: () => source.value?.description || `Latest news from ${source_name.value}.`
-})
+usePageMetadata(() => ({
+  ready: Boolean(source.value || source_error.value),
+  title: `${source_name.value} news | Beans`,
+  description: source.value?.description || `Latest news from ${source_name.value}. Compare original reporting and related coverage on Beans.`,
+  kind: 'CollectionPage',
+  breadcrumbs: [{ name: 'Beans', path: '/' }, { name: source_name.value, path: route.path }]
+}))
+useSeoMeta({ robots: () => source_error.value ? 'noindex, follow' : 'index, follow, max-image-preview:large' })
 
 async function loadSource(): Promise<void> {
   const generation = ++_generation
@@ -47,10 +53,15 @@ async function loadSource(): Promise<void> {
   loading_source.value = true
   try {
     const result = await fetchSource(id)
+    if (!result.id) throw createError({ statusCode: 404, statusMessage: 'Source not found.' })
     if (generation !== _generation) return
     source.value = result
-  } catch {
-    if (generation === _generation) source_error.value = 'This source could not be loaded right now.'
+  } catch (error) {
+    if (generation === _generation) {
+      const failure = resourceError(error)
+      if (failure.statusCode !== 503) showError(failure)
+      source_error.value = failure.statusMessage
+    }
   } finally {
     if (generation === _generation) {
       loading_source.value = false
@@ -59,22 +70,23 @@ async function loadSource(): Promise<void> {
   }
 }
 
-watch(source_id, () => {
-  void loadSource()
-}, { immediate: true })
+const { data: initial_source, error: initial_error } = await useAsyncData(`source:${source_id.value}`, async () => {
+  const result = await fetchSource(source_id.value)
+  if (!result.id) throw createError({ statusCode: 404, statusMessage: 'Source not found.' })
+  return result
+})
+source.value = initial_source.value ?? null
+if (initial_error.value) {
+  const failure = resourceError(initial_error.value)
+  if (failure.statusCode !== 503) throw createError(failure)
+  if (import.meta.server) setResponseStatus(useRequestEvent()!, 503)
+  source_error.value = failure.statusMessage
+}
+if (source.value) await initialiseFeed()
 </script>
 
 <template>
   <div class="space-y-7">
-    <UButton
-      to="/"
-      label="Back to news"
-      icon="lucide:arrow-left"
-      color="neutral"
-      variant="ghost"
-      size="sm"
-    />
-
     <USkeleton
       v-if="loading_source"
       class="h-36 rounded-lg bg-stone-800"
@@ -122,6 +134,7 @@ watch(source_id, () => {
           </p>
           <a
             v-if="source_url"
+            data-publisher-link
             :href="outboundHref(source_url)"
             target="_blank"
             rel="noopener noreferrer"

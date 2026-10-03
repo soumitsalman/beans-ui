@@ -4,6 +4,7 @@ import type { NewsArticle } from '~/types/news'
 import ArticleTrendCounts from '~/components/news/ArticleTrendCounts.vue'
 import ArticleSourceLine from '~/components/news/ArticleSourceLine.vue'
 import CoverageSourceOrbit from '~/components/news/CoverageSourceOrbit.vue'
+import { sharedCoverageDate } from '~/utils/coverageTimeline'
 import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceIdentity, sourceLabel } from '~/utils/source'
 
 interface CoverageGroup {
@@ -42,13 +43,19 @@ const sorted_articles = computed(() => [...props.coverage_articles].sort((left, 
 const first_article = computed(() => sorted_articles.value[0])
 const last_article = computed(() => sorted_articles.value.length > 1 ? sorted_articles.value.at(-1) : undefined)
 const middle_articles = computed(() => sorted_articles.value.slice(1, -1))
+const single_date_group = computed(() => sharedCoverageDate(sorted_articles.value)
+  ? createGroups(sorted_articles.value, 1, 5, 'same-day')[0]
+  : undefined)
 
 const coverage_views = computed<CoverageView[]>(() => [
   { id: 'small', classes: 'flex sm:hidden', groups: createGroups(middle_articles.value, 1, 1, 'small') },
   { id: 'medium', classes: 'hidden sm:flex xl:hidden', groups: createGroups(middle_articles.value, 3, 2, 'medium') },
   { id: 'large', classes: 'hidden xl:flex', groups: createGroups(middle_articles.value, 5, 3, 'large') }
 ])
-const selected_group = computed(() => coverage_views.value.flatMap(view => view.groups).find(group => group.id === selected_group_id.value))
+const selected_group = computed(() => [
+  ...(single_date_group.value ? [single_date_group.value] : []),
+  ...coverage_views.value.flatMap(view => view.groups)
+].find(group => group.id === selected_group_id.value))
 
 watch(() => props.coverage_articles, () => {
   selected_group_id.value = null
@@ -149,77 +156,26 @@ function articleTime(article: NewsArticle): number {
         class="min-w-0 space-y-3"
       >
         <div
-          v-for="view in coverage_views"
-          :key="view.id"
-          :class="[view.classes, 'relative w-full min-w-0 items-stretch gap-1.5 sm:gap-2']"
+          v-if="single_date_group"
+          class="relative flex min-w-0 justify-center"
         >
           <div
-            class="absolute inset-x-5 top-4 h-px bg-stone-800"
+            class="absolute inset-x-5 top-6 h-px bg-stone-800"
             aria-hidden="true"
           />
-          <a
-            :href="first_article.url ? outboundHref(first_article.url) : undefined"
-            :target="first_article.url ? '_blank' : undefined"
-            :rel="first_article.url ? 'noopener noreferrer' : undefined"
-            :aria-label="`First coverage: ${first_article.title || sourceLabel(first_article) || 'article'}`"
-            class="relative z-10 flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg bg-stone-950 px-1 py-2 text-center focus-visible:outline-2 focus-visible:outline-primary"
+          <UButton
+            color="neutral"
+            variant="ghost"
+            :aria-label="`Coverage on ${single_date_group.date}: ${single_date_group.source_count} sources. ${selected_group_id === single_date_group.id ? 'Hide' : 'Show'} sources orbit`"
+            :aria-expanded="selected_group_id === single_date_group.id"
+            :aria-controls="selected_group_id === single_date_group.id ? 'coverage-group-details' : undefined"
+            class="relative z-10 min-w-0 max-w-full flex-col gap-1.5 bg-stone-950 px-2 py-2"
+            @click="toggleGroup(single_date_group.id)"
           >
-            <UAvatar
-              :src="sourceFavicon(first_article)"
-              :alt="sourceLabel(first_article) || 'Source'"
-              :icon="DEFAULT_SOURCE_ICON"
-              size="xs"
-              class="ring-1 ring-stone-800"
-              loading="lazy"
-              referrerpolicy="no-referrer"
-            />
-            <span
-              class="w-full truncate text-[10px] tabular-nums text-stone-500"
-              :title="shortDate(first_article.published_at)"
-            >
-              {{ shortDate(first_article.published_at) }}
-            </span>
-          </a>
-
-          <template
-            v-for="group in view.groups"
-            :key="group.id"
-          >
-            <NuxtLink
-              v-if="group.source_count === 1"
-              :to="group.icons[0]?.source?.id ? `/sources/${group.icons[0].source.id}` : undefined"
-              :aria-label="`Coverage from ${sourceLabel(group.icons[0]) || 'Source'}: ${group.date}`"
-              class="relative z-10 flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg bg-stone-950 px-1 py-2 text-center focus-visible:outline-2 focus-visible:outline-primary"
-            >
-              <UAvatar
-                :src="sourceFavicon(group.icons[0])"
-                :alt="sourceLabel(group.icons[0]) || 'Source'"
-                :icon="DEFAULT_SOURCE_ICON"
-                size="xs"
-                class="ring-1 ring-stone-800"
-                loading="lazy"
-                referrerpolicy="no-referrer"
-              />
-              <span
-                class="w-full truncate text-[10px] tabular-nums text-stone-500"
-                :title="group.date"
-              >{{ group.date }}</span>
-            </NuxtLink>
-            <UButton
-              v-else
-              :color="selected_group_id === group.id ? 'primary' : 'neutral'"
-              variant="subtle"
-              :aria-label="`${group.date}: ${group.source_count} sources. ${selected_group_id === group.id ? 'Hide' : 'Show'} sources orbit`"
-              :aria-expanded="selected_group_id === group.id"
-              :aria-controls="selected_group_id === group.id ? 'coverage-group-details' : undefined"
-              class="relative z-10 min-w-0 flex-1 flex-col gap-1 overflow-hidden px-1 py-1.5 text-center"
-              @click="toggleGroup(group.id)"
-            >
-              <UAvatarGroup
-                :max="view.id === 'small' ? 1 : view.id === 'medium' ? 2 : 3"
-              >
+            <span class="flex items-center gap-1.5">
+              <UAvatarGroup :max="5">
                 <UAvatar
-                  v-for="article in group.icons"
+                  v-for="article in single_date_group.icons"
                   :key="sourceIdentity(article) || article.id"
                   :src="sourceFavicon(article)"
                   :alt="sourceLabel(article) || 'Source'"
@@ -229,42 +185,136 @@ function articleTime(article: NewsArticle): number {
                 />
               </UAvatarGroup>
               <span
-                v-if="group.source_count > group.icons.length"
-                class="text-[10px] tabular-nums"
-              >+{{ group.source_count - group.icons.length }}</span>
-              <span
-                class="w-full truncate text-[10px] tabular-nums"
-                :title="group.date"
-              >{{ group.date }}</span>
-              <span class="w-full truncate text-[10px] tabular-nums opacity-70">{{ group.source_count }} sources</span>
-            </UButton>
-          </template>
-
-          <a
-            v-if="last_article"
-            :href="last_article.url ? outboundHref(last_article.url) : undefined"
-            :target="last_article.url ? '_blank' : undefined"
-            :rel="last_article.url ? 'noopener noreferrer' : undefined"
-            :aria-label="`Latest coverage: ${last_article.title || sourceLabel(last_article) || 'article'}`"
-            class="relative z-10 flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg bg-stone-950 px-1 py-2 text-center focus-visible:outline-2 focus-visible:outline-primary"
-          >
-            <UAvatar
-              :src="sourceFavicon(last_article)"
-              :alt="sourceLabel(last_article) || 'Source'"
-              :icon="DEFAULT_SOURCE_ICON"
-              size="xs"
-              class="ring-1 ring-stone-800"
-              loading="lazy"
-              referrerpolicy="no-referrer"
-            />
-            <span
-              class="w-full truncate text-[10px] tabular-nums text-stone-500"
-              :title="shortDate(last_article.published_at)"
-            >
-              {{ shortDate(last_article.published_at) }}
+                v-if="single_date_group.source_count > single_date_group.icons.length"
+                class="text-[10px] tabular-nums text-stone-400"
+              >+{{ single_date_group.source_count - single_date_group.icons.length }}</span>
             </span>
-          </a>
+            <span class="text-[10px] tabular-nums text-stone-500">
+              {{ single_date_group.date }}
+            </span>
+          </UButton>
         </div>
+        <template v-else>
+          <div
+            v-for="view in coverage_views"
+            :key="view.id"
+            :class="[view.classes, 'relative w-full min-w-0 items-stretch gap-1.5 sm:gap-2']"
+          >
+            <div
+              class="absolute inset-x-5 top-4 h-px bg-stone-800"
+              aria-hidden="true"
+            />
+            <a
+              :href="first_article.url ? outboundHref(first_article.url) : undefined"
+              data-publisher-link
+              :target="first_article.url ? '_blank' : undefined"
+              :rel="first_article.url ? 'noopener noreferrer' : undefined"
+              :aria-label="`First coverage: ${first_article.title || sourceLabel(first_article) || 'article'}`"
+              class="relative z-10 flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg bg-stone-950 px-1 py-2 text-center focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <UAvatar
+                :src="sourceFavicon(first_article)"
+                :alt="sourceLabel(first_article) || 'Source'"
+                :icon="DEFAULT_SOURCE_ICON"
+                size="xs"
+                class="ring-1 ring-stone-800"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+              />
+              <span
+                class="w-full truncate text-[10px] tabular-nums text-stone-500"
+                :title="shortDate(first_article.published_at)"
+              >
+                {{ shortDate(first_article.published_at) }}
+              </span>
+            </a>
+
+            <template
+              v-for="group in view.groups"
+              :key="group.id"
+            >
+              <NuxtLink
+                v-if="group.source_count === 1"
+                :to="group.icons[0]?.source?.id ? `/sources/${group.icons[0].source.id}` : undefined"
+                :aria-label="`Coverage from ${sourceLabel(group.icons[0]) || 'Source'}: ${group.date}`"
+                class="relative z-10 flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg bg-stone-950 px-1 py-2 text-center focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                <UAvatar
+                  :src="sourceFavicon(group.icons[0])"
+                  :alt="sourceLabel(group.icons[0]) || 'Source'"
+                  :icon="DEFAULT_SOURCE_ICON"
+                  size="xs"
+                  class="ring-1 ring-stone-800"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                />
+                <span
+                  class="w-full truncate text-[10px] tabular-nums text-stone-500"
+                  :title="group.date"
+                >{{ group.date }}</span>
+              </NuxtLink>
+              <UButton
+                v-else
+                :color="selected_group_id === group.id ? 'primary' : 'neutral'"
+                variant="subtle"
+                :aria-label="`${group.date}: ${group.source_count} sources. ${selected_group_id === group.id ? 'Hide' : 'Show'} sources orbit`"
+                :aria-expanded="selected_group_id === group.id"
+                :aria-controls="selected_group_id === group.id ? 'coverage-group-details' : undefined"
+                class="relative z-10 min-w-0 flex-1 flex-col gap-1 overflow-hidden px-1 py-1.5 text-center"
+                @click="toggleGroup(group.id)"
+              >
+                <UAvatarGroup
+                  :max="view.id === 'small' ? 1 : view.id === 'medium' ? 2 : 3"
+                >
+                  <UAvatar
+                    v-for="article in group.icons"
+                    :key="sourceIdentity(article) || article.id"
+                    :src="sourceFavicon(article)"
+                    :alt="sourceLabel(article) || 'Source'"
+                    :icon="DEFAULT_SOURCE_ICON"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  />
+                </UAvatarGroup>
+                <span
+                  v-if="group.source_count > group.icons.length"
+                  class="text-[10px] tabular-nums"
+                >+{{ group.source_count - group.icons.length }}</span>
+                <span
+                  class="w-full truncate text-[10px] tabular-nums"
+                  :title="group.date"
+                >{{ group.date }}</span>
+                <span class="w-full truncate text-[10px] tabular-nums opacity-70">{{ group.source_count }} sources</span>
+              </UButton>
+            </template>
+
+            <a
+              v-if="last_article"
+              :href="last_article.url ? outboundHref(last_article.url) : undefined"
+              data-publisher-link
+              :target="last_article.url ? '_blank' : undefined"
+              :rel="last_article.url ? 'noopener noreferrer' : undefined"
+              :aria-label="`Latest coverage: ${last_article.title || sourceLabel(last_article) || 'article'}`"
+              class="relative z-10 flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg bg-stone-950 px-1 py-2 text-center focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <UAvatar
+                :src="sourceFavicon(last_article)"
+                :alt="sourceLabel(last_article) || 'Source'"
+                :icon="DEFAULT_SOURCE_ICON"
+                size="xs"
+                class="ring-1 ring-stone-800"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+              />
+              <span
+                class="w-full truncate text-[10px] tabular-nums text-stone-500"
+                :title="shortDate(last_article.published_at)"
+              >
+                {{ shortDate(last_article.published_at) }}
+              </span>
+            </a>
+          </div>
+        </template>
 
         <div
           v-if="selected_group"
@@ -350,6 +400,7 @@ function articleTime(article: NewsArticle): number {
           </div>
           <a
             :href="outboundHref(article.url)"
+            data-publisher-link
             :target="article.url ? '_blank' : undefined"
             :rel="article.url ? 'noopener noreferrer' : undefined"
             class="group flex min-w-0 items-start gap-3 rounded-sm focus-visible:outline-2 focus-visible:outline-primary"

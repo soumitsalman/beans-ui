@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { NewsArticle, NewsPublisher } from '~/types/news'
+import MarkdownSummary from '~/components/news/MarkdownSummary.vue'
 import ArticleSignals from '~/components/news/ArticleSignals.vue'
 import ArticleSourceLine from '~/components/news/ArticleSourceLine.vue'
 import ArticleShareModal from '~/components/news/ArticleShareModal.vue'
@@ -13,6 +14,9 @@ import { withBeansShareAttribution } from '~/utils/outboundUrl'
 const props = defineProps<{ article: NewsArticle }>()
 const { outboundHref } = useOutboundUrl()
 const image_failed = ref(false)
+const card_image = useTemplateRef<HTMLImageElement>('card-image')
+const summary = computed(() => props.article.summary?.trim())
+const show_image = computed(() => Boolean(props.article.image_url) && !image_failed.value)
 const share_url = computed(() => withBeansShareAttribution(props.article.url))
 const title_link = computed(() => props.article.story_id && props.article.id
   ? `/articles/${props.article.id}`
@@ -22,16 +26,21 @@ const external_article_url = computed(() => !title_link.value && props.article.u
   : undefined)
 const image_entities = computed(() => props.article.entities.filter(Boolean).slice(0, 2))
 const image_regions = computed(() => props.article.regions.filter(Boolean).slice(0, 2))
-const show_text_tags = computed(() => (!props.article.image_url || image_failed.value)
+const show_text_tags = computed(() => !show_image.value
   && Boolean(image_entities.value.length || image_regions.value.length))
 const related_count = computed(() => props.article.trend?.related)
 const show_card_footer = computed(() => Boolean(props.article.other_publishers?.length)
   || hasPositiveCount(related_count.value)
   || [props.article.trend?.mentions, props.article.trend?.comments, props.article.trend?.likes].some(hasPositiveCount)
-  || Boolean(share_url.value))
+  || Boolean(share_url.value || title_link.value))
 
 watch(() => props.article.image_url, () => {
   image_failed.value = false
+})
+
+onMounted(() => {
+  // An SSR image can fail before hydration attaches its error listener.
+  if (card_image.value?.complete && !card_image.value.naturalWidth) image_failed.value = true
 })
 
 function publisherIdentity(publisher: NewsPublisher): string {
@@ -76,6 +85,7 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
         </NuxtLink>
         <a
           v-else-if="external_article_url"
+          data-publisher-link
           :href="external_article_url"
           target="_blank"
           rel="noopener noreferrer"
@@ -85,6 +95,12 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
         </a>
         <span v-else>{{ article.title }}</span>
       </h2>
+      <MarkdownSummary
+        v-if="summary && !show_image"
+        :summary="summary"
+        :line_limit="2"
+        class="mt-2 break-words"
+      />
       <div
         v-if="show_text_tags"
         class="mt-2 flex flex-wrap gap-1.5"
@@ -114,48 +130,74 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
       </div>
     </div>
 
-    <a
-      v-if="article.image_url && !image_failed"
-      :href="outboundHref(article.image_url)"
-      target="_blank"
-      rel="noopener noreferrer"
-      :aria-label="`Open image for ${article.title || 'article'}`"
-      class="group/image relative block max-h-[34rem] overflow-hidden bg-stone-800"
+    <div
+      v-if="show_image"
+      class="relative max-h-[34rem] overflow-hidden bg-stone-800"
     >
-      <img
-        :src="article.image_url"
-        :alt="article.title"
-        class="max-h-[34rem] w-full object-cover"
-        loading="lazy"
-        referrerpolicy="no-referrer"
-        @error="image_failed = true"
+      <a
+        :href="outboundHref(article.image_url)"
+        target="_blank"
+        rel="noopener noreferrer"
+        :aria-label="`Open image for ${article.title || 'article'}`"
+        class="block"
       >
+        <img
+          ref="card-image"
+          :src="article.image_url || undefined"
+          :alt="article.title"
+          class="aspect-video max-h-[34rem] w-full object-cover"
+          width="960"
+          height="540"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          @error="image_failed = true"
+        >
+      </a>
       <div
-        v-if="image_entities.length || image_regions.length"
-        class="absolute inset-x-0 bottom-0 flex flex-wrap gap-1.5 bg-gradient-to-t from-stone-950/90 via-stone-950/50 to-transparent px-3 pb-3 pt-8"
+        v-if="summary || image_entities.length || image_regions.length"
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 bg-linear-to-t from-stone-950 from-0% via-stone-950/85 via-35% to-transparent to-70%"
+      />
+      <div
+        v-if="summary || image_entities.length || image_regions.length"
+        class="absolute inset-x-0 bottom-0 space-y-2 px-3 pb-3"
       >
-        <UBadge
-          v-for="region in image_regions"
-          :key="`region-${region}`"
-          color="neutral"
-          variant="soft"
-          size="sm"
-          class="max-w-32 truncate bg-stone-950/75 text-stone-200"
+        <MarkdownSummary
+          v-if="summary"
+          :summary="summary"
+          :line_limit="2"
+          on_image
+          class="break-words"
+        />
+        <div
+          v-if="image_entities.length || image_regions.length"
+          class="flex flex-wrap gap-1.5"
+          role="group"
+          aria-label="Article entities and regions"
         >
-          {{ formatTaxonomyLabel(region) }}
-        </UBadge>
-        <UBadge
-          v-for="entity in image_entities"
-          :key="`entity-${entity}`"
-          color="neutral"
-          variant="soft"
-          size="sm"
-          class="max-w-32 truncate bg-stone-950/75 text-stone-200"
-        >
-          {{ formatTaxonomyLabel(entity) }}
-        </UBadge>
+          <UBadge
+            v-for="region in image_regions"
+            :key="`region-${region}`"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            class="max-w-32 truncate bg-stone-950/75 text-stone-200"
+          >
+            {{ formatTaxonomyLabel(region) }}
+          </UBadge>
+          <UBadge
+            v-for="entity in image_entities"
+            :key="`entity-${entity}`"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            class="max-w-32 truncate bg-stone-950/75 text-stone-200"
+          >
+            {{ formatTaxonomyLabel(entity) }}
+          </UBadge>
+        </div>
       </div>
-    </a>
+    </div>
 
     <div
       v-if="show_card_footer"
@@ -176,6 +218,7 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           >
             <NuxtLink
               :to="publisherHref(publisher)"
+              data-publisher-link
               :aria-label="`Open ${publisherLabel(publisher)}`"
               class="rounded-full focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary"
             >
@@ -208,9 +251,11 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           :show_related="false"
         />
         <ArticleShareModal
-          v-if="share_url"
+          v-if="share_url || title_link"
           :article_title="article.title"
           :article_url="article.url"
+          :article_id="article.id"
+          :has_coverage="Boolean(title_link)"
         />
       </div>
     </div>

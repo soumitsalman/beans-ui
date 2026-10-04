@@ -9,7 +9,6 @@ const SITE_TITLE = 'Beans | Publisher News and Trending Stories'
 const SITE_DESCRIPTION = 'Beans is a news discovery app from Project Cafecito that groups publisher reporting into current and trending stories while preserving source context.'
 const SOCIAL_IMAGE_URL = `${SITE_URL}/beans-banner.png`
 const canonical_url = computed(() => `${SITE_URL}${route.path}`)
-const page_key = computed(() => route.path)
 const structured_data = JSON.stringify({
   '@context': 'https://schema.org',
   '@graph': [
@@ -92,7 +91,7 @@ useSeoMeta({
 <template>
   <UApp>
     <NuxtLayout>
-      <NuxtPage :page-key="page_key" />
+      <NuxtPage :page-key="page_route => page_route.path" />
     </NuxtLayout>
   </UApp>
 </template>

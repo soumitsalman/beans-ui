@@ -42,6 +42,8 @@ This document defines implementation acceptance for the mobile-first UI. It does
 
 ## Failure cases to guard against
 
+- Home/category client navigation must render the existing article skeletons while the initial feed is pending. Exactly one category tab, including Now, must match the router's current path on the first click and remain selected after loading. Switching categories quickly, returning home, and browser Back/Forward must remount the correct path's feed without late responses replacing it. Direct requests must still contain server-rendered articles, and hydration must not repeat the initial feed fetch.
+
 - Same-day coverage must render one timeline group/date at every breakpoint, deduplicate publisher icons and retain every article in its expanded orbit. Compare full UTC calendar dates including year; missing/invalid timestamps must not collapse as Date unknown. Empty coverage retains its empty state, and different dates retain the normal first/middle/last layout.
 - Article snapshots must not render the extra attribution/publication paragraph or a share-modal trigger. Six direct share actions belong in the right-aligned divided footer, fit at 320px and retain successful-copy/event behavior and selectable-URL fallback on clipboard failure. Feed-card share modals must still offer both destinations.
 - Image-summary text and Markdown links must use the lighter image treatment. The gradient must cover the text area without blocking image-link clicks; image-free summaries and detail summaries retain their normal colors.

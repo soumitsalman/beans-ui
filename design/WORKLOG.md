@@ -1,5 +1,12 @@
 # Beans UI Working Log
 
+## 2026-10-04 — Initial feed skeletons and category navigation
+
+- Reproduced the blank feed during category navigation and the stale Now highlight after the category finished loading in the live browser.
+- Home/category client navigation now starts its feed without suspending page rendering, exposing ArticleSection's existing loading skeletons. Server rendering and initial hydration retain the awaited feed snapshot, cursors and error handling.
+- Category navigation uses the router's current path for its explicit active state, color, variant and aria-current. NuxtPage keys derive from the incoming page route so category changes remount the appropriate feed independently of Nuxt's deferred useRoute update.
+- Verification: focused ESLint, Nuxt typecheck, production build, analytics checks and discovery integration checks passed, including initial home/category SSR content and feed filters. The type checker emitted an existing optional Vue Router editor-plugin resolution warning but exited successfully. The cloud browser denied the local fixture URL, so delayed-load/rapid-navigation browser verification remains pending deployment. graphifyy is unavailable; direct code inspection was used.
+
 ## 2026-10-03 — Footer Feedback popup
 
 - Replaced the footer Contact link with a Feedback button using the same Tally form and popup attributes as the header Help improve Beans control. Shared the form ID between both controls; Privacy and Terms remain external links.

@@ -16,6 +16,7 @@ const {
   can_load_more,
   error_message,
   initialiseFeed,
+  refreshFeed,
   loadMore,
   retryFeed
 } = useNewsFeed(category)
@@ -27,7 +28,9 @@ usePageMetadata(() => ({
   breadcrumbs: [{ name: 'Beans', path: '/' }, { name: category.value?.label || 'Category', path: route.path }]
 }))
 
-await initialiseFeed()
+// Preserve SSR payloads on hydration; let later navigation render the loading state.
+if (import.meta.server || useNuxtApp().isHydrating) await initialiseFeed()
+else void refreshFeed()
 if (import.meta.server && error_message.value && !articles.value.length) setResponseStatus(useRequestEvent()!, 503)
 useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noindex, follow' : 'index, follow, max-image-preview:large' })
 </script>

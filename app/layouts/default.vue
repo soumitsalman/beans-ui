@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { CATEGORY_GROUPS } from '~/settings/categories'
 import { CAFECITO_LINKS } from '~/settings/site'
 
-const route = useRoute()
+const router = useRouter()
 const { outboundHref } = useOutboundUrl()
 const main_content = useTemplateRef<HTMLElement>('main-content')
 const TALLY_FORM_ID = '9q8zrE'
@@ -36,7 +36,7 @@ const navigation_items = computed(() => [
 ])
 
 function isActive(path: string): boolean {
-  return route.path === path
+  return router.currentRoute.value.path === path
 }
 
 async function skipToContent(): Promise<void> {
@@ -140,6 +140,7 @@ async function skipToContent(): Promise<void> {
               v-for="item in navigation_items"
               :key="item.to"
               :to="item.to"
+              :active="isActive(item.to)"
               :color="isActive(item.to) ? 'primary' : 'neutral'"
               :variant="isActive(item.to) ? 'soft' : 'ghost'"
               size="xs"

@@ -821,3 +821,9 @@ Hash inputs: 21 application files under `app/` and `server/`, plus `nuxt.config.
 - Implemented non-blocking Espresso confidence enrichment for story feeds and the story detail route. A shared end-aligned badge renders only valid `High`, `Medium`, or `Low` values, with its meaning available through a tooltip.
 - Moved count presentation from the detailed story card into the story timeline: Coverage now displays `N articles` and Propagation displays `N sources`, both end aligned.
 - Files: `app/composables/useBeansApi.ts`, `app/composables/useNewsFeed.ts`, `app/components/news/StoryConfidenceBadge.vue`, `app/components/news/StoryCard.vue`, `app/components/news/StoryTimeline.vue`, `app/pages/stories/[story_id].vue`, `app/types/news.ts`.
+
+## 2026-10-05
+
+- Reframed the Beans API & MCP social banner to a 1.90:1 preview while keeping the full infographic visible; replaced `public/beans-banner.png`, the shared default used by Open Graph and Twitter metadata.
+- Added a verification case for the shared image fallback and its social metadata references.
+- The existing metadata composable already points to `/beans-banner.png`, so no runtime metadata code change was needed.

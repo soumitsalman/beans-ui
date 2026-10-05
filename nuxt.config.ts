@@ -11,6 +11,17 @@ export default defineNuxtConfig({
     enabled: true
   },
 
+  app: {
+    head: {
+      meta: [
+        {
+          name: 'msvalidate.01',
+          content: '65E9BF6A4B003B4D3FE6AD6E6673A644'
+        }
+      ]
+    }
+  },
+
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {

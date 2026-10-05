@@ -1,5 +1,10 @@
 # Beans UI Working Log
 
+## 2026-10-05 — Bing Webmaster verification
+
+- Added the Bing Webmaster Tools `msvalidate.01` verification token to Nuxt's global head configuration so it is present in the server-rendered home-page `<head>`.
+- Verification: lint, Nuxt typecheck, and the production build pass. A request to the production server confirmed the exact tag appears before the `</head><body` boundary. `graphifyy` is not installed; direct Nuxt configuration inspection was used.
+
 ## 2026-10-04 — Initial feed skeletons and category navigation
 
 - Reproduced the blank feed during category navigation and the stale Now highlight after the category finished loading in the live browser.

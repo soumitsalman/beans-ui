@@ -1,19 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { NewsArticle } from '~/types/news'
 import ArticleCard from '~/components/news/ArticleCard.vue'
 
-withDefaults(defineProps<{
+const STACKED_LIST_CLASS = 'space-y-3'
+const WIDE_GRID_CLASS = 'grid grid-cols-1 items-start gap-3 lg:grid-cols-2'
+
+const props = withDefaults(defineProps<{
   title?: string
   articles: NewsArticle[]
   loading: boolean
   can_load_more: boolean
   error_message?: string | null
   empty_message?: string
+  wide_grid?: boolean
 }>(), {
   title: undefined,
   error_message: null,
-  empty_message: 'Nothing is available yet.'
+  empty_message: 'Nothing is available yet.',
+  wide_grid: false
 })
+
+const list_class = computed(() => props.wide_grid ? WIDE_GRID_CLASS : STACKED_LIST_CLASS)
 
 const emit = defineEmits<{
   'load-more': []
@@ -51,7 +59,7 @@ const emit = defineEmits<{
 
     <div
       v-if="articles.length"
-      class="space-y-3"
+      :class="list_class"
     >
       <ArticleCard
         v-for="article in articles"
@@ -62,7 +70,7 @@ const emit = defineEmits<{
 
     <div
       v-else-if="loading"
-      class="space-y-3"
+      :class="list_class"
       aria-label="Loading articles"
     >
       <USkeleton

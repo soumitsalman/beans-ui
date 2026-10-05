@@ -1,5 +1,46 @@
 # Beans UI Working Log
 
+## 2026-10-05 — Home search fields at md
+
+- The home preference box keeps one column through `sm` and uses two columns from `md` up. Topic and tags share a row at tablet width.
+- Verification: on the local home page the topic and tags stacked at 320px, 640px, and 767px, and sat side by side at 768px and 1024px, with no horizontal overflow.
+
+## 2026-10-05 — Home search clear button
+
+- Home preference box has a Clear button beside Find. Clear removes the topic, tags, and session cookie, then loads the unfiltered category-style feed. It stays disabled when the box and the saved search are already empty.
+- Verification: focused ESLint passed. On the local home page, Clear was disabled while the box was empty. Find for battery and energy sent those params, then Clear emptied both fields, requested the unfiltered one-plus-four mix with no `q`, `tags`, or `score_threshold`, and rendered five articles. graphifyy is not installed; direct component inspection was used.
+
+## 2026-10-05 — Configurable search score threshold
+
+- Home Find and `/search` send `score_threshold` from `NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD`. A blank, non-numeric, or out-of-range value uses `0.6`. The threshold is still omitted when the topic is empty.
+- Verification: focused ESLint passed. With `NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD=0.75` in `.env`, `/search` for “quantum computing” and home Find for “battery” both sent `score_threshold=0.75`. The unfiltered home mix and an empty Find omitted `q`, `tags`, and `score_threshold`, and each rendered five articles. graphifyy is not installed; direct component inspection was used.
+
+## 2026-10-05 — Home uses the category mix
+
+- The default home feed again follows the category feed, with no category filter: one trending article from two days and four latest articles from seven days. A topic or tags in the session cookie or Find are added to those requests. `score_threshold=0.6` is sent only with a topic. Empty Find clears the cookie and reloads the unfiltered mix.
+- Verification: focused ESLint passed. On the local dev server, home with an empty search box rendered five articles, and home with a saved topic and tags also rendered five articles. A category page still rendered five articles. graphifyy is not installed; direct component inspection was used.
+
+## 2026-10-05 — Home always requests unique articles
+
+- Home now always requests `/private/articles/unique`. With no topic and no tags, the request uses `sort=trend`, a two-day `from`, and no categories. A session cookie or Find that has a topic or tags sends those params on the same route, with a one-day `from` and no categories or sort. `score_threshold=0.6` is sent only when the topic is non-empty, because the unique route rejects that threshold without `q`.
+- Verification: focused ESLint passed. Live home requests: an empty session used `sort=trend`, a two-day `from`, and no `q`, `tags`, `categories`, or `score_threshold`. A tags-only session and Find sent `tags` with no `q`, `sort`, `categories`, or `score_threshold`. A topic sent `q` and `score_threshold=0.6`. Find with both sent `q`, `tags`, and `score_threshold=0.6`. Empty Find restored the default unique request and rendered five articles. Returning from a category with the session cookie requested the saved topic and tags again. graphifyy is not installed; direct component inspection was used.
+
+## 2026-10-05 — Default search score threshold
+
+- Home Find and `/search` now send `score_threshold=0.6`. Home still uses `/private/articles/unique` from one day ago. `/search` still sends the threshold only when the topic is non-empty.
+- Verification: focused ESLint passed. Discovery integration checks passed, including a saved home search and `/search?q=` both sending `score_threshold=0.6`, and a tag-only search omitting it. In the fixture browser, Find for “battery” requested `/private/articles/unique` with `score_threshold=0.6`, and `/search?q=battery` requested `/articles/search` with the same threshold. The discovery HTML check now accepts the encoded apostrophe in the topic placeholder. graphifyy is not installed; direct component inspection was used.
+
+## 2026-10-05 — Home discovery header and search layout
+
+- Home now opens with a Discover Trending News heading, then a preference box. The topic placeholder is “What's on your mind?”. Topic and tags sit side by side at `lg` and stack below that, with no visible Tags label. A divider replaces the old Trending News headline between the box and the cards.
+- Find still searches `/private/articles/unique` from one day ago with `score_threshold=0.75`. The live unique route rejects `search_threshold`. Submitted topic and tags stay in a session cookie, and successful responses use a separate 12-hour cache.
+- Verification: focused ESLint passed. Browser measurements: the fields share one row at 1280px and 1024px, and stack at 768px and 320px with no horizontal overflow. The heading reads Discover Trending News, the visible Tags label is gone, and the divider follows the form. Discovery integration checks earlier in the session passed for the public feed cache, the 12-hour discovery cache, uncached failures, and private home HTML when the cookie is present. graphifyy is not installed; direct component inspection was used.
+
+## 2026-10-05 — Two-column news lists at large screens
+
+- Home, category, and source feeds use `ArticleSection` `wide_grid`: one column below `lg`, two columns at `lg` and above. Search keeps the stacked list. Article Related rows use the same breakpoint, with a one-pixel divider between cells at `lg`.
+- Verification: focused ESLint passed. Browser measurements: home was two columns at 1280px and 1024px, and one column at 1023px, 768px, and 320px, with the fifth card alone in the first column. Category was two columns at 1280px and one at 768px. Source was two columns at 1280px and one at 768px and 320px. Related rows were two columns at 1280px with one-pixel dividers, and one column at 768px and 320px. Search results stayed a single stacked list at 1280px. None of those views overflowed horizontally. graphifyy is not installed; direct component inspection was used.
+
 ## 2026-10-05 — Bing Webmaster verification
 
 - Added the Bing Webmaster Tools `msvalidate.01` verification token to Nuxt's global head configuration so it is present in the server-rendered home-page `<head>`.

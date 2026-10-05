@@ -8,7 +8,7 @@ The 26 numbered recommendations on pages 12–14 are mapped below. **Implemented
 
 ## Product-direction update — 2026-10-03
 
-Beans is a publisher-news reader. The user's minimalist UI direction supersedes recommendations to add explanatory volume, question blocks and promotional follow controls to Now. Home retains news, descriptive metadata and structured data; source/signal explanations and the sharing checklist are consolidated on About. The older implementation evidence below records the preceding audit response, not a requirement to restore home prose. `/methodology` redirects to About; Archive/RSS routes remain available without footer or home promotions. Now uses five trending articles across all categories; category feeds retain the 1+4 mix. A fresh GEO result may still flag home word-count heuristics, which are intentionally subordinate to the reader experience.
+Beans is a publisher-news reader. The user's minimalist UI direction supersedes recommendations to add explanatory volume, question blocks and promotional follow controls to Now. Home retains news, descriptive metadata and structured data; source/signal explanations and the sharing checklist are consolidated on About. The older implementation evidence below records the preceding audit response, not a requirement to restore home prose. `/methodology` redirects to About; Archive/RSS routes remain available without footer or home promotions. Home and category feeds use the 1+4 mix. Home sends no category filter. A fresh GEO result may still flag home word-count heuristics, which are intentionally subordinate to the reader experience.
 
 ## Quick wins
 

@@ -15,6 +15,8 @@ primary_region = 'iad'
   ESPRESSO_API_BASE_URL = 'http://cafecito-espresso-api.flycast'
   NUXT_PUBLIC_SITE_URL = 'https://beans.cafecito.tech'
   NUXT_PUBLIC_GA_MEASUREMENT_ID = 'G-KPG0Y2MBV9'
+  NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD = '0.7'
+
 
 [http_service]
   internal_port = 8080

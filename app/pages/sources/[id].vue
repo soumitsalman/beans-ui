@@ -155,6 +155,7 @@ if (source.value) await initialiseFeed()
 
     <ArticleSection
       v-if="source && !loading_source"
+      wide_grid
       :articles="articles"
       :loading="loading"
       :can_load_more="can_load_more"

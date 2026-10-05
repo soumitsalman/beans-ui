@@ -31,7 +31,8 @@ export default defineNuxtConfig({
     public: {
       vitals_report_all_changes: false,
       site_url: ENV.NUXT_PUBLIC_SITE_URL?.trim() || 'https://beans.cafecito.tech',
-      ga_measurement_id: ENV.NUXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || 'G-KPG0Y2MBV9'
+      ga_measurement_id: ENV.NUXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || 'G-KPG0Y2MBV9',
+      default_score_threshold: ENV.NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD?.trim() || '0.6'
     }
   },
 

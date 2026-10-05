@@ -7,7 +7,7 @@ import type {
   NewsPage,
   NewsSource
 } from '~/types/news'
-import { NEWS_LANGUAGES } from '#shared/news'
+import { defaultScoreThreshold, NEWS_LANGUAGES } from '#shared/news'
 
 interface ApiEnvelope<T> {
   data?: T
@@ -145,9 +145,19 @@ function confidenceMap(payload?: ConfidencePayload): Record<string, EspressoConf
 }
 
 export function useBeansApi() {
+  const default_score_threshold = defaultScoreThreshold(useRuntimeConfig().public.default_score_threshold)
+
+  function withScoreThreshold(params: BeansPageParams): BeansPageParams {
+    if (!params.q?.trim()) return { ...params, score_threshold: undefined }
+    return {
+      ...params,
+      score_threshold: params.score_threshold ?? default_score_threshold
+    }
+  }
+
   async function fetchTopHeadlines(params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
     const page = await fetchBeansPage<BeansArticle>('private/articles/unique', {
-      ...withEnglishNews(params),
+      ...withEnglishNews(withScoreThreshold(params)),
       sort: 'trend',
       from: params.from ?? new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
     })
@@ -160,7 +170,7 @@ export function useBeansApi() {
 
   async function fetchLatestArticles(params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
     const page = await fetchBeansPage<BeansArticle>('private/articles/unique', {
-      ...withEnglishNews(params),
+      ...withEnglishNews(withScoreThreshold(params)),
       sort: 'recent',
       from: params.from ?? new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
     })
@@ -172,12 +182,11 @@ export function useBeansApi() {
   }
 
   async function fetchSearchArticles(params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
-    const page = await fetchBeansPage<BeansArticle>('articles/search', {
+    const page = await fetchBeansPage<BeansArticle>('articles/search', withScoreThreshold({
       ...params,
       ...withEnglishNews(params),
-      content_type: 'news',
-      score_threshold: params.q ? params.score_threshold ?? 0 : undefined
-    })
+      content_type: 'news'
+    }))
 
     return {
       ...page,

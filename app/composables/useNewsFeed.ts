@@ -19,6 +19,11 @@ interface FeedFilters {
 
 type FeedKind = 'trending' | 'latest'
 
+export interface NewsFeedSearch {
+  query: string
+  tags: string[]
+}
+
 interface FeedStream {
   cursor: string | null
   exhausted: boolean
@@ -29,7 +34,8 @@ interface FeedStream {
 export function useNewsFeed(
   category?: MaybeRef<NewsCategory | undefined>,
   source_id?: MaybeRef<string | undefined>,
-  feed_mode: 'mixed' | 'trending' = 'mixed'
+  feed_mode: 'mixed' | 'trending' = 'mixed',
+  search?: MaybeRef<NewsFeedSearch | null | undefined>
 ) {
   const { fetchLatestArticles, fetchSourceArticles, fetchTopHeadlines } = useBeansApi()
   const { enrichArticles } = useArticleEnrichment()
@@ -89,6 +95,17 @@ export function useNewsFeed(
     return kind === 'trending' ? trending_stream : latest_stream
   }
 
+  function searchParams(): Pick<BeansPageParams, 'q' | 'tags'> {
+    const current = unref(search)
+    const query = current?.query?.trim() || ''
+    const tags = current?.tags?.filter(Boolean) ?? []
+    if (!query && !tags.length) return {}
+    return {
+      q: query || undefined,
+      tags: tags.length ? tags : undefined
+    }
+  }
+
   async function fetchMixedStream(
     kind: FeedKind,
     desired_count: number,
@@ -104,6 +121,7 @@ export function useNewsFeed(
       const previous_cursor = state.cursor
       const params: BeansPageParams = {
         ...filters(),
+        ...searchParams(),
         limit: desired_count - received.length,
         cursor: previous_cursor ?? undefined,
         exclude_ids: [...opposite_state.ids],

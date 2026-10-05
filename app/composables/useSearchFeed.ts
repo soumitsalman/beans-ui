@@ -6,7 +6,6 @@ import { normaliseTagInput } from '~/utils/formatters'
 import { logClientEvent } from '~/utils/telemetry'
 
 const PAGE_SIZE = 5
-const RELEVANCE_SCORE_THRESHOLD = 0
 
 interface SearchCriteria {
   query: string
@@ -84,8 +83,7 @@ export function useSearchFeed() {
         tags: criteria.tags,
         domains: criteria.sources,
         limit: PAGE_SIZE,
-        cursor,
-        score_threshold: criteria.query ? RELEVANCE_SCORE_THRESHOLD : undefined
+        cursor
       })
       if (!isCurrentGeneration(generation)) return
 

@@ -47,6 +47,7 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
     </div>
 
     <ArticleSection
+      wide_grid
       :articles="articles"
       :loading="loading"
       :can_load_more="can_load_more"

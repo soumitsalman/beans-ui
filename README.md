@@ -48,9 +48,10 @@ BEANS_API_BASE_URL=https://cafecito-beans-api.fly.dev
 ESPRESSO_API_BASE_URL=https://cafecito-espresso-api.fly.dev
 NUXT_PUBLIC_SITE_URL=https://cafecito-beans-app.fly.dev
 NUXT_PUBLIC_GA_MEASUREMENT_ID=G-KPG0Y2MBV9
+NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD=0.6
 ```
 
-The API base URLs have the defaults shown above. `CAFECITO_API_KEY` is server-only and is used by the API proxy routes. Set `NUXT_PUBLIC_SITE_URL` to the public canonical origin when deploying under a custom domain. `NUXT_PUBLIC_GA_MEASUREMENT_ID` is the Google Analytics 4 tag; it defaults to `G-KPG0Y2MBV9`. Every page includes the official `gtag.js` snippet in `<head>` and records a page view on every client route, including in-app navigations. Page path omits query strings. If Realtime shows two views per in-app click, turn off **Page changes based on browser history events** on that GA4 web stream.
+The API base URLs have the defaults shown above. `CAFECITO_API_KEY` is server-only and is used by the API proxy routes. Set `NUXT_PUBLIC_SITE_URL` to the public canonical origin when deploying under a custom domain. `NUXT_PUBLIC_GA_MEASUREMENT_ID` is the Google Analytics 4 tag; it defaults to `G-KPG0Y2MBV9`. `NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD` is the relevance threshold sent with a topic on home Find and `/search`; it defaults to `0.6`. Every page includes the official `gtag.js` snippet in `<head>` and records a page view on every client route, including in-app navigations. Page path omits query strings. If Realtime shows two views per in-app click, turn off **Page changes based on browser history events** on that GA4 web stream.
 
 ## Routes
 

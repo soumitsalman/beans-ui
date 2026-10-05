@@ -7,6 +7,7 @@ const MOCK_PORT = 4919
 const APP_PORT = 4920
 const BROWSER_PORT = 4921
 const SITE_URL = 'https://beans.cafecito.tech'
+const DEFAULT_SCORE_THRESHOLD = '0.55'
 const REQUESTS = []
 const EVENTS = []
 const BROWSER_REQUESTS = []
@@ -103,6 +104,10 @@ const mock_server = createServer((request, response) => {
     response.writeHead(500).end(JSON.stringify({ message: 'Fixture temporary outage.' }))
     return
   }
+  if (url.pathname === '/private/articles/unique' && url.searchParams.get('q') === 'fail-discovery') {
+    response.writeHead(500).end(JSON.stringify({ message: 'Fixture discovery failure.' }))
+    return
+  }
   if (url.pathname.startsWith('/articles/') && url.pathname !== '/articles/search') {
     const id = url.pathname.split('/').at(-1)
     if (id === 'temporary' && _fail_article) {
@@ -157,7 +162,8 @@ const app_process = spawn(process.execPath, ['.output/server/index.mjs'], {
     NUXT_CAFECITO_API_KEY: 'fixture-only',
     NUXT_PUBLIC_SITE_URL: SITE_URL,
     NUXT_PUBLIC_GA_MEASUREMENT_ID: 'G-FIXTURE123',
-    NUXT_PUBLIC_VITALS_REPORT_ALL_CHANGES: 'true'
+    NUXT_PUBLIC_VITALS_REPORT_ALL_CHANGES: 'true',
+    NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD: DEFAULT_SCORE_THRESHOLD
   },
   stdio: ['ignore', 'pipe', 'pipe']
 })
@@ -260,6 +266,9 @@ try {
   const warm_home = await fetchPage('/')
   const warm_duration = performance.now() - warm_start
   assert.equal(REQUESTS.filter(request => request.path === '/private/articles/unique').length, request_count, 'Warm feed uses the bounded presentation cache')
+  assert.match(warm_home.response.headers.get('cache-control'), /must-revalidate/)
+  assert.match(warm_home.html, /What(?:'|&#39;)s on your mind\?/)
+  assert.match(warm_home.html, /Discover Trending News/)
   assert.match(warm_home.html, /beans-icon-48.webp/)
   assert.match(warm_home.html, /srcset="[^"]*beans-icon-24.webp/)
   assert.ok(!warm_home.html.includes('Explore coverage'), 'Now stays focused on news')
@@ -273,9 +282,52 @@ try {
   const methodology = await fetchPage('/methodology', { redirect: 'manual' })
   assert.equal(methodology.response.status, 301)
   assert.equal(methodology.response.headers.get('location'), '/about-beans#how-it-works')
-  const home_request = REQUESTS.find(request => request.path === '/private/articles/unique' && request.query.sort === 'trend' && request.query.limit === '5' && !request.query.categories)
-  assert.ok(home_request, 'Now fetches five trending articles without a category filter')
-  assert.ok(!REQUESTS.some(request => request.path === '/private/articles/unique' && request.query.sort === 'recent' && request.query.limit === '4' && !request.query.categories), 'Now does not mix in latest articles')
+  const home_trend = REQUESTS.find(request => request.path === '/private/articles/unique' && request.query.sort === 'trend' && request.query.limit === '1' && !request.query.categories && !request.query.q)
+  assert.ok(home_trend, 'Home fetches one trending article without a category filter')
+  assert.equal(home_trend.query.tags, undefined, 'Default home trending omits tags')
+  const home_latest = REQUESTS.find(request => request.path === '/private/articles/unique' && request.query.sort === 'recent' && request.query.limit === '4' && !request.query.categories && !request.query.q)
+  assert.ok(home_latest, 'Home fetches four latest articles without a category filter')
+  assert.equal(home_latest.query.tags, undefined, 'Default home latest omits tags')
+  const discovery_from = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const discovery_url = `/api/beans/private/articles/unique?q=battery&tags=startups&score_threshold=0.6&content_type=news&from=${discovery_from}&limit=5`
+  const discovery_before = REQUESTS.filter(request => request.query.q === 'battery').length
+  assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}${discovery_url}`)).status, 200)
+  assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}${discovery_url}`)).status, 200)
+  assert.equal(REQUESTS.filter(request => request.query.q === 'battery').length, discovery_before + 1, 'Identical discovery searches reuse the 12-hour cache')
+  const discovery_request = REQUESTS.find(request => request.query.q === 'battery')
+  assert.equal(discovery_request.query.score_threshold, '0.6')
+  assert.equal(discovery_request.query.from, discovery_from)
+  assert.equal(discovery_request.query.sort, undefined)
+  assert.equal(discovery_request.query.categories, undefined)
+  const failure_before = REQUESTS.filter(request => request.query.q === 'fail-discovery').length
+  assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}/api/beans/private/articles/unique?q=fail-discovery&score_threshold=0.6`)).status, 500)
+  const failure_after_first = REQUESTS.filter(request => request.query.q === 'fail-discovery').length
+  assert.ok(failure_after_first > failure_before, 'A discovery failure reaches the upstream API')
+  assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}/api/beans/private/articles/unique?q=fail-discovery&score_threshold=0.6`)).status, 500)
+  assert.ok(REQUESTS.filter(request => request.query.q === 'fail-discovery').length > failure_after_first, 'Discovery failures are not cached')
+  const discovery_cookie = `beans_home_discovery=${encodeURIComponent(JSON.stringify({ query: 'battery', tags: ['startups'] }))}`
+  const personalized_before = REQUESTS.filter(request => request.query.q === 'battery' && request.query.tags === 'startups' && !request.query.categories).length
+  const personalized = await fetchPage('/', { headers: { cookie: discovery_cookie } })
+  assert.equal(personalized.response.status, 200)
+  assert.equal(personalized.response.headers.get('cache-control'), 'private, no-store')
+  assert.match(personalized.html, /battery/)
+  assert.match(personalized.html, />Find</)
+  assert.equal((personalized.html.match(/<article(?:\s|>)/g) || []).length, 5)
+  const personalized_requests = REQUESTS.filter(request => request.path === '/private/articles/unique' && request.query.q === 'battery' && request.query.tags === 'startups' && !request.query.categories)
+  assert.ok(personalized_requests.some(request => request.query.sort === 'trend' && request.query.limit === '1' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A saved home search keeps the trending request')
+  assert.ok(personalized_requests.some(request => request.query.sort === 'recent' && request.query.limit === '4' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A saved home search keeps the latest request')
+  const personalized_after = personalized_requests.length
+  assert.ok(personalized_after > personalized_before, 'A saved home search requests the category mix with the topic and tags')
+  const personalized_again = await fetchPage('/', { headers: { cookie: discovery_cookie } })
+  assert.equal(personalized_again.response.headers.get('cache-control'), 'private, no-store')
+  assert.equal(REQUESTS.filter(request => request.query.q === 'battery' && request.query.tags === 'startups' && !request.query.categories).length, personalized_after, 'Returning home reuses the cached discovery feed')
+  const tags_cookie = `beans_home_discovery=${encodeURIComponent(JSON.stringify({ query: '', tags: ['energy'] }))}`
+  const tags_home = await fetchPage('/', { headers: { cookie: tags_cookie } })
+  assert.equal(tags_home.response.status, 200)
+  assert.equal(tags_home.response.headers.get('cache-control'), 'private, no-store')
+  const tags_requests = REQUESTS.filter(request => request.path === '/private/articles/unique' && request.query.tags === 'energy' && !request.query.q && !request.query.categories)
+  assert.ok(tags_requests.some(request => request.query.sort === 'trend' && request.query.score_threshold === undefined), 'A tags-only home search keeps trending and omits the score threshold')
+  assert.ok(tags_requests.some(request => request.query.sort === 'recent' && request.query.score_threshold === undefined), 'A tags-only home search keeps latest and omits the score threshold')
   console.log(`Warm home response: ${warm_duration.toFixed(1)} ms; no upstream feed fetches.`)
 
   for (const [path, expected] of [['/articles/missing', 404], ['/articles/gone', 410], ['/sources/missing', 404]]) {
@@ -299,6 +351,9 @@ try {
   const search_page = await fetchPage('/search?q=sensitive-query')
   assert.match(search_page.html, /content="noindex, follow"/)
   assert.equal(search_page.response.headers.get('cache-control'), 'private, no-store')
+  assert.equal(REQUESTS.find(request => request.path === '/articles/search' && request.query.q === 'sensitive-query')?.query.score_threshold, DEFAULT_SCORE_THRESHOLD, 'Search uses the configured score threshold')
+  await fetchPage('/search?tags=startups')
+  assert.equal(REQUESTS.find(request => request.path === '/articles/search' && request.query.tags === 'startups' && !request.query.q)?.query.score_threshold, undefined, 'Tag-only search omits the score threshold')
   // Node fetch can override Host; use the HTTP client to exercise the actual host middleware.
   const redirect = await new Promise((resolve, reject) => {
     const redirect_request = request(`http://127.0.0.1:${APP_PORT}/articles/article-1?utm_campaign=test`, {

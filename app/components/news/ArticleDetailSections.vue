@@ -381,12 +381,12 @@ function articleTime(article: NewsArticle): number {
 
       <div
         v-if="related_articles.length"
-        class="divide-y divide-stone-800/80 rounded-lg border border-stone-800/90 bg-stone-900/50 px-3"
+        class="grid grid-cols-1 divide-y divide-stone-800/80 rounded-lg border border-stone-800/90 bg-stone-900/50 px-3 lg:grid-cols-2 lg:divide-y-0 lg:px-0"
       >
         <div
           v-for="article in related_articles"
           :key="article.id"
-          class="min-w-0 space-y-1 py-3"
+          class="min-w-0 space-y-1 py-3 lg:border-b lg:border-stone-800/80 lg:px-3 lg:[&:nth-child(odd):not(:last-child)]:border-e lg:last:border-b-0 lg:[&:nth-last-child(2):nth-child(odd)]:border-b-0"
         >
           <div class="flex min-w-0 flex-wrap items-center justify-between gap-2">
             <ArticleSourceLine
@@ -421,7 +421,7 @@ function articleTime(article: NewsArticle): number {
 
       <div
         v-else-if="loading_related"
-        class="space-y-2 rounded-lg border border-stone-800/90 bg-stone-900/50 p-3"
+        class="grid grid-cols-1 gap-2 rounded-lg border border-stone-800/90 bg-stone-900/50 p-3 lg:grid-cols-2"
       >
         <USkeleton class="h-12 rounded-md bg-stone-800" />
         <USkeleton class="h-12 rounded-md bg-stone-800" />

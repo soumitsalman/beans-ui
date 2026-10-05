@@ -827,3 +827,9 @@ Hash inputs: 21 application files under `app/` and `server/`, plus `nuxt.config.
 - Reframed the Beans API & MCP social banner to a 1.90:1 preview while keeping the full infographic visible; replaced `public/beans-banner.png`, the shared default used by Open Graph and Twitter metadata.
 - Added a verification case for the shared image fallback and its social metadata references.
 - The existing metadata composable already points to `/beans-banner.png`, so no runtime metadata code change was needed.
+
+## 2026-10-05 — Exact social banner dimensions
+
+- Corrected the previously generated 1730 × 909 banner to an exact 1200 × 630 PNG frame, resizing proportionally and retaining the complete composition.
+- Tightened the social preview acceptance case to require exact decoded pixel dimensions, rather than an approximate aspect ratio.
+- Reopened and fully decoded the saved production asset: PNG, exactly 1200 × 630 pixels.

@@ -42,6 +42,10 @@ This document defines implementation acceptance for the mobile-first UI. It does
 - Existing theme, header, category mapping, footer, date/count formatting, confidence labels, source/favicons fallback, referral parameters, and server-only API credentials remain intact.
 - At 320px and common mobile widths, cards and controls remain usable with no page-level horizontal overflow.
 
+- Glossy surfaces use shared Tailwind utilities and Nuxt UI theme overrides; coffee colors, text contrast, image-summary overlays, focus rings and disabled states remain legible.
+- Home search has only the visible query field, with Find inline at all widths and Clear embedded in the input. At 320px, 640px, 767px, 768px and 1280px, no text/control overlap or horizontal page overflow occurs. Find is icon-only below 768px and text plus icon at/above 768px; both icon-only actions have accessible labels.
+- Enter and Find retain existing submission/loading behavior. Clear retains its disabled predicate and clears topic, saved tags and cookie through the existing handler. Saved tags still filter home even though their input is hidden; `/search` retains topic, tags and sources.
+
 ## Failure cases to guard against
 
 - Home/category client navigation must render the existing article skeletons while the initial feed is pending. Exactly one category tab, including Now, must match the router's current path on the first click and remain selected after loading. Switching categories quickly, returning home, and browser Back/Forward must remount the correct path's feed without late responses replacing it. Returning home with a discovery cookie restores that search instead of trending. Direct requests must still contain server-rendered articles, and hydration must not repeat the initial feed fetch.

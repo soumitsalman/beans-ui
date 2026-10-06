@@ -57,7 +57,7 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
 </script>
 
 <template>
-  <article class="overflow-hidden rounded-lg border border-stone-800/90 bg-stone-900/60">
+  <article class="overflow-hidden beans-surface rounded-lg border border-stone-800/90 bg-stone-900/60">
     <div class="flex items-start justify-between gap-3 px-3.5 pt-3.5">
       <div class="min-w-0 flex-1">
         <ArticleSourceLine :article="article" />

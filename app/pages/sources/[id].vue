@@ -110,7 +110,7 @@ if (source.value) await initialiseFeed()
     </UAlert>
     <article
       v-else-if="source"
-      class="mt-10 rounded-lg border border-stone-800/90 bg-stone-900/60 sm:mt-12"
+      class="mt-10 beans-surface rounded-lg border border-stone-800/90 bg-stone-900/60 sm:mt-12"
     >
       <div class="px-4 pb-5 sm:px-5">
         <UAvatar

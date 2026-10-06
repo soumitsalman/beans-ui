@@ -1,6 +1,6 @@
 # Beans UI Design
 
-- Theme: minimalist coffee-bean foreground, dark charcoal background, matte finish, dark mode only.
+- Theme: minimalist coffee-bean foreground, dark charcoal background, subtly glossy finish with gentle surface gradients, faint inset highlights and soft shadows, dark mode only.
 - Product icons: `./public/*`.
 - Dates: `N hrs ago` under 24 hours; `N days ago` from 24 hours to under 3 days; `MMM dd, YYYY` from 3 days onward.
 - Counts: humanize trend, publisher, article, and related counts. Render social counts only when greater than zero.
@@ -18,7 +18,7 @@
 
 ## Pages
 
-- Home (`/`): Discover Trending News uses the category heading wrapper and typography. Below it, the preference box asks “What's on your mind?” and accepts comma-separated tags without a Tags label. The two fields stack below `md` and share one row at `md` and above. A divider separates the box from the news cards. With no topic and no tags, home uses the category feed with no category filter: one `sort=trend` article from two days and four `sort=recent` articles from seven days. A session cookie or Find with a topic or tags adds those params to that same feed. A topic also sends `score_threshold` from `NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD` (default 0.6). The submitted topic and tags stay in the fields and in a session cookie. Clear, and an empty Find, wipe the topic, tags, and cookie, then load the unfiltered category-style feed again. `/search` remains the separate topic, tag, and source search.
+- Home (`/`): Discover Trending News uses the category heading wrapper and typography. Below it, the preference box asks “What's on your mind?” in a single query input. Find stays inline at every width: icon-only below `md`, text and icon from `md` upward. Clear is an icon-only button inside the query input, retaining its existing disabled state. The home tags input is omitted from the template; existing saved-tag state and filtering remain supported. A divider separates the box from the news cards. With no topic and no tags, home uses the category feed with no category filter: one `sort=trend` article from two days and four `sort=recent` articles from seven days. A session cookie or Find with a topic or tags adds those params to that same feed. A topic also sends `score_threshold` from `NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD` (default 0.6). The submitted topic stays in the query field; existing topic and tag state stays in a session cookie. Clear, and an empty Find, wipe the topic, tags, and cookie, then load the unfiltered category-style feed again. `/search` remains the separate topic, tag, and source search.
 - About (`/about-beans`): product explanation, signal methodology and corrections. `/methodology` redirects permanently to the About methodology section.
 - Category (`/categories/{category_slug}`): category heading, description and filtered article feed, without a Category eyebrow or archive link.
 - Article (`/articles/{id}`): article snapshot, Coverage timeline, and Related list, without a Back to news button.

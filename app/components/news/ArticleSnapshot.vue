@@ -18,7 +18,7 @@ watch(() => props.article.image_url, () => {
 </script>
 
 <template>
-  <article class="overflow-hidden rounded-lg border border-stone-800/90 bg-stone-900/60">
+  <article class="overflow-hidden beans-surface rounded-lg border border-stone-800/90 bg-stone-900/60">
     <div class="flex flex-col gap-4 p-4 sm:flex-row sm:p-5">
       <a
         v-if="article.image_url && !image_failed"

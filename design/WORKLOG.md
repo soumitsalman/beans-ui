@@ -1,5 +1,12 @@
 # Beans UI Working Log
 
+## 2026-10-06 — Subtle gloss and compact home search
+
+- Added shared Tailwind surface/control highlights and Nuxt UI theme overrides for cards, panels, dialogs, header, inputs and filled/outlined controls while keeping the coffee palette and image overlays.
+- Home renders only the existing query input; Find stays inline and hides its text below md. Clear is an accessible icon-only trailing action inside the query input with the existing disabled predicate and handler.
+- Existing composables, saved tags, cookies, API wiring and separate search fields are unchanged. Updated design guidance and success/failure checks. graphifyy is unavailable; direct component/data-flow inspection was used.
+- Verification: lint and Nuxt typecheck pass; production build, analytics and discovery HTTP regressions pass. Mock-backed browser measurements at 320/640/767/768/1280px confirm one visible home input, inline Find, text hidden below md and visible from md, a 32px embedded Clear with 44px input padding, and no page overflow. Find sent the existing q/score_threshold and one-plus-four feed parameters; Clear reset the query and disabled itself. Existing HTTP fixtures confirm saved topic/tag filtering. Home/category/article/source/search/About surfaces and the 288px share dialog retain their shared gradients; separate search still has all three inputs. Native keyboard events did not take effect through browser automation, so Enter/Tab and transient loading verification remain unconfirmed. Temporary viewport override restored and fixture servers stopped. Final shadow-layer production rebuild and discovery regression rerun pass; browser computed styles confirm the dialog retains both the inset highlight and its default elevation shadow.
+
 ## 2026-10-05 — Home search fields at md
 
 - The home preference box keeps one column through `sm` and uses two columns from `md` up. Topic and tags share a row at tablet width.

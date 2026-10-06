@@ -53,7 +53,7 @@ async function skipToContent(): Promise<void> {
       class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50"
       @click="skipToContent"
     />
-    <header class="sticky top-0 z-30 border-b border-stone-800/90 bg-stone-950/95 backdrop-blur">
+    <header class="beans-surface sticky top-0 z-30 border-b border-stone-800/90 bg-stone-950/95 backdrop-blur">
       <div class="mx-auto flex h-15 max-w-6xl items-center gap-1 px-3 sm:px-6">
         <time
           :datetime="current_date_iso"

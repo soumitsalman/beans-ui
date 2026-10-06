@@ -83,7 +83,7 @@ useSeoMeta({ robots: 'noindex, follow' })
 
     <UForm
       :state="search_form"
-      class="space-y-3 rounded-lg border border-stone-800/90 bg-stone-900/50 p-3.5 sm:p-4"
+      class="space-y-3 beans-surface rounded-lg border border-stone-800/90 bg-stone-900/50 p-3.5 sm:p-4"
       @submit="submitSearch"
     >
       <UFormField

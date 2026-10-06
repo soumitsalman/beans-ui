@@ -41,3 +41,11 @@ body {
   background: #151311;
   color: #f5f0e8;
 }
+
+@utility beans-surface {
+  @apply bg-linear-to-b from-white/[0.045] to-transparent inset-shadow-[0_1px_0_rgb(255_255_255/0.06)] shadow-[0_6px_18px_rgb(0_0_0/0.12)];
+}
+
+@utility beans-control {
+  @apply bg-linear-to-b from-white/[0.06] to-transparent inset-shadow-[0_1px_0_rgb(255_255_255/0.08)];
+}

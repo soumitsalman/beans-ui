@@ -38,11 +38,14 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
 
     <UForm
       :state="search_form"
-      class="space-y-3 rounded-lg border border-stone-800/90 bg-stone-900/50 p-3.5 sm:p-4"
+      class="space-y-3 beans-surface rounded-lg border border-stone-800/90 bg-stone-900/50 p-3.5 sm:p-4"
       @submit="find"
     >
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <UFormField name="query">
+      <div class="flex items-start gap-2">
+        <UFormField
+          name="query"
+          class="min-w-0 flex-1"
+        >
           <UInput
             v-model="search_form.query"
             class="w-full"
@@ -50,37 +53,36 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
             icon="lucide:search"
             size="lg"
             autocomplete="off"
-          />
+            aria-label="Search query"
+            :ui="{ base: 'pe-11', trailing: 'pe-1' }"
+          >
+            <template #trailing>
+              <UButton
+                type="button"
+                icon="lucide:x"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                square
+                class="size-8 justify-center"
+                aria-label="Clear search"
+                :disabled="!can_clear"
+                @click="clearSearch"
+              />
+            </template>
+          </UInput>
         </UFormField>
-        <UFormField name="tags">
-          <UInput
-            v-model="search_form.tags"
-            class="w-full"
-            placeholder="machine_learning, startups"
-            icon="lucide:tags"
-            size="lg"
-            autocomplete="off"
-            aria-label="Tags"
-          />
-        </UFormField>
-      </div>
-      <div class="flex justify-end gap-2 pt-1">
-        <UButton
-          type="button"
-          label="Clear"
-          icon="lucide:x"
-          color="neutral"
-          variant="outline"
-          :disabled="!can_clear"
-          @click="clearSearch"
-        />
         <UButton
           type="submit"
-          label="Find"
           icon="lucide:search"
           color="primary"
+          size="lg"
+          class="size-9 shrink-0 justify-center md:w-auto"
+          aria-label="Find"
           :loading="searching"
-        />
+        >
+          <span class="hidden md:inline">Find</span>
+        </UButton>
       </div>
     </UForm>
 

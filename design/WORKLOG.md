@@ -886,3 +886,9 @@ Hash inputs: 21 application files under `app/` and `server/`, plus `nuxt.config.
 - Corrected the previously generated 1730 × 909 banner to an exact 1200 × 630 PNG frame, resizing proportionally and retaining the complete composition.
 - Tightened the social preview acceptance case to require exact decoded pixel dimensions, rather than an approximate aspect ratio.
 - Reopened and fully decoded the saved production asset: PNG, exactly 1200 × 630 pixels.
+
+## 2026-10-08 — Hide More after pagination ends
+
+- Made trending/latest stream state reactive so cursor updates and hydration restoration update More immediately on home/category feeds. Continuation now depends on an actual cursor; mixed feeds retain More while either stream can continue, and source feeds require their source cursor.
+- Retained the shared feed/search and Related visibility guards, hiding More entirely when no cursor remains. Explicitly disable visible More buttons while loading; existing exhausted/repeated-cursor request guards remain in effect.
+- Updated design guidance and pagination acceptance criteria. Verification: focused ESLint, Nuxt typecheck, production build, analytics and discovery integration checks, and whitespace checks passed. Executed the actual feed composable with mock cursor sequences for mixed/trending/source feeds: null/repeated cursors stop continuation, exhausted calls make no request, and refresh re-enables continuation after receiving a new cursor. graphifyy is unavailable; direct component/data-flow inspection was used.

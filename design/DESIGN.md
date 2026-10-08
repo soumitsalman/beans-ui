@@ -27,6 +27,7 @@
 
 ## Home, category, and source feeds
 
+- Hide More when no continuation cursor is available; disable it while a request is pending. Mixed home/category feeds can continue while either stream has a cursor. Apply the same behavior to source, search, and Related lists.
 - Image-card summaries use near-white text and links over a stronger bottom gradient: opaque stone at the bottom, 85% opacity at 35% of image height, fading to transparent at 70%. Keep the upper image visible, the two-line clamp and summary-before-tags ordering.
 - Home and category feeds share one panel: a single column below `lg`, and two columns at `lg` and above. Source feeds use the same columns. Search results stay one column. Home and category batches request one trending article and four latest articles, with IDs from the other feed in `exclude_ids`. Home sends no category filter. A saved or submitted topic or tag list is added to those home requests. De-duplicate by article ID in the UI. If a feed is exhausted, fill the remaining batch from the other feed. One `More` button loads the next batch.
 - Keep the existing two-day trending and seven-day latest date windows and category filters. Source feeds show latest items only, selected and checked by the source ID, five per page. Start with English news; on an empty API data array, omit content type, then omit language if still empty. Source pages separate the publisher snapshot and feed with a Nuxt USeparator instead of the Latest news heading.

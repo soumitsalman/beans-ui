@@ -97,6 +97,7 @@ const emit = defineEmits<{
         color="neutral"
         variant="outline"
         :loading="loading"
+        :disabled="loading"
         @click="emit('load-more')"
       />
     </div>

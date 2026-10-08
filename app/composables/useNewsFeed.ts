@@ -1,4 +1,4 @@
-import { computed, onMounted, onScopeDispose, ref, unref } from 'vue'
+import { computed, onMounted, onScopeDispose, reactive, ref, unref } from 'vue'
 import type { MaybeRef } from 'vue'
 import type { NewsCategory } from '~/settings/categories'
 import type { BeansPageParams, NewsArticle } from '~/types/news'
@@ -45,23 +45,23 @@ export function useNewsFeed(
   const error_message = ref<string | null>(null)
   const active_category = computed(() => unref(category))
   const active_source_id = computed(() => unref(source_id))
-  const trending_stream: FeedStream = {
+  const trending_stream = reactive<FeedStream>({
     cursor: null,
     exhausted: false,
     ids: new Set(),
     from: ''
-  }
-  const latest_stream: FeedStream = {
+  })
+  const latest_stream = reactive<FeedStream>({
     cursor: null,
     exhausted: false,
     ids: new Set(),
     from: ''
-  }
+  })
   const source_cursor = ref<string | null>(null)
   const source_exhausted = ref(false)
   const can_load_more = computed(() => active_source_id.value
-    ? !source_exhausted.value
-    : feed_mode === 'trending' ? !trending_stream.exhausted : !trending_stream.exhausted || !latest_stream.exhausted)
+    ? Boolean(source_cursor.value)
+    : feed_mode === 'trending' ? Boolean(trending_stream.cursor) : Boolean(trending_stream.cursor || latest_stream.cursor))
   let _generation = 0
   let _initialising = false
 

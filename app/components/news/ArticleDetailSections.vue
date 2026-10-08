@@ -443,6 +443,7 @@ function articleTime(article: NewsArticle): number {
           color="neutral"
           variant="outline"
           :loading="loading_related"
+          :disabled="loading_related"
           @click="emit('load-more-related')"
         />
       </div>

@@ -143,6 +143,7 @@ useSeoMeta({ robots: 'noindex, follow' })
 
     <ArticleSection
       v-if="has_searched"
+      wide_grid
       title="Search results"
       :articles="articles"
       :loading="loading"

@@ -1,4 +1,4 @@
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import type { HomeDiscoveryCriteria } from '#shared/homeDiscovery'
 import { HOME_DISCOVERY_COOKIE } from '#shared/homeDiscovery'
 import { normaliseTagInput } from '~/utils/formatters'
@@ -17,6 +17,9 @@ export function useHomeDiscovery() {
     path: '/',
     sameSite: 'lax'
   })
+  const route = useRoute()
+  const router = useRouter()
+  const nuxt_app = useNuxtApp()
   const { trackEvent } = useGoogleAnalytics()
   const search_form = reactive({
     query: '',
@@ -50,13 +53,64 @@ export function useHomeDiscovery() {
     search_form.tags = criteria.tags.join(', ')
   }
 
-  async function start(): Promise<void> {
-    const saved = savedCriteria()
-    if (saved) {
-      applyForm(saved)
-      active_criteria.value = saved
+  function routeQuery(): { present: boolean, value: string } {
+    const raw_query = route.query.q
+    if (Array.isArray(raw_query)) return { present: true, value: String(raw_query[0] ?? '').trim() }
+    return {
+      present: raw_query !== undefined && raw_query !== null,
+      value: typeof raw_query === 'string' ? raw_query.trim() : String(raw_query ?? '').trim()
     }
-    if (import.meta.server || useNuxtApp().isHydrating) await feed.initialiseFeed()
+  }
+
+  function routeCriteria(): HomeDiscoveryCriteria | null {
+    const query = routeQuery()
+    if (query.present) {
+      if (!query.value) return null
+      return { query: query.value, tags: savedCriteria()?.tags ?? [] }
+    }
+    return savedCriteria()
+  }
+
+  function criteriaSignature(criteria: HomeDiscoveryCriteria | null): string {
+    return criteria ? `${criteria.query}\0${criteria.tags.join(',')}` : ''
+  }
+
+  function setActiveCriteria(criteria: HomeDiscoveryCriteria | null, sync_cookie: boolean): void {
+    if (criteria) applyForm(criteria)
+    else {
+      search_form.query = ''
+      search_form.tags = ''
+    }
+    active_criteria.value = criteriaActive(criteria) ? criteria : null
+    if (sync_cookie) criteria_cookie.value = active_criteria.value
+  }
+
+  async function syncRouteCriteria(refresh: boolean): Promise<void> {
+    const criteria = routeCriteria()
+    const previous_signature = criteriaSignature(active_criteria.value)
+    const next_signature = criteriaSignature(criteria)
+
+    setActiveCriteria(criteria, routeQuery().present)
+    if (refresh && previous_signature !== next_signature) await feed.refreshFeed()
+  }
+
+  async function writeHomeRoute(query: string): Promise<void> {
+    _syncing_route = true
+    try {
+      await router.replace({ query: query ? { q: query } : {} })
+    } finally {
+      _syncing_route = false
+    }
+  }
+
+  let _syncing_route = false
+  let _last_route_query: string | null | undefined
+
+  async function start(): Promise<void> {
+    void syncRouteCriteria(false)
+    const query = routeQuery()
+    _last_route_query = query.present && query.value ? query.value : null
+    if (import.meta.server || nuxt_app.isHydrating) await feed.initialiseFeed()
     else void feed.refreshFeed()
   }
 
@@ -69,6 +123,7 @@ export function useHomeDiscovery() {
     trackEvent('search_submit', { has_topic: Boolean(criteria.query), tag_count: criteria.tags.length })
     active_criteria.value = criteriaActive(criteria) ? criteria : null
     criteria_cookie.value = active_criteria.value
+    await writeHomeRoute(criteria.query)
     await feed.refreshFeed()
   }
 
@@ -78,8 +133,33 @@ export function useHomeDiscovery() {
     search_form.tags = ''
     active_criteria.value = null
     criteria_cookie.value = null
+    await writeHomeRoute('')
     if (had_active) await feed.refreshFeed()
   }
+
+  watch(
+    () => {
+      const query = routeQuery()
+      return `${query.present}\0${query.value}`
+    },
+    () => {
+      const query = routeQuery()
+      const previous_query = _last_route_query
+      _last_route_query = query.present && query.value ? query.value : null
+      if (_syncing_route) return
+
+      if (previous_query && !query.present) {
+        const saved = savedCriteria()
+        const criteria = saved?.tags.length ? { query: '', tags: saved.tags } : null
+        const previous_signature = criteriaSignature(active_criteria.value)
+        setActiveCriteria(criteria, true)
+        if (previous_signature !== criteriaSignature(criteria)) void feed.refreshFeed()
+        return
+      }
+
+      void syncRouteCriteria(true)
+    }
+  )
 
   return {
     search_form,

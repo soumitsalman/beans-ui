@@ -1,5 +1,11 @@
 # Beans UI Working Log
 
+## 2026-10-08 — Home search URL synchronization
+
+- Synchronized the home topic with the `/` route's `q` parameter. Find uses route replacement with encoded query text, direct and client-side query navigation restores the input and existing home feed rendering, and the route topic overrides the saved topic while preserving saved tags.
+- Clear and empty Find remove `q`, clear saved criteria, and restore the unfiltered feed. Home responses with an active `q` are now private and uncached alongside cookie-backed discovery responses.
+- Verification: focused ESLint, production build, discovery integration, analytics checks, and whitespace checks pass, including SSR query restoration, saved-tag preservation, API query propagation, URL encoding, and private query responses. Nuxt typecheck remains blocked by the existing `node:crypto` typing errors in `server/utils/proxyApi.ts` and `server/plugins/page-cache.ts`.
+
 ## 2026-10-06 — Subtle gloss and compact home search
 
 - Added shared Tailwind surface/control highlights and Nuxt UI theme overrides for cards, panels, dialogs, header, inputs and filled/outlined controls while keeping the coffee palette and image overlays.
@@ -47,6 +53,11 @@
 
 - Home, category, and source feeds use `ArticleSection` `wide_grid`: one column below `lg`, two columns at `lg` and above. Search keeps the stacked list. Article Related rows use the same breakpoint, with a one-pixel divider between cells at `lg`.
 - Verification: focused ESLint passed. Browser measurements: home was two columns at 1280px and 1024px, and one column at 1023px, 768px, and 320px, with the fifth card alone in the first column. Category was two columns at 1280px and one at 768px. Source was two columns at 1280px and one at 768px and 320px. Related rows were two columns at 1280px with one-pixel dividers, and one column at 768px and 320px. Search results stayed a single stacked list at 1280px. None of those views overflowed horizontally. graphifyy is not installed; direct component inspection was used.
+
+## 2026-10-08 — Two-column search results from medium screens
+
+- Search results now use the shared `ArticleSection` `wide_grid` layout: one column below `md`, and two columns at `md` and above. The shared feed breakpoint was aligned to `md` for home, category, source, and search feeds.
+- Verification: home and category routes were checked to confirm they already use `wide_grid`; graphifyy code-only extraction confirmed the shared `ArticleSection` relationship. Focused ESLint passed. Nuxt typecheck remains blocked by the existing `node:crypto` typing errors in `server/utils/proxyApi.ts` and `server/plugins/page-cache.ts`.
 
 ## 2026-10-05 — Bing Webmaster verification
 

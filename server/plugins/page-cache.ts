@@ -6,8 +6,12 @@ export default defineNitroPlugin((nitro_app) => {
   nitro_app.hooks.hook('render:response', (response, { event }) => {
     response.headers ||= {}
     const status = response.statusCode || getResponseStatus(event)
-    const pathname = getRequestURL(event).pathname
-    const discovery_active = pathname === '/' && homeDiscoveryCookieActive(getCookie(event, HOME_DISCOVERY_COOKIE))
+    const request_url = getRequestURL(event)
+    const pathname = request_url.pathname
+    const discovery_active = pathname === '/' && (
+      homeDiscoveryCookieActive(getCookie(event, HOME_DISCOVERY_COOKIE))
+      || Boolean(request_url.searchParams.get('q')?.trim())
+    )
     if (pathname === '/search' || discovery_active || status !== 200) {
       response.headers['cache-control'] = 'private, no-store'
       return

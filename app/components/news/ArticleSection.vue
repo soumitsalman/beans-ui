@@ -4,7 +4,7 @@ import type { NewsArticle } from '~/types/news'
 import ArticleCard from '~/components/news/ArticleCard.vue'
 
 const STACKED_LIST_CLASS = 'space-y-3'
-const WIDE_GRID_CLASS = 'grid grid-cols-1 items-start gap-3 lg:grid-cols-2'
+const WIDE_GRID_CLASS = 'grid grid-cols-1 items-start gap-3 md:grid-cols-2'
 
 const props = withDefaults(defineProps<{
   title?: string

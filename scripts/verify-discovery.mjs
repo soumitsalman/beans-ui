@@ -214,6 +214,16 @@ try {
   _fail_feed = false
   _fail_article = false
 
+  const query_home_cookie = `beans_home_discovery=${encodeURIComponent(JSON.stringify({ query: 'old-topic', tags: ['startups'] }))}`
+  const query_home = await fetchPage('/?q=search%20query', { headers: { cookie: query_home_cookie } })
+  assert.equal(query_home.response.status, 200)
+  assert.equal(query_home.response.headers.get('cache-control'), 'private, no-store', 'A home q query is not publicly cached')
+  assert.match(query_home.html, /search query/)
+  assert.equal((query_home.html.match(/<article(?:\s|>)/g) || []).length, 5)
+  const query_home_requests = REQUESTS.filter(request => request.path === '/private/articles/unique' && request.query.q === 'search query' && request.query.tags === 'startups' && !request.query.categories)
+  assert.ok(query_home_requests.some(request => request.query.sort === 'trend' && request.query.limit === '1' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A home q query keeps the trending request and saved tags')
+  assert.ok(query_home_requests.some(request => request.query.sort === 'recent' && request.query.limit === '4' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A home q query keeps the latest request and saved tags')
+
   const secure_page = await fetchPage('/about-beans', { headers: { 'x-forwarded-proto': 'https' } })
   assert.equal(secure_page.response.headers.get('strict-transport-security'), 'max-age=31536000')
   assert.equal(secure_page.response.headers.get('x-content-type-options'), 'nosniff')
@@ -318,6 +328,7 @@ try {
   assert.ok(personalized_requests.some(request => request.query.sort === 'recent' && request.query.limit === '4' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A saved home search keeps the latest request')
   const personalized_after = personalized_requests.length
   assert.ok(personalized_after > personalized_before, 'A saved home search requests the category mix with the topic and tags')
+
   const personalized_again = await fetchPage('/', { headers: { cookie: discovery_cookie } })
   assert.equal(personalized_again.response.headers.get('cache-control'), 'private, no-store')
   assert.equal(REQUESTS.filter(request => request.query.q === 'battery' && request.query.tags === 'startups' && !request.query.categories).length, personalized_after, 'Returning home reuses the cached discovery feed')

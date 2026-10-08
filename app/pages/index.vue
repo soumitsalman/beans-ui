@@ -86,7 +86,6 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
       </div>
     </UForm>
 
-    <USeparator />
     <ArticleSection
       wide_grid
       :articles="articles"

@@ -4,404 +4,166 @@ This document defines implementation acceptance for the mobile-first UI. It does
 
 ## Success criteria
 
-- Minimalist reader UI: Now shows a Discover Trending News heading, a preference box, a divider, t…25686 tokens truncated…t=recent` over seven days. Removed client story/article deduplication and headline limit expansion; both feeds use independent cursors, fetch 20, and reveal five items at a time with stable time windows.
-- Removed feed article-detail trend and similar-article requests. Feed trends remain authoritative; private story detail supplies counts and unpaginated private propagation supplies all source previews. Plural and singular API count names normalize to the UI fields; authoritative zero counts are preserved. Existing Espresso confidence enrichment remains.
-- Updated feed routing and verification documentation. Files: `app/composables/useBeansApi.ts`, `app/composables/useNewsFeed.ts`, `app/types/news.ts`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
-- Verification: ESLint, Nuxt typecheck, production build, and temporary fixture checks passed for request routes/filters/time windows, five-item reveals, independent cursor continuation, repeated-cursor termination, complete source enrichment, counts, trend preservation, story-less items, and enrichment failure fallback. Build reports Browserslist age and plugin sourcemap warnings. Live API and browser checks were not run.
+- Minimalist reader UI: Now shows a Discover Trending News heading, a preference box, trending news across categories and More, with no product guide or RSS/archive promotions. About includes How Beans works and sharing guidance; `/methodology` redirects to `/about-beans#how-it-works`. Footer excludes Archive, RSS and How it works.
+- Footer Feedback is a button that opens the same Tally form as the header Help improve Beans control; no Contact footer link remains.
+
+- Discovery: initial HTTP HTML contains home/category headlines, article summaries and source identity with one preferred Beans canonical. Hydration restores cursors, exclusion IDs and date windows without repeating initial fetches. Only the Fly duplicate redirects permanently; localhost and API proxy paths remain usable.
+- Story sharing offers Beans coverage and the original publisher as distinct destinations; story-less cards retain original sharing. Every option uses the selected destination and resets copy state when changing it.
+- The removed `/archive` route returns 404 and is absent from categories, sitemap and llms links. Sitemap and RSS use existing presentation proxies, contain only useful entries, escape XML, and return temporary failures rather than caching an empty response on outages.
+- Confirmed missing resources return 404/410; temporary upstream failures return 503 with Retry. Internal search is noindex,follow. Page-specific previews and structured data describe visible content and retain original publisher attribution.
+- Growth events omit search text and outbound query strings, page views fire once on initial load and navigation, and inbound campaign parameters remain attributable. About and sharing controls work at 320px.
+
+## Discovery verification cases
+
+- GEO report regression gates: successful HTML declares CSP, frame protection, nosniff, referrer and permissions policies; HTTPS requests also receive HSTS. Public HTML has an ETag with mandatory revalidation, while `/search`, errors, and a home response with an active `beans_home_discovery` cookie are no-store. Conditional requests can return 304; the public feed cache is limited to 30 seconds and never caches discovery searches or failures. Discovery searches use a separate 12-hour cache.
+- The first focusable link skips to the main content. All initial images reserve dimensions; the header uses responsive 24/48/72px WebP images. Now contains the Discover Trending News heading, preference box and news feed; explanatory sections, signal definitions and a sharing checklist live on About. The topic and tag fields stack below `lg` and sit side by side at `lg` and above. The tag field has no visible label.
+- Original article attribution preserves supplied author and publication time. Schema cites the original work; no author bio, modification date, review, rating, statistic or public profile is invented. Product identity (Beans) remains distinct from its provider (Project Cafecito).
+- Footer Privacy/Terms URLs must match the verified official Cafecito destinations, while Feedback opens the existing Tally form. Compare all 26 GEO recommendations with `GEO-AUDIT-VERIFICATION.md`; external reputation/editorial work must not be marked fixed by code.
+- Browser analytics gates: each route gets one page view after its own metadata is ready; same-path query navigation counts once; titles never inherit from the prior page. Publisher clicks only come from marked original-reporting/source links. Observe actual share and search events with the fixture collector, including clipboard-denied fallback.
+
+| Case | Expected guard / check |
+| --- | --- |
+| Flat surfaces | Shared panels, modals, inputs and buttons retain restrained gloss without inset highlights or drop shadows. Home has spacing between its search form and feed, with no divider. |
+| More exhaustion | More is hidden when all applicable cursors are null; one remaining mixed-feed cursor keeps continuation available. Source, search and Related hide More on their final cursor. Null/repeated cursors block further requests. |
+| SSR and hydration | HTTP HTML has five home or category articles; no extra initial feed requests on hydration; More retains opposite-stream exclusions, date windows and cursors. |
+| Home discovery | Home uses the category mix with no `categories`: one `sort=trend` article from two days and four `sort=recent` articles from seven days. A session cookie or Find with a topic or tags adds those params to both requests. `score_threshold` from `NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD` (default `0.6`) is sent only with `q`. The unique route rejects `search_threshold` and rejects `score_threshold` without `q`. An identical discovery request inside 12 hours is served from the discovery cache. An upstream failure is requested again. A home cookie restores the topic and tags and is `private, no-store`; home without the cookie stays publicly revalidated. Clear, and an empty Find, load the unfiltered mix. `/search` sends that same threshold only when `q` is non-empty. |
+| Resource errors | API 404/410 maps to page 404/410; upstream 500/timeout maps to retryable page 503, not a missing-resource result. |
+| Host consolidation | Fly hostname returns 308 preserving path/query; preferred host and localhost do not redirect. |
+| Discovery routes | Removed archive route returns 404 and is absent from discovery links; sitemap/RSS have valid XML and correctly escaped URLs/text. |
+| Sharing and analytics | Coverage mode shares Beans; original mode retains publisher UTM overrides. Copy/social actions send one share event; search event records filter presence only; publisher events contain hostname only. |
+| Mobile and previews | Home, About, category, source, detail and share modal have no 320px overflow; plain HTML contains matching title/OG/Twitter metadata and parseable JSON-LD. |
+| Social preview asset | Shared `/beans-banner.png` fallback decodes as a PNG exactly 1200 × 630 pixels; server-rendered Open Graph and Twitter image URLs resolve to it, with the complete banner visible. |
+
+- Home, category, and source routes render one article feed: one column below `lg`, two columns at `lg` and above. Search results stay one column at every width. Home discovery results remain in the home panel and follow its columns. Home and category batches each load one trending result and four latest results, pass opposite-feed article IDs in `exclude_ids`, de-duplicate IDs, fill from the remaining feed when one is exhausted, and retain the two-day/seven-day date windows. Home sends no categories. A saved or submitted topic or tag list is added to the home requests, with `score_threshold` from `NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD` (default `0.6`) only when the topic is non-empty. Clear, and an empty Find, delete the cookie and load the unfiltered mix.
+- Source pages render a publisher snapshot with its existing favicon overlapping the card top edge, details below, and no separate banner, a scheme-free URL label with a link icon, and latest source articles in five-item cursor pages without trending interleaving. Requests use `sources={route source ID}` and one `languages` query key per English locale; Empty API data triggers another request without `content_type`, then without `languages` if still empty; stop on the first non-empty response. Each attempt retains the source ID, sort, limit, and cursor. Returned articles must match the route source ID. A Nuxt USeparator replaces the Latest news heading.
+- Article cards place a prominent source name and muted caption-size publish date on one row, with category below; confidence, ideology, and trend icons form a right-aligned row in that order with equal small dimensions. Cards show an optional image, up to two entities and regions, and up to five distinct other-publisher avatars without a heading. The footer places avatars and a positive related count on the left and positive mentions, comments, likes, and a share button on the right. Ideology shows its arrow plus small L/R character. Confidence tooltips omit the Espresso signal suffix. Signal tooltips retain their labels and colors; missing confidence and ideology are omitted.
+- Article cards route to `/articles/{article.id}` only when `story_id` exists; otherwise the article URL remains the destination. Source links appear only when a source ID exists. Image URLs remain direct outbound hot links.
+- Article detail loads `/articles/{id}` and batch confidence by article ID. It has no Back to news button. Its header reuses the card's source/date row, colors, and signal row; the publisher article title opens in a new tab, followed immediately by the existing three-line summary and then region/entity tags. If the summary is absent, tags follow the title; if tags are absent, no empty tag row remains. Coverage drains `/private/stories/{story_id}/articles` pages of 100, retains the first and last chronologically, and represents every middle article in responsive date-range chips with bounded favicon samples. A selected multi-source chip opens source favicons in an open orbit or wreath around the selected cluster's article count, paging above twelve unique sources; single-source groups render a favicon/date without a chip or counts. Related items reuse the card source/date row. Related uses the same story endpoint with a separate five-item cursor and the existing article-row presentation, in one column below `lg` and two columns at `lg` and above.
+- Search uses full-width Topic and comma-separated Tags/Sources controls, preserves all three in URLs, maps source domains to `domains`, sends `score_threshold` from `NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD` (default `0.6`) when the topic is non-empty, and keeps five-item pagination while rendering the shared article card.
+- Category umbrella mapping keeps every underlying value exactly once: World & Politics uses slug `world-and-politics`, includes the former Security & Defense values, and excludes society-focused values now assigned to Culture & Lifestyle. No separate Security & Defense group remains.
+- Existing theme, header, category mapping, footer, date/count formatting, confidence labels, source/favicons fallback, referral parameters, and server-only API credentials remain intact.
+- At 320px and common mobile widths, cards and controls remain usable with no page-level horizontal overflow.
+
+- Glossy surfaces use shared Tailwind utilities and Nuxt UI theme overrides; coffee colors, text contrast, image-summary overlays, focus rings and disabled states remain legible.
+- Home search has only the visible query field, with Find inline at all widths and Clear embedded in the input. At 320px, 640px, 767px, 768px and 1280px, no text/control overlap or horizontal page overflow occurs. Find is icon-only below 768px and text plus icon at/above 768px; both icon-only actions have accessible labels.
+- Enter and Find retain existing submission/loading behavior. Clear retains its disabled predicate and clears topic, saved tags and cookie through the existing handler. Saved tags still filter home even though their input is hidden; `/search` retains topic, tags and sources.
+
+## Failure cases to guard against
+
+- Home/category client navigation must render the existing article skeletons while the initial feed is pending. Exactly one category tab, including Now, must match the router's current path on the first click and remain selected after loading. Switching categories quickly, returning home, and browser Back/Forward must remount the correct path's feed without late responses replacing it. Returning home with a discovery cookie restores that search instead of trending. Direct requests must still contain server-rendered articles, and hydration must not repeat the initial feed fetch.
+
+- Same-day coverage must render one timeline group/date at every breakpoint, deduplicate publisher icons and retain every article in its expanded orbit. Compare full UTC calendar dates including year; missing/invalid timestamps must not collapse as Date unknown. Empty coverage retains its empty state, and different dates retain the normal first/middle/last layout.
+- Article snapshots must not render the extra attribution/publication paragraph or a share-modal trigger. Six direct share actions belong in the right-aligned divided footer, fit at 320px and retain successful-copy/event behavior and selectable-URL fallback on clipboard failure. Feed-card share modals must still offer both destinations.
+- Image-summary text and Markdown links must use the lighter image treatment. The gradient must cover the text area without blocking image-link clicks; image-free summaries and detail summaries retain their normal colors.
+- Card summaries must appear at most once, clamp to two lines, and precede entity/region tags. Missing or whitespace-only summaries leave no blank block. Image failure, including failure before hydration, moves both summary and tags below the title; summary Markdown links must not be nested inside the image link.
+
+- Coverage chips count unique sources; the expanded orbit centers the selected group's article count, including repeated publishers. Up to eight articles use an open orbit; nine or more use a wreath. Source identity deduplicates favicons, no-ID sources do not create invalid links, and failed/missing favicons retain the system fallback. Wreath pages contain at most twelve sources and collectively include every unique source. Changing groups resets the orbit page; coverage changes close the selection. Single-source groups retain their favicon/date presentation.
+- Avatar-group children must be direct VNodes so Nuxt's default styling, overlap, ordering, and maximum behavior apply. Card and coverage groups have no visual overrides on UAvatarGroup. Related source links must not be nested inside publisher article links.
+
+- One feed's exclusion set omits previously loaded IDs, duplicate articles appear, or a feed's cursor repeats and causes an infinite fetch loop.
+- One feed's failure removes already loaded cards, retry loses its cursor, or a failed stream is incorrectly marked exhausted.
+- A category/source route change lets a stale request overwrite the new page; source filters or category filters leak into another feed. A source-page request uses `domains` or omits `sources`, or returned articles include another source ID.
+- Missing article/source IDs create invalid internal links; missing or failed images/favicons leave broken media.
+- Missing confidence or ideology renders a fabricated value, numeric trend scores appear, social counts show zero, or a source count is confused with `trend.related`.
+- Coverage and Related share or overwrite cursor state, either uses the article-similar route instead of the story-articles route, repeated articles show twice, a failed Coverage page discards earlier pages, or More remains after the related cursor ends.
+- Publisher enrichment follows a cursor, requests more than 50 story articles, includes the card article's source, or repeats a source among the selected favicons.
+- Share options use a different destination from the selected coverage/original mode; original mode fails to replace existing `utm_source`/`utm_medium`, loses other query parameters or fragments; neither destination is usable but the trigger remains visible.
+- A large Coverage group renders unbounded favicons in one orbit, a breakpoint displays too many chips, a source is inaccessible through orbit paging, the center counts sources instead of articles, or the detail panel pushes the page horizontally beyond 320px.
+- The title links to a story ID instead of the article ID, or a story-less article stops opening its publisher URL.
+- Search loses source-domain filters or its existing `q`, normalized `tags`, news-only, relevance-threshold, and cursor behavior.
+- Multi-value Beans filters arrive as one comma-containing query value instead of separate repeated query keys, or the English `languages` values omit `en`.
+- External links lose existing query strings, hashes, or UTM values; API keys appear in client requests or runtime configuration.
+
+## Acceptance scenarios
+
+| Scenario | Given | When | Then |
+| --- | --- | --- | --- |
+| Mixed first batch | Trending and latest each return several articles | Category loads | Requests are sequential: trending limit 1, then latest limit 4 with the trending IDs excluded; five unique cards appear. |
+| Cross-feed exclusion | Multiple More batches are loaded | Each stream requests another page | Trending excludes IDs already loaded from latest; latest excludes IDs already loaded from trending; dates and category filters stay fixed. |
+| Feed exhaustion | Trending or latest returns fewer items or ends | More is clicked | The other stream fills remaining slots when possible; More disappears when both streams are exhausted. |
+| Cursor safety | A response returns an empty page, null cursor, or repeated cursor | A feed loads | Pagination terminates or advances safely without duplicate cards or an infinite loop. |
+| Source snapshot | A valid source ID is opened | Source page loads | `/sources/{id}` metadata is fetched; `/private/articles/unique?sources={id}` uses `sort=recent` and one repeated `languages` value per English locale, returns articles verified against the route source ID, and pages five at a time; a bare `url` is normalized to HTTPS for the link and displayed without the scheme. |
+| Source filter fallback | Source API data is empty with English news filters | A source page batch loads | Retry without content type, then without language only if still empty; stop at the first non-empty data array, cap attempts at three, retain source/sort/limit/cursor, use the final response cursor, and show the existing empty state if all attempts are empty. Errors use Retry without relaxing filters further. Render a divider above the feed with no Latest news heading. |
+| Card layout | Home and category cards have trend, confidence, ideology, entities, and regions, with and without images | Cards render at 320px and wider widths | Source, date, and category stack on the left; confidence, ideology, and trend align on the right in one row; title, image, and badges follow. Up to two entity and two region tags overlay a usable image or appear below the title otherwise. |
+| Card footer | Articles have different combinations of publisher sources and trend counts | A feed card renders | Up to five unique other-source favicons and the positive related count appear on the left; positive mentions, comments, likes, and share control align on the right; zero and missing counts are omitted and footer groups wrap without page overflow. |
+| Card destinations | Articles with and without `story_id`, with/without `source.id` | User clicks title, publisher, avatar, or image | Story-backed article opens `/articles/{article.id}`; story-less article opens its URL; source links require an ID; image opens its image URL. |
+| Publisher enrichment | The first 50 story articles include repeated and primary sources | A feed card enriches | One `/private/stories/{story_id}/articles?limit=50` request is made without cursor continuation; up to five unique `source.id` values other than the card article's source appear as favicons. |
+| Share modal | An article has coverage and/or a valid publisher URL with existing UTM, other query parameters, and a fragment | Each destination and share option is selected | Six circular controls use the selected URL. Coverage mode shares the canonical Beans article URL; original mode replaces publisher UTM values with Beans/referral while preserving other query data and fragments. Story-less articles offer original sharing only. Copy failure leaves a selectable URL; destination changes and modal reopening clear copy status. |
+| Confidence batch | Several article IDs have mixed confidence data | Feed enrichment completes | One comma-separated batch request uses article IDs; available labels render and missing results are omitted. |
+| Article detail | Article has a publisher URL, summary, signals, and a `story_id` | Detail route loads at 320px and wider widths | Source/date and signals occupy the card's positions; title opens the publisher URL in a new tab; the unchanged three-line summary follows immediately. Coverage drains `/private/stories/{story_id}/articles` in 100-item pages without `languages` or `content_type`; Related loads five from the same story endpoint and advances its own cursor with More while retaining `languages` and omitting `content_type`, including when a page has no articles but still has a next cursor. |
+| Coverage density | Article has 333 similar articles | Detail renders at small, medium, and extra-large widths; a middle group is opened | First and last remain visible; the middle is partitioned into 1, up to 3, or up to 5 chips respectively. Each chip shows at most 1, 2, or 3 distinct favicons; selecting a multi-source chip reveals unique source favicons around the selected group's article count. Up to eight articles use an open orbit, larger groups use a wreath, and more than twelve sources page without losing sources. Closing/reopening or switching groups resets the source page. Single-source groups retain a favicon/date without a chip. The page has no horizontal overflow at 320px. |
+| Search preservation | Query, tags, and a `sources` URL parameter are supplied | Search runs | The URL restores all three fields; each tag, source domain (`domains`), and English locale is sent under a repeated query key, publisher-ID `sources` is omitted, a non-empty topic sends `score_threshold` from `NUXT_PUBLIC_DEFAULT_SCORE_THRESHOLD` (default `0.6`), and results use the shared article cards. Comma lists trim and deduplicate entries; source-only searches work and More/retry retain the domains. Topic fills the container; Tags and Sources stack below md and share two columns at md and above. |
+| Category umbrella mapping | Category groups and the documented Category Map are loaded | The category map is checked | `world-and-politics` is labeled World & Politics and contains the three former Security & Defense values; rights, inclusion, identity, LGBTQ, migration, accessibility, and civil rights/society values are in Culture & Lifestyle; every value appears exactly once and Security & Defense is absent. |
+| Feed columns | Home, category, source, search, and an article Related list are rendered below `lg` and at `lg` or wider | The article list is measured | Home, category, source, and Related stay one column below `lg` and use two columns at `lg` and above. Search results stay one column. A short last row leaves the final item in one column. No horizontal page overflow. |
+| Mobile layout | Home, category, source, search, and article routes are rendered at 320px | Pages are inspected | No horizontal page overflow; links, labels, images, and More controls remain operable. Feeds and Related stay one column. |
+| Proxy boundary | API calls are made in browser and server contexts | Requests are inspected | Browser calls target same-origin Nuxt proxies; API credentials remain server-only. |
+
+## Verification record
+
+### Single-day coverage timeline — 2026-10-03
+
+- Focused ESLint, Nuxt typecheck, production build, discovery HTTP regressions and whitespace checks pass. Calendar-date checks cover UTC offsets, midnight/year boundaries, singleton coverage and empty/missing/invalid dates.
+- Mock-backed browser checks: 36 articles from seven publishers on Oct 2 render one timeline group/date with five deduplicated icons plus +2. Expansion retains all 36 articles/seven sources. No horizontal overflow at 320px/1280px (305px/1265px document/scroll widths). A fixture spanning Oct 2–3 retains the normal first/latest endpoints and middle groups. Fixture modes use `BEANS_COVERAGE_FIXTURE=same-day` or `multi-day` with the existing serve script. Viewport restored.
+
+### Direct article-detail sharing — 2026-10-03
 
-Code snapshot SHA-256: `4076e5ccb56410e154a89e9a8cac40555e581e053822cc4f859bad9a91349ee6`
+- Focused ESLint, Nuxt typecheck, production build, discovery HTTP regressions and whitespace checks pass. Initial detail HTML includes direct Copy/LinkedIn controls and omits the extra attribution paragraph; original credit and publication date remain in JSON-LD.
+- Mock-backed browser inspection at 320px confirms six right-aligned actions below the card divider and matching 305px document/scroll widths. Clipboard-denied fallback exposes the correct selectable coverage URL without overflow or a false copy event; X emits one share_coverage event. Feed-card modal retains both destination choices and correct publisher referral parameters/fragments. Viewport restored.
 
-Hash inputs: 45 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+### Stronger image-summary contrast — 2026-10-03
 
-## 2026-09-10
+- Focused ESLint, Nuxt typecheck, production build, existing discovery HTTP regressions and whitespace checks pass. At 320px, browser computed styles confirm the stronger 0%/35%/70% gradient stops and matching near-white summary/link colors. The gradient has no pointer events; summaries remain 40px/two lines, fallback cards retain normal colors, and document/scroll widths match at 305px. Viewport restored afterward.
 
-- Documented the selected Espresso confidence treatment: end-aligned metadata badges labelled only `High`, `Medium`, or `Low`, with an Espresso-signal tooltip and omission for null, missing, or unavailable data. The data chain is `/events/{event_id}/signals` → `/signals/{first_signal_id}` → `data.confidence`.
-- Moved story count ownership in the design: the story metadata row has no article/source counts; Coverage owns `N articles` and Propagation owns `N sources`.
-- Files: `design/DESIGN.md`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
+### Two-line card summaries — 2026-10-03
 
-## 2026-09-09T13:55:41Z
+- Focused ESLint, Nuxt typecheck, production build, discovery HTTP regressions and whitespace checks pass. The shared Markdown renderer retains escaped HTML and attributed links.
+- Mock-backed browser inspection at 320px confirms a long summary with 180px full content height displays at 40px (two lines), above entity/region tags. Image cards overlay it; image-free and failed-image cards put it below the title. Missing summaries render no summary block. Summary links are not nested inside image anchors. Pre-hydration image failure is recovered on mount. Page document/scroll widths match at 305px; viewport restored afterward.
 
-- Replaced Search publisher-source lookup with a two-line query/tags form. Line 1 is the semantic `q` input. Line 2 is `UInputTags` (Space/comma/paste commits a tag; backspace on an empty field removes the last tag).
-- Guard: `/articles/search` sends `q` and CSV `tags` only. `sources` is omitted, including leftover `/search?sources=` URLs which are rewritten to `q`/`tags`. `score_threshold=0` is sent only when `q` is non-empty; empty tags omit `tags`. Duplicate/display labels are normalized (lowercase, spaces → `_`).
-- Firefox/WebDriver: empty submit explains a topic or tag is required; Space creates tags; results load; tags-only omits `score_threshold` and `sources`; clearing tags drops `tags` from the URL and request; `/search?q=battery&tags=startups&sources=dead-source` hydrates the form and strips `sources`.
-- Files: `app/pages/search.vue`, `app/composables/useSearchFeed.ts`, `app/utils/formatters.ts`, `app/utils/searchQuery.ts`, `design/DATASOURCES.md`, `design/DESIGN.md`, `design/VERIFICATIONS.md`, `README.md`.
+### Archive removal and page headers — 2026-10-03
 
-Code snapshot SHA-256: `b38cd06f5c57169a37ddb56a665f5d6252f5b1e41b2c920d349fbf25fa1d498c`
+- Lint, Nuxt typecheck, production build, discovery HTTP regressions and whitespace checks pass. The removed `/archive` route returns 404 and is absent from the sitemap; application/server source contains no archive references.
+- Mock-backed browser checks confirm Trending News uses the category H1 classes, Category and archive controls are absent, and the source-page Back to news button is absent. Home, category and source document/scroll widths match at 305px in a 320px viewport. The viewport override was reset. Prior archive verification records below describe removed behavior.
 
-Hash inputs: 44 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+### Minimalist reader update — 2026-10-03
 
-## 2026-09-09T13:53:25Z
+- Lint, Nuxt typecheck, production build, analytics checks and production HTTP fixture regressions pass. Updated assertions confirm five unfiltered trending items on Now, no latest mix or home guide, no footer archive/RSS/methodology links, merged About content and a 301 methodology redirect to About. The existing canonical/schema, resource errors, security/cache and discovery endpoint checks still pass.
+- Mock-backed browser checks: five cards initially and ten after More; the continuation request is `sort=trend`, `limit=5`, `cursor=5`, with no category filter. About has its How Beans works section and sharing checklist; the old methodology URL resolves to `/about-beans#how-it-works`. Footer links contain one About destination. Home and About document/scroll widths are both 305px at a 320px viewport. The viewport override was reset.
+- This update supersedes the earlier home guide/word-count acceptance claims below. The reader UI intentionally keeps long explanatory content on About and useful descriptions in metadata; no new live GEO score or traffic measurement is claimed.
 
-- Added a centralized outbound referral helper so every user-facing link to another site appends `utm_source=beans.cafecito.tech` and `utm_medium=referral`.
-- Guard: relative/internal routes, same-origin hosts (`beans.cafecito.tech` and `NUXT_PUBLIC_SITE_URL`), mailto/tel/javascript, empty hrefs, and malformed URLs are left unchanged. Existing query strings, hashes, and present UTM values are preserved.
-- Wired the helper through story-less article cards, Coverage rows, markdown summary links, header API/Contact, footer Cafecito/Publications/API/Github, and About Beans CTAs.
-- SSR on `/`, `/about-beans`, and `/search` showed those chrome/CTA hrefs with the referral params and left `/`, `/search`, `/about-beans`, and `/categories/*` untouched. Canonical URLs stayed without UTM. Live article/coverage URLs rewritten by the helper kept their paths and gained the params.
-- Verification: helper cases, markdown link rewrite, ESLint, Nuxt typecheck, and production build pass.
+### Traffic and GEO completion — 2026-10-03
 
-Code snapshot SHA-256: `b38cd06f5c57169a37ddb56a665f5d6252f5b1e41b2c920d349fbf25fa1d498c`
+- **Build and regression checks:** `pnpm lint`, `pnpm typecheck`, `pnpm build`, analytics regression checks and discovery HTTP checks pass. Final focused ESLint on the browser fixture and `git diff --check` also pass. Tests use synthetic API data and the production build; they do not claim live upstream behavior.
+- **HTTP:** initial headline/detail/source content, route-specific metadata and parseable JSON-LD, one preferred-origin canonical, Fly 308 with preserved path/query, localhost access, 404/410 versus temporary 503/Retry, search noindex/no-store, sitemap/RSS entries and outage recovery, archive pagination/filter retention, security headers/HSTS, ETag/304, cache isolation, supplied author/publication attribution and reserved image dimensions pass. Both XML responses also parse with Python ElementTree.
+- **Hydration and discovery:** the browser proxy records request paths independently of the upstream cache. Initial hydration makes no client `/api/beans/private/articles/unique` request. Home has five cards, More produces ten; category and source each have five. Article detail is populated; archive has 20 cards then 16 on its next page with the date filter retained. Methodology and search routes render correctly.
+- **Sharing and telemetry:** both coverage and original URLs copy successfully and match the clipboard; original sharing preserves unrelated query values and fragments while replacing Beans referral parameters. Modal reopening clears copy status. Each tested copy or social action emits one matching share event; coverage opens and search submit emit once. Correct source/detail titles reach page views, raw search text is absent from captured events, and publisher clicks are limited to marked links with hostname-only event data. Analytics regression checks cover query navigation and fragment deduplication. Earlier clipboard-denied inspection confirmed a selectable-URL fallback.
+- **Accessibility and layout:** skip activation focuses `main-content` without an extra page view. Home, category, article, source, archive, methodology and search fit a 320px viewport; the share dialog is 288px wide. Category document/scroll widths match at 320px (305px), 768px (753px) and 1280px (1265px). Temporary viewport overrides were reset and fixture servers stopped.
+- **Performance evidence and limits:** responsive logo variants are 174–832 bytes versus the original 1,139,566-byte PNG. Warm local home samples were 33–49 ms with no upstream feed requests. Local LCP/CLS telemetry was observed, but background automation and synthetic navigation distort paint timings; those values are not a field baseline. Real-user INP, field Core Web Vitals, seven-day returns, indexing and traffic improvement require deployment and observation.
+- **GEO scope:** all 26 numbered recommendations are accounted for in `GEO-AUDIT-VERIFICATION.md`: 19 addressed by local changes, 3 partially addressed and 4 external. Missing authoritative author biographies/modification dates, additional genuine profiles, backlinks, original research and authentic reviews are not fabricated. The historical 52/100 score is not a post-change result.
 
-Hash inputs: 44 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+- Coverage source orbit (2026-10-02): focused ESLint, Nuxt typecheck, and production build passed (home API prerender disabled for the build). Browser checks with a temporary local mock API confirmed the eight-article open orbit at 320px, a 331-article wreath with 25 deduplicated sources and all three source pages, disabled final-page navigation, close/reopen reset, and different cluster counts after switching at 768px and 1280px. Document widths were 305px, 753px, and 1265px respectively, with no horizontal page overflow. Missing favicons displayed the existing newspaper fallback. Live API data was not used for these orbit checks.
 
-## 2026-09-09T13:39:12Z
+- Source filter fallback: mocked API checks pass for each fallback stage, early stopping, all-empty results, initial and fallback errors, source/sort/limit/cursor retention, final response cursor, and unchanged caller parameters. Focused ESLint and Nuxt typecheck pass. Source page structure uses USeparator without a Latest news title. Browser layout and live API results remain unverified; no local server was running for the proxy smoke attempt.
 
-- Added Google Analytics 4 (`gtag.js`, `G-KPG0Y2MBV9`) so every client route visit, including SPA navigations, records a `page_view`.
-- Guard: `gtag('config')` does not send a page view; the router hook sends one event per path. Page path and location omit query strings so search text is not sent. The measurement ID is public runtime config (`NUXT_PUBLIC_GA_MEASUREMENT_ID`).
-- Browser: home, `/categories/tech-and-innovation`, `/about-beans`, `/search?q=secret-query`, and a story route each queued a `page_view` for `G-KPG0Y2MBV9`. The Search location was `/search` with no query. `gtag.js` loaded from googletagmanager.com.
-- Verification: ESLint, Nuxt typecheck, and production build pass.
+- Default avatar-group styling: both UAvatarGroup instances use only their existing `max` limits. Browser inspection on the Daily Post Nigeria source page confirms two 32px publisher favicons with Nuxt's default 6px overlap and ring; the document width is 305px at a 320px viewport. A multi-source article coverage page renders 32px favicon groups with the same default styling and no page overflow at 320px.
 
-Code snapshot SHA-256: `395fda6597aee9eab5205d23d7c47b47ed52d3766527cb7f673103dddf4e7d89`
+- Shared card avatar overlap on source pages: focused ESLint passes. On `/sources/1514cb83-468d-5b64-8f27-08d4eb0c4bc9`, the two available other-source favicons are 32px each with 16px overlap and a 48px group width. The same ArticleCard component serves home, category, source, and search feeds. At a 320px viewport, the source page document width is 305px.
 
-Hash inputs: 41 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
+- Card publisher avatar overlap: focused ESLint passes. Browser inspection confirms five loaded favicons in a Nuxt UAvatarGroup at 32px each with 12px overlap and contrasting rings; the group is 112px wide. At a 320px viewport, the page document is 305px wide without horizontal overflow.
 
-## 2026-09-08T19:11:41Z
+- Additional UI updates: focused ESLint and production build pass; Nuxt typecheck exits successfully with the existing Vue Router language-plugin warning. Browser checks confirm the description-free modal, separate neutral share button, L/R signal characters, overlapping UAvatarGroup links, source/date related rows, multi-source timeline expansion, and plain single-source timeline nodes. A six-article story renders three plain middle-source nodes at desktop width and a three-source expandable group on mobile; its document width is 305px at a 320px viewport.
 
-- Added structured Fly-visible observability for route visits and content loading. Server access logs record sanitized request/response paths, methods, status codes, and durations; client telemetry records SPA page views and initial versus more content loads for home, category, search, and story Coverage.
-- Guard: telemetry records paths, surfaces, feeds, actions, outcomes, and item counts only. Query strings, search text, cursors, user identity, and API keys are excluded.
-- Added the telemetry verification case and validated the endpoint locally with a synthetic search path containing a query; the logged path was `/search` only.
-- Verification: `corepack pnpm lint`, `corepack pnpm typecheck`, and `corepack pnpm build` pass.
-
-Code snapshot SHA-256: `f5ec519c68a5fd7f9f21016eb2cb4b5ec65ae3cc16848dd630deec81efdfc61d`
-
-Hash inputs: 38 application and configuration files under `app/`, `server/`, `shared/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-## 2026-09-08T15:47:20Z
-
-- Added a configurable public site origin (`NUXT_PUBLIC_SITE_URL`) and site-wide canonical, Open Graph, and Twitter metadata. Organization and WebSite JSON-LD now identify Beans as a Project Cafecito web property.
-- Added About Beans SoftwareApplication JSON-LD and tightened its product copy: Beans presents source-linked publisher snapshots and discovery context; it does not republish articles or claim to verify their truth.
-- Added runtime `/robots.txt`, `/sitemap.xml`, and `/llms.txt` routes. They use the public site origin, block internal `/api/` routes from crawlers, list stable category pages, and direct programmatic or freshness-sensitive work to the Beans API documentation.
-- Updated README, deployment/example configuration, and verification criteria to document the public crawlability and AI-agent surfaces.
-- Verification: local ESLint passes. The Fly-equivalent production output served `/about-beans`, `/robots.txt`, `/sitemap.xml`, and `/llms.txt`; canonical, Open Graph/Twitter metadata, and `Organization`/`WebSite`/`SoftwareApplication` JSON-LD rendered and parsed. Nuxt typecheck remains blocked by the existing `MarkdownSummary.vue` missing `markdown-it` declaration.
-
-Code snapshot SHA-256: `13bd805ed9c5c343959e651ac4ea62d14dd5e56af3c06c61c08f7935aaad995c`
-
-Hash inputs: 33 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-## 2026-09-08T15:22:57Z
-
-- Rebuilt About Beans around four explicit sections: the publisher-news snapshot, the broader public Beans API, source-correlated discovery, and the Project Cafecito product lineup.
-- Clarified that Beans presents and links to original publisher reporting, while Espresso Publications publishes editorial/opinion analysis derived from market events and signals. Correlation is presented as supporting context rather than proof of truth.
-- Added safe external calls to action for the Beans API, Espresso, and the Cafecito product catalog, plus mobile-first verification criteria.
-- Browser verification: desktop renders the product cards in two columns; 320px renders one column with no page or card overflow. The page exposes one H1, all four requested sections, safe external-link attributes, and no console errors.
-- Static checks: ESLint and the Nuxt production build pass. Nuxt typecheck remains blocked by the existing `MarkdownSummary.vue` error: TypeScript cannot resolve `markdown-it` or its declarations.
-- Files: `app/pages/about-beans.vue`, `design/VERIFICATIONS.md`.
-
-Code snapshot SHA-256: `b1880dc1a22acc7b498d3a07756c4666eac395e3ab82d69b280d0d75cb85233e`
-
-Hash inputs: 30 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-## 2026-09-08T14:23:00Z
-
-- Removed leftover agent debug ingest hooks from the home feed composable (localhost:7380 POSTs).
-- Guard: `useNewsFeed` no longer posts to `/ingest/...` from `fillTopHeadlinesPool`, `fillLatestNewsPool`, or `loadTopHeadlines`.
-- Files: `app/composables/useNewsFeed.ts`.
-
-## 2026-09-08T14:10:00Z
-
-- Story Coverage and Propagation still sent `languages=en` on `/stories/{id}/articles`, which hid non-English members of the same story.
-- Guard: `fetchStoryArticles` calls `/stories/{story_id}/articles` with `limit`/`cursor` only. It does not send `languages` or `content_type`. Home news collections still send `languages=en`.
-- Browser on `/stories/003d0bb7-2f23-52b4-8869-364dc7d0d7bc`: Coverage includes unfiltered members (bears/Rockies, KFC, Rhode Island, WBUR). `More` requested `/api/beans/stories/{id}/articles?limit=5&cursor=…` with no `languages` and no `content_type`. Story heading stayed the API title/summary.
-- Files: `app/composables/useBeansApi.ts`, `design/VERIFICATIONS.md`.
-
-## 2026-09-08T14:05:00Z
-
-- Added a Fly.io multi-stage Dockerfile (pnpm, Nitro `node-server`, listen on 8080) and `.dockerignore`. Runtime image is only `.output`, non-root.
-- Guard: Docker build sets `NUXT_SKIP_HOME_PRERENDER=1` so `/` is not prerendered without Flycast/API secrets. Container maps `CAFECITO_API_KEY` / `BEANS_API_BASE_URL` / `ESPRESSO_API_BASE_URL` onto `NUXT_*` runtimeConfig overrides. `fly.toml` sets `HOST`/`PORT` to match `http_service.internal_port`.
-- Files: `Dockerfile`, `.dockerignore`, `nuxt.config.ts`, `fly.toml`, `design/VERIFICATIONS.md`.
-
-## 2026-09-08T13:54:42Z
-
-- Replaced the ten narrow category tabs with eight general-news groups: Tech & Innovation, Business & Markets, Science & Health, Climate & Energy, World, Politics & Society, Culture & Lifestyle, Security & Defense, and Industry & Infrastructure.
-- Each slug is the kebab-case form of its label. Crypto, blockchain, and DeFi now belong to Business & Markets; the former technology and hardware/robotics/space groups are consolidated under Tech & Innovation; culture and lifestyle are consolidated.
-- Preserved every 119 underlying category value exactly once. Updated DESIGN.md so its Category Map matches the UI taxonomy.
-- Verified category-value set equality against the tracked baseline; lint and production build pass. Nuxt typecheck remains blocked by the existing missing markdown-it module declaration in app/components/news/MarkdownSummary.vue.
-
-Code snapshot SHA-256: `308cb4219247ed299d7c0faa7806b5f2c8395072c7cae4546250343377d007f9`
-
-Hash inputs: 30 application and configuration files under app/, server/, nuxt.config.ts, and eslint.config.mjs; paths and file bytes are hashed in lexical path order.
-
-## 2026-09-08T13:42:00Z
-
-- Beans (and Espresso) API origins were baked in at config-eval time via `import.meta.env`, so a `.env` `BEANS_API_BASE_URL` never reached the server proxy.
-- Guard: server-only `runtimeConfig` reads `process.env.BEANS_API_BASE_URL` / `ESPRESSO_API_BASE_URL` (blank falls back to the fly.dev hosts). Proxies call `useRuntimeConfig(event)` so `NUXT_BEANS_API_BASE_URL` still overrides at runtime. `.env.example` documents the vars.
-- Files: `nuxt.config.ts`, `server/api/beans/[...path].get.ts`, `server/api/espresso/[...path].get.ts`, `.env.example`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
-
-## 2026-09-08T13:40:00Z
-
-- `/stories/{id}` now returns a cleaned `title`, `summary`, and `top_articles`. The UI was still picking the longest article title/summary pair and overwriting that copy when Coverage loaded.
-- Guard: `toNewsStory` maps story `title` and `summary` from the story payload. Story detail no longer rewrites title/summary from Coverage, Propagation, or `top_articles`. Missing titles stay empty (no Untitled copy).
-- Browser on `/stories/003d0bb7-2f23-52b4-8869-364dc7d0d7bc`: heading and SEO title stay the story `title` (`Loose Women star Judi Love…`); summary stays the story `summary` (`Comedian lived in social housing…`). Coverage rows (North Korea, amusement parks, Fox host, and the next page after `More`) do not replace that copy. Unrelated `top_articles` titles (bears/Rockies) are not used as the story heading.
-- Files: `app/composables/useBeansApi.ts`, `app/types/news.ts`, `app/pages/stories/[story_id].vue`, `design/DATASOURCES.md`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
-
-## 2026-09-08T13:27:00Z
-
-- DATASOURCES news routes now require `languages=en`. Latest was still hitting `/articles/latest` with `content_type=news`, and Coverage used `content_type=news` instead of language.
-- Guard: Beans collection helpers always send `languages=en` for `/news/top-headlines`, `/news/latest`, `/news/trending`, and `/stories/{id}/articles`. Latest News uses `/news/latest`. Coverage no longer sends `content_type`. Trending is available as `fetchTrendingNews`.
-- Files: `app/composables/useBeansApi.ts`, `app/types/news.ts`, `design/VERIFICATIONS.md`.
-
-## 2026-09-08T00:20:00Z
-
-- Category tabs stayed packed to the start of the content column, so the nav looked left-weighted on wide screens.
-- Guard: the tab row is `flex w-max min-w-full justify-between`. When the tabs fit, Now sits at the start of the content column and Politics at the end (`space-between`). When they overflow, the inner nav scrolls and the first tab stays reachable; the page does not overflow.
-- Browser CDP on `http://127.0.0.1:3000/`: 1280px `justify-content: space-between`, first/last tabs align with the header column, even ~34px gaps, no page overflow. 320px: inner nav `scrollWidth` 834 > `clientWidth` 320, `Now` visible at scroll start, `Politics` reachable at scroll end, `scrollWidth === clientWidth` on the page. Technology tab still opens `/categories/technology`; Search keeps the same row.
-- Files: `app/layouts/default.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
-
-## 2026-09-08T00:15:00Z
-
-- Propagation used a fixed `w-52` step plus `min-w-max`, so the timeline side-scrolled on small screens and did not fill the story column on wide ones.
-- Guard: `UTimeline` is `w-full` with `min-w-0` flex steps; dates wrap (`break-words` / `leading-tight`); grouped avatars use `xs`. No inner `overflow-x-auto`.
-- Browser on `/stories/003d0bb7-2f23-52b4-8869-364dc7d0d7bc`: 1280px timeline width 1104 equals Coverage, 5×216px steps, no overflow. 320px timeline 288 equals Coverage, 5×53px steps, page `scrollWidth === clientWidth`.
-- Files: `app/components/news/StoryTimeline.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
-
-## 2026-09-07T23:59:00Z
-
-- Header date live icon read as a static radio glyph with no on-air presence.
-- Guard: `lucide:radio` sits over a pulsing, blurred `bg-primary/50` blob plus a primary drop-shadow. Date text stays chip-free (no border, background, or box-shadow). `aria-label` remains `Live, {date}`.
-- Browser on `/` and `/categories/technology`: glow `blur(3px)` + `pulse`, icon drop-shadow coffee `rgb(196, 134, 84)`, time `borderWidth: 0` / `boxShadow: none`. 320px: `scrollWidth === clientWidth`.
-- Files: `app/layouts/default.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
-
-## 2026-09-07T15:02:00Z
-
-- Header date chip still used an inset-shadow / border that looked odd. Story `article_count` / `source_count` sat beside Back instead of on the category/date row.
-- Guard: date is live icon + `Weekday, MMM dd` with no border, background, or inset shadow. Detailed StoryCard metadata row is `w-full`: category and date at start, humanized `article_count` then `source_count` in an `ml-auto` / `justify-end` cluster, each only when > 0. Back control no longer shows those counts.
-- Browser on `/stories/003d0bb7-2f23-52b4-8869-364dc7d0d7bc`: header `borderWidth: 0`, `boxShadow: none`. Metadata row `ELECTIONS AND VOTING` / `14 hrs ago` start, `81 articles` / `2 sources` end (`justify-content: flex-end`, `gapFromRowEnd: 0`). Same at 320px, no overflow. Back row has no counts.
-- Files: `app/layouts/default.vue`, `app/components/news/StoryCard.vue`, `app/pages/stories/[story_id].vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
-
-## 2026-09-07T14:55:00Z
-
-- Home still led with “Live desk / The story, not the noise.” and stacked eyebrows (“Last 24 hours Top headlines”, “Just in Latest news”). Header date was `MMM dd, YYYY` with no live treatment.
-- Guard: drop the home hero. Section titles are `Trending` and `Just In` on home and category (no eyebrows). Header date is `Weekday, MMM dd` in an inset-shadow embossed chip with `lucide:radio` live icon; `datetime` is the local ISO date; `aria-label` is `Live, {date}`. Home keeps a visually hidden `h1`.
-- Browser: home headings Beans / Trending / Just In; no Live desk / Last 24 hours. Date chip `Monday, Sep 07` with inset highlight/shadow and radio icon. 320px: no overflow; date, mark, Search visible. `/categories/technology` also uses Trending and Just In.
-- Files: `app/pages/index.vue`, `app/pages/categories/[category_slug].vue`, `app/layouts/default.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
-
-## 2026-09-07T14:45:00Z
-
-- Viewport map was still lg/xl 3 Top Headlines + 2 Latest News columns, and md 2 headlines + 1 Latest News column. User wants md and up: 2 headlines + 2 columns; below md: 1 + 1.
-- Guard: `CAROUSEL_SLIDE_BASIS_CLASS` is `basis-full md:ps-0 md:px-1.5 md:basis-1/2` (no `lg:basis-1/3`). `LATEST_NEWS_GRID_CLASS` is `grid grid-cols-1 items-start gap-3 md:grid-cols-2`. `SKELETON_COUNT` is 2 so md+ skeletons do not peek. Removed leftover debug ingest `fetch` logs from `StorySection.vue` so lint passes.
-- Top Headlines / Latest News still showed word labels (`mentions`, `likes`, `comments`). `StoryTrendCounts` always renders Coverage compact: icon + humanized number, `aria-label` keeps the words for assistive tech. `labeled` prop removed.
-- Browser CDP on `http://127.0.0.1:3000/`: 1920/1280/1024/768 → 2 fully visible headlines, 0 peek, Latest News 2 columns; 767/375 → 1 headline, 1 column, no overflow. Count nodes visible text `1` / `10` / `3` with aria `1 mentions` / `10 likes` / `3 comments`. `/categories/technology` at 1280: 2+2. `./node_modules/.bin/eslint` on StorySection / StoryTrendCounts / StoryTimeline exit 0.
-- Files: `app/components/news/StorySection.vue`, `app/components/news/StoryTrendCounts.vue`, `app/components/news/StoryTimeline.vue`, `design/DESIGN.md`, `design/VERIFICATIONS.md`.
-
-## 2026-09-07T14:40:00Z
-
-- Top Headlines right-arrow continuation was wired, but `/news/top-headlines?limit=5` page 2 is always empty (`pagination.next_cursor` decodes to `trend_score` `ts:0` while collection rows have no trend). Live comparison: page 1 has 5 articles / 4 unique `story_id`s; the same cursor page 2 is `num_results: 0`; `limit=20` returns 20 articles / 9 unique stories. Latest News `limit=5` + `next_cursor` matches items 6–10 of its `limit=20` set.
-- Guard: fetch `limit=20` internally per tab, reveal 5 unique stories, then 10, then 15 from the pool. When the Top Headlines cursor page is empty, expand `limit` (20→40→…→100) and skip already-seen stories instead of stopping at 4–5 cards. Latest News still uses its working cursor after the 20-item batch.
-- Files: `app/composables/useNewsFeed.ts`, `design/DATASOURCES.md`, `design/VERIFICATIONS.md`.
-
-## 2026-09-07T14:32:00Z
-
-- Coffee primary `#b07048` was a bit too dark/roast. Lifted `--color-coffee-400` to `#c48654` (rgb 196, 134, 84), between mocha and the old amber gold, with matching 200/300/500 steps.
-- Browser verification: `--ui-primary` and Search CTA background are `#c48654` / `rgb(196, 134, 84)` on home (active Now tab) and `/search`. In-app screenshots timed out; used CDP computed styles.
-
-## 2026-09-07T14:25:00Z
-
-- Foreground primary and accent icons still used Tailwind `amber` (`primary: 'amber'` plus hardcoded `text-amber-*`), so CTAs, active tabs, category labels, trend/propagation/coverage icons, and markdown links read as yellow/gold instead of coffee bean.
-- Guard: custom `coffee` scale in `app/assets/css/main.css` (`--color-coffee-400: #b07048` mocha roast). Nuxt UI `primary` maps to `coffee`. `--ui-primary` locked to shade 400 for dark-only. Components use semantic `text-primary` / `outline-primary` instead of amber utilities. No `amber` classes remain in app source.
-- Browser verification against `http://127.0.0.1:3000` (cursor-ide-browser + CDP). `--ui-primary` is `#b07048`; active Now/Technology tabs, Search CTA background, trend/propagation/coverage/social icons are `rgb(176, 112, 72)`. Zero `amber` class matches. Home, Search, story `003d0bb7-2f23-52b4-8869-364dc7d0d7bc`, and `/categories/technology` all use the coffee primary. 320px story view: `scrollWidth === clientWidth` (no page overflow). Header Search/API/Contact icons stay cream (`color="neutral"`).
-- Files: `app/app.config.ts`, `app/assets/css/main.css`, `app/components/news/StoryCard.vue`, `app/components/news/StoryTimeline.vue`, `app/components/news/StorySection.vue` (eyebrow class only), `app/components/news/StoryTrendCounts.vue`, `app/components/news/MarkdownSummary.vue`, `app/components/news/SignalStrip.vue`, `app/pages/index.vue`, `app/pages/search.vue`, `app/pages/about-beans.vue`, `app/pages/categories/[category_slug].vue`, `design/VERIFICATIONS.md`.
-
-## 2026-09-07T14:16:38Z
-
-- Coverage rows placed mentions beside the source label and only right-aligned likes/comments, so the first row did not match DESIGN (`source_label` start, trend counts end, title on the second row).
-- Guard: Coverage reuses `StoryTrendCounts` with `ml-auto` / `justify-end`. Mentions, likes, comments, and shares render together on the source row, only when each value is > 0. Coverage uses compact unlabeled counts so the cluster stays on one line at 320px. Shared counts themselves use `flex-nowrap` so the group stays a single end-aligned cluster. Title stays on the second row. Empty/zero trend values stay omitted.
-- Browser verification against `http://127.0.0.1:3000/stories/003d0bb7-2f23-52b4-8869-364dc7d0d7bc` (in-app screenshots timed out; used Playwright Chromium plus CDP layout metrics). Fox host row: source at start, `1` / `13K` / `528` at the row end (`justify-content: flex-end`, `gapFromRowEnd: 0`), title below, no zeros, no page overflow. Same geometry at 1280px and 320px; 320px no longer stacks the counts. Coverage `More` still appended the next five rows. Home still shows labeled `1 mentions` / `13K likes` / `528 comments` on Top Headlines.
-- Files: `app/components/news/StoryTimeline.vue`, `app/components/news/StoryTrendCounts.vue`, `design/VERIFICATIONS.md`. `./node_modules/.bin/eslint` on those Vue files and `git diff --check` passed.
-
-## 2026-09-07T14:05:00Z
-
-- Promoted the homepage feed rules into an explicit `Requirements` section in `design/VERIFICATIONS.md`: Top Headlines `limit=5` plus `next_cursor` continuation until null, no `More headlines` button, mentions/likes/comments only when > 0 on headlines/latest/coverage, and the `lg`/`xl` 3+2, `md` 2+1, `sm`/`xs` 1+1 viewport map.
-- Aligned Coverage success criteria and the manual verification gate with those same rules. Existing success criteria, failure cases, and test scenarios for carousel continuation, trend overlay, and breakpoints were left in place.
-
-## 2026-09-07T13:57:55Z
-
-- Top Headlines continuation was not wired to the carousel. The last-item check used the last story index, so a 2- or 3-slide viewport never looked “at the end”; Nuxt UI also disables Next when `canScrollNext()` is false, so the right arrow could not request the next cursor. Users depended on a `More headlines` button that DESIGN does not want.
-- Guard: initial page stays `limit=5`. When the exposed Embla API reports the last snap (`canScrollNext() === false`) or Next is used there, emit load-more with the stored `next_cursor`. Keep Next enabled while a cursor exists. Bind `select`/`settle`/`reInit` on the unwrapped `emblaApi` (including nested refs). Preserve the current snap after append. Stop when `next_cursor` is null or a page returns no items. Do not auto-loop after an append error; Retry remains. Latest News `More` is unchanged.
-- Browser verification against `http://localhost:3000` (Cursor in-app browser tabs vanished immediately; used Playwright Chromium). Live home: first request `/api/beans/news/top-headlines?limit=5`; 5 articles / 4 unique stories after `story_id` dedupe; no `More headlines`; Latest News still has `More`. Reaching the last snap with Next sends `cursor=` + `limit=5`. Live `/news/top-headlines` page 2 currently returns `data: []` and `next_cursor: null`, so Next then disables and no extra slides appear. Mocked 3 cursor pages: 5 → 10 → 15 slides then Next disables. Failed page-2: existing slides stay, “Top headlines could not be loaded right now.” + Retry, no `More headlines`, no further requests after the failed page.
-- Files: `app/components/news/StorySection.vue` (carousel cursor/pagination and removal of `More headlines` only; slide-basis/grid classes in this file belong to the responsive-layout slice), `design/VERIFICATIONS.md`. `./node_modules/.bin/eslint` on `StorySection.vue` and `git diff --check` passed. `useNewsFeed` already used `PAGE_SIZE = 5` and `next_cursor`; left unchanged.
-
-## 2026-09-07T13:54:00Z
-
-- Homepage responsive viewport: Top Headlines was locked to one full-width carousel slide (`basis-full`) and Latest News was a single-column stack (`space-y-3`) at every width.
-- Guard: Tailwind slide basis and list grid only. Visible top-news slides: 1 below `md` (xs/sm), 2 at `md`, 3 at `lg`/`xl`. Latest News columns: 1 below `lg`, 2 at `lg`/`xl`. Even fractions plus `md:ms-0` / `md:ps-0` so an extra slide does not peek; `sm:start-1` / `sm:end-1` cancel theme `sm:-start-12` arrow overflow. Did not change cursor pagination, the More control, or trend/count rendering.
-- Browser verification against `http://localhost:3000` (Cursor in-app browser tabs vanished immediately; used system Firefox via geckodriver). Measured fully-visible slides, peek overlap, grid-template-columns, and page overflow:
-  - `xl` 1280px: 3 top slides (0 peek), Latest News 2 columns (`546px 546px`), no overflow
-  - `lg` 1024px: 3 top slides (0 peek), Latest News 2 columns (`476px 476px`), no overflow
-  - `md` 768px: 2 top slides (0 peek), Latest News 1 column, no overflow
-  - `sm` 640px: 1 top slide (0 peek), Latest News 1 column, no overflow
-  - `xs`: Firefox headless clamped `innerWidth` to 500px (still below `md`); 1 top slide (0 peek), Latest News 1 column, no overflow
-- Files: `app/components/news/StorySection.vue` (slide basis / grid / skeleton classes only; pagination code in the same file is from the carousel-pagination slice), `design/DESIGN.md`, `design/VERIFICATIONS.md`. `./node_modules/.bin/eslint` on `StorySection.vue` and `git diff --check` passed.
-
-## 2026-09-07T13:48:55Z
-
-- Trend stats (mentions, likes, comments) were missing on Top Headlines, Latest News, and Coverage even when article detail had values > 0.
-- Root cause: `/news/top-headlines`, `/articles/latest`, and `/stories/{id}/articles` omit `trend`. Detail `/articles/{id}` has `trend.mentions` / `trend.likes` / `trend.comments`. Compressed headline cards never rendered social counts. Snapshot cards omitted `mentions` (only likes/comments/shares). Coverage read collection `article.trend` and never overlaid article-detail trend.
-- Guard: render `trend.mentions`, `trend.likes`, `trend.comments`, and `trend.shares` only when the value is a finite number > 0; hide 0 and missing. Overlay from article detail is trend-only (no title/url/summary/image swap). Shared `app/utils/trend.ts` + `StoryTrendCounts.vue`. Coverage and Search enrich via `overlayArticleTrend` with generation guards. Feed enrichment in `useNewsFeed` was already present and left unchanged.
-- Browser verification against `http://localhost:3000` (Cursor in-app browser tabs vanished immediately; used system Firefox via geckodriver). After enrich: Fox host headline `1 mentions` / `13K likes` / `528 comments`; White House `1 mentions` / `779 likes` / `129 comments`; Donkeys and Amazon headlines with all-zero detail engagement showed no counts. Latest News on home had 0/missing engagement and showed none. `/categories/technology` showed `1 mentions` / `10 likes` / `3 comments` with no zeros. Coverage on `/stories/003d0bb7-2f23-52b4-8869-364dc7d0d7bc`: Fox host row `1 mentions`, `13K`, `528`; sibling rows with zero engagement omitted counts. Search `election`: Clacton `40 likes` / `107 comments` / `1 mentions`; Stone `1 mentions` / `4 comments` (likes 0 hidden); items with missing/zero detail trend showed no counts.
-- Files: `app/utils/trend.ts`, `app/components/news/StoryTrendCounts.vue`, `app/components/news/StoryCard.vue`, `app/components/news/StoryTimeline.vue`, `app/pages/stories/[story_id].vue`, `app/composables/useSearchFeed.ts`, `design/VERIFICATIONS.md`. `./node_modules/.bin/eslint` on those files and `git diff --check` passed.
-
-## 2026-09-06T23:17:30Z
-
-- In-app Browser inspection of `http://localhost:3000/` succeeded (tab `abbbef`). Routes checked: `/`, `/categories/technology`, `/stories/3317387d-881c-5f7f-837a-a489145facd9`, `/search` (topic `battery manufacturing`). Viewports: default mobile-width and `Emulation.setDeviceMetricsOverride` 320×720. No page-level horizontal overflow at 320px. Header date, Beans mark, Search, API, and Contact stayed visible.
-- Content-rendering issue found on Latest News: API summaries start with markdown images (`![](http://cdn.newser.com/...)`). `markdown-it` `.disable('image')` left a visible `!` plus an empty image link (`!<a href="...jpeg"></a>`). Root cause was in `MarkdownSummary.vue`, not the feed contract.
-- Fix: strip `![...](...)` before inline render; keep `html: false` and images disabled. Re-checked Latest News: summaries now start with prose (e.g. “Older people often have a good idea…”); no leftover `!` or empty image links.
-- 320px Top Headlines: default carousel arrows sat at vertical center and covered the category row. `UCarousel` `prev`/`next` now pin to the image band (`top-20`) on small viewports. After reload, arrows sit on the photo; category/date/title remain readable (long category labels still truncate via `max-w-40`).
-- Also observed, left as API/data rather than UI fabrication: Egypt drugs headline tagged `VIETNAM`/`DUBLIN`; story category `CANNABIS AND CANNABINOIDS`; Technology latest includes off-topic API taxonomy. Story-less aviation card linked to the original article URL. Search returned battery-related news with `More`. No `/stories/undefined`. No numeric trend scores. Console had no application error UI.
-- Files: `design/VERIFICATIONS.md` (markdown-image and 320px carousel cases first), `app/components/news/MarkdownSummary.vue`, `app/components/news/StorySection.vue`. `./node_modules/.bin/eslint` on those Vue files and `git diff --check` passed.
-
-## 2026-09-06T23:04:15Z
-
-- Completion pass after four exclusive parallel slices. `graphifyy` was unavailable; used checked-in `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.json` as the fallback. The graph still describes the Beans API client (`toNewsArticle` / `articleToStory`), feed/search composables, Story card/section/source/timeline, and home/category/story/search/shell routes.
-- Rendering leftovers still present after the slices, and their root causes:
-  - Search dropped or collided story-less items because `useSearchFeed` keyed only on `story_id || id`. A URL-only article is now its own item keyed by primary article id/url, and similar-article ids are not search/feed keys.
-  - Missing API titles were fabricated as `"Untitled update"` / `"Untitled story"` in `toNewsArticle` / `toNewsStory`. Titles are now omitted/empty; cards and Coverage hide empty headings.
-  - A card with no resolvable source still rendered a source group via a `'source'` fallback key and `top_articles.length`, producing a fake “1 source”. Unresolvable sources are omitted.
-  - Coverage/Propagation skipped URL-only articles because identity was `article.id` only. Identity is now `id || url`.
-- Already fixed and left unchanged: `MarkdownSummary.vue` is complete (`html:false`, inline render, 2/3-line clamps). StoryCard still uses icon-only scores (activity / trending-up / fire) and omits zero social counts.
-- Files changed and the requirement they satisfy:
-  - `design/VERIFICATIONS.md` — appended still-valid search/shell, card, story, and feed cases before the guard rails.
-  - `app/composables/useSearchFeed.ts` — story-less identity; last-submitted empty/error copy; no similar-article keys (`DATASOURCES` article identity, search replacement).
-  - `app/composables/useBeansApi.ts` — do not fabricate title (`DATASOURCES` / `INSTRUCTIONS` contract).
-  - `app/utils/source.ts`, `StoryCard.vue`, `StorySourceStack.vue` — omit unresolved source groups; keep 404 favicon → default icon.
-  - `app/pages/stories/[story_id].vue`, `StoryTimeline.vue` — coverage identity and empty-title omit.
-  - `app/pages/search.vue` — empty-publisher copy uses last submitted criteria.
-- Static checks: `pnpm` wrapper failed registry signature verification (`@pnpm/exe@10.33.0` / `pnpm@10.33.0` fetch failed). Equivalent local binaries: `./node_modules/.bin/eslint .` exit 0; `./node_modules/.bin/nuxt typecheck` exit 0; `./node_modules/.bin/nuxt build` exit 0 (existing Browserslist/sourcemap warnings only); `git diff --check` exit 0.
-- HTTP smoke (not visual): after restarting `./node_modules/.bin/nuxt dev --host 0.0.0.0` outside the sandbox, `127.0.0.1:3000` returned 200 for `/`, `/categories/technology`, `/search`, `/about-beans`, `/stories/example`, and `/stories/{live_story_id}`. SSR HTML includes the Beans mark, Contact (`https://developer.cafecito.tech/contact`) with `noopener noreferrer`, and no fabricated Untitled titles. Live `/api/beans/news/top-headlines?limit=5` returned five news rows.
-- Browser inspection: required in-app Browser skill `SKILL.md` was not present in Cursor skills; used `cursor-ide-browser` MCP `INSTRUCTIONS.md` and tool schemas. Availability result: `browser_tabs` list returned empty; `browser_tabs` `new` created ephemeral viewIds (`e15bbc`, `8acd53`) that vanished immediately; `browser_lock` and `browser_navigate` then reported `No browser tab available. Please navigate to a page first.` and `Browser view not found`. No screenshot, viewport (default or 320px), or interaction check could be performed. Visual/touch verification remains incomplete; the goal stays active.
-
-## 2026-09-06T22:41:29Z
-
-- Added [`INSTRUCTIONS.md`](../INSTRUCTIONS.md) as the continuation guide for aligning the UI with the current `DESIGN.md`, `DATASOURCES.md`, and `VERIFICATIONS.md`. It documents the rendering/data contract, content-flow audit, mobile browser inspection workflow for `http://localhost:3000/`, and completion gates.
-- Attempted the required in-app Browser inspection. The browser service reported `Browser is not available: iab`, and the available browser list was empty, so no visual or touch verification could be claimed in this run.
-
-## 2026-09-06T22:07:02Z
-
-- Added a visible `More` control below Latest News whenever its cursor is present, and a matching Top Headlines fallback. The carousel-end handler now reads Nuxt UI's unwrapped Embla API, so reaching its final scroll snap requests the next cursor page.
-- Feed enrichment now requests the primary article detail only when a feed item has no trend payload, preserving the feed page/order while supplying the returned `trend_score` to the existing score icon.
-- Added a reusable, safe Markdown summary renderer. Inline Markdown is rendered with raw HTML disabled; snapshot summaries clamp to two lines and Story detail summaries clamp to three lines.
-- Extended `VERIFICATIONS.md` before implementation for carousel continuation, the visible Latest News continuation control, detail-based trend enrichment, Markdown safety, and summary clamps. Live local Beans proxy responses returned continuation cursors for Top Headlines and Latest News; article detail returned a numeric `trend_score` while feed rows omitted it.
-- Verified `pnpm lint`, `pnpm typecheck`, `pnpm build`, and `git diff --check` pass. The in-app Browser connection is unavailable in this environment, so final visual/touch confirmation remains unavailable here.
-
-## 2026-09-06T21:16:37Z
-
-- Added request-token and filter-snapshot guards to both independently paged feeds. A fast category change now clears the previous category's visible cards and prevents a stale response, cursor, error, or source enrichment from updating the newly selected category.
-- Scoped those guards to a feed generation rather than an individual cursor request, so source enrichment remains valid when the user loads a later page of the same category.
-- Added a page-level retryable empty state for Home and Category while preserving the design requirement to omit empty individual sections.
-- Restructured Top Headlines into the specified optional full-width-image card hierarchy and Latest News into the specified optional side-image card with a separate source-and-social-counts row. Story detail continues to use its dedicated metadata hierarchy.
-- Made Story detail progressive: the first five latest Coverage rows render without waiting for every Propagation cursor, and Propagation retains its own loading/retry state. Coverage rows now include humanized per-article mentions when provided.
-- Added generation guards to Search, so delayed source lookups or result requests cannot overwrite a newer query or block it from starting. Source identity is now domain-based when source metadata is missing, preventing related article URLs from one publisher from inflating source counts.
-- Extended `VERIFICATIONS.md` before these changes for in-flight category switching, the fully empty-page state, related-source enrichment during paging, progressive Story detail, Coverage mentions, replacement searches, source-less same-domain deduplication, and the distinct feed-card layouts. `pnpm lint`, `pnpm typecheck`, `pnpm build`, and `git diff --check` pass. Built-server smoke checks returned HTTP 200 for Home, a category, Story, Search, About, Top Headlines, Latest News, Sources, and semantic Search with its `score_threshold=0` guard rail.
-- The in-app browser connection remains unavailable, so visual and touch interaction checks at 320px could not be completed in this environment.
-
-## 2026-09-06T21:06:47Z
-
-- Confirmed local Nuxt development loads the gitignored `.env` `CAFECITO_API_KEY` through existing `runtimeConfig` and keeps it server-only. An authenticated local Beans-proxy Top Headlines request returned HTTP 200 without logging the key.
-- Added the Beans semantic-search `score_threshold=0` guard rail for non-empty relevance queries. The live API returns HTTP 200 with the threshold and HTTP 500 without it.
-- Extended `VERIFICATIONS.md` for the `.env` boundary and semantic-search failure mode. `pnpm lint` and `pnpm typecheck` pass; production build completed with only existing Browserslist/sourcemap warnings.
-
-## 2026-09-06T17:13:30Z
-
-- Updated `VERIFICATIONS.md` before implementation to cover the canonical shell/routes, search modes, story-less navigation, related sources, and the Google favicon fallback required by `DATASOURCES.md`.
-- Aligned the UI with `DESIGN.md`: canonical `/categories/*` and `/stories/*` routes; a dated Beans header; search/API controls; specified footer links and About page; and a news-only Search view with relevance, normalized-tag, and publisher-source filters.
-- Removed the out-of-spec Espresso signal rail from Home. Feed cards now enrich source groups from related articles, use the authoritative story source count when available, and open the original URL when no `story_id` exists. Story previews select the longest loaded summary/title pair.
-- Verification passed: `pnpm lint`, `pnpm typecheck`, and `pnpm build`; local HTTP smoke checks returned 200 for `/`, `/categories/technology`, `/stories/example`, `/search`, and `/about-beans`.
-- The in-app Browser service was unavailable, so the required interactive 320px visual, carousel-end, and live data/error-state checks could not run in this session.
-
-## 2026-09-06T00:39:58Z
-
-Code snapshot SHA-256: `74aba3efa9f843c958457cb5d2848141192779b30949a6748b73988c46e9cb37`
-
-Hash inputs: 24 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-- Preserved feed continuation controls when category filtering removes a page, avoided inferred story counts from partial top articles, and used the default source icon for favicon-free cards.
-
-## 2026-09-06T00:32:30Z
-
-Code snapshot SHA-256: `61e36264595e726d378568011f3e81849b32dd31bbbba44f41836ee32cd05ea7`
-
-Hash inputs: 24 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-- Propagation now uses chronological five-point grouping with first/last story timestamps and grouped intermediate source avatars; source labels and trend shares follow the current UI contract.
-
-## 2026-09-06T00:30:23Z
-
-Code snapshot SHA-256: `541e4f57d41905df5f3e354f3c179e17c8d6ff1d2033e6b2da7e287a2a5fcd37`
-
-Hash inputs: 24 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-- Applied current Propagation grouping guidance: all story articles remain represented, while the timeline renders the first, last, and three grouped intermediate source points; empty feeds now omit their sections after a successful empty response.
-
-## 2026-09-06T00:23:19Z
-
-Code snapshot SHA-256: `6cbdb8ae7f614886836d448f5ca9987bc18784174a6d7bed6622ce3fc71ba2bc`
-
-Hash inputs: 24 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-- Aligned feed and story behavior with `design/VERIFICATIONS.md`: isolated retryable feed states, category-safe five-item cursor paging, carousel-end loading, latest-first Coverage, complete Propagation loading, humanized dates/counts, explicit source fallbacks, and mobile-safe missing-media layouts.
-
-## 2026-09-05T18:33:03Z
-
-Code snapshot SHA-256: `1168b35817716bcfa67e0461551076573b81a8b2ae048844b36e2d0e15e709f9`
-
-Hash inputs: 24 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-- Centralized source labels and favicons: `site_name`, `domain_name`, `base_url`, and the article URL's base URL are used in order for labels; source favicon URLs fall back to the article URL's `/favicon.ico`.
-
-## 2026-09-05T18:21:21Z
-
-Code snapshot SHA-256: `f3d05bdd920079b050676c687d82344ca1c4aee9b5f89682a90380c85d44e323`
-
-Hash inputs: 23 application and configuration files under `app/`, `server/`, `nuxt.config.ts`, and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-- Feed enrichment now retains a loaded feed image when the later story-detail response has no image, preventing an unintended fallback swap.
-
-## 2026-09-05T18:04:33Z
-
-Code snapshot SHA-256: `1c5ee7b79ac435e6ac9055c7259a688b2d189f9c0bb311c9566ec7d4be0a82ab`
-
-Hash inputs: 23 application files under `app/` and `server/`, plus `nuxt.config.ts` and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-- Replaced the stale starter page with home, category, and story-detail routes.
-- Added dark coffee/charcoal shared styling, reusable compressed/snapshot/detailed story views, source stacks, and member-article/mention timelines.
-- Uses `UCarousel` for Top Headlines, friendly time labels, and capitalized taxonomy labels.
-- Uses `UAvatarGroup` for unique favicon sources from the first three story articles, with the authoritative source count beside it.
-- Disables lazy loading and suppresses referrers for hotlinked story images and source favicons; story images retain an explicit fallback after a load failure.
-- Added cursor-based Beans feeds and optional independent Espresso signal cards behind same-origin server proxies.
-- Applied the provided high-level category map as client-side category groups.
-- Removed unused starter components.
-
-Known API boundaries:
-
-- Feeds de-duplicate through `story_id`; the live `/stories` collection endpoint currently times out, while story detail and member-article endpoints respond.
-- Article mentions are per article. The UI renders a derived story chronology and does not claim a server-provided story-level propagation graph or trend history.
-- Espresso events/signals have no declared Beans story or article identifier, so they remain an independent analysis rail.
-
-## 2026-09-05T18:22:23Z
-
-Code snapshot SHA-256: `64455f82bfa29dbe3233580a0fb30da0e88db31e42072de68c179d9afb647068`
-
-Hash inputs: 21 application files under `app/` and `server/`, plus `nuxt.config.ts` and `eslint.config.mjs`; paths and file bytes are hashed in lexical path order.
-
-- Replaced the story-detail article cards with compact, linked Coverage rows: source favicon and domain followed by the article headline.
-
-## 2026-09-10
-
-- Implemented non-blocking Espresso confidence enrichment for story feeds and the story detail route. A shared end-aligned badge renders only valid `High`, `Medium`, or `Low` values, with its meaning available through a tooltip.
-- Moved count presentation from the detailed story card into the story timeline: Coverage now displays `N articles` and Propagation displays `N sources`, both end aligned.
-- Files: `app/composables/useBeansApi.ts`, `app/composables/useNewsFeed.ts`, `app/components/news/StoryConfidenceBadge.vue`, `app/components/news/StoryCard.vue`, `app/components/news/StoryTimeline.vue`, `app/pages/stories/[story_id].vue`, `app/types/news.ts`.
-
-## 2026-10-05
-
-- Reframed the Beans API & MCP social banner to a 1.90:1 preview while keeping the full infographic visible; replaced `public/beans-banner.png`, the shared default used by Open Graph and Twitter metadata.
-- Added a verification case for the shared image fallback and its social metadata references.
-- The existing metadata composable already points to `/beans-banner.png`, so no runtime metadata code change was needed.
-
-## 2026-10-05 — Exact social banner dimensions
-
-- Corrected the previously generated 1730 × 909 banner to an exact 1200 × 630 PNG frame, resizing proportionally and retaining the complete composition.
-- Tightened the social preview acceptance case to require exact decoded pixel dimensions, rather than an approximate aspect ratio.
-- Reopened and fully decoded the saved production asset: PNG, exactly 1200 × 630 pixels.
-
-## 2026-10-08 — Hide More after pagination ends
-
-- Made trending/latest stream state reactive so cursor updates and hydration restoration update More immediately on home/category feeds. Continuation now depends on an actual cursor; mixed feeds retain More while either stream can continue, and source feeds require their source cursor.
-- Retained the shared feed/search and Related visibility guards, hiding More entirely when no cursor remains. Explicitly disable visible More buttons while loading; existing exhausted/repeated-cursor request guards remain in effect.
-- Updated design guidance and pagination acceptance criteria. Verification: focused ESLint, Nuxt typecheck, production build, analytics and discovery integration checks, and whitespace checks passed. Executed the actual feed composable with mock cursor sequences for mixed/trending/source feeds: null/repeated cursors stop continuation, exhausted calls make no request, and refresh re-enables continuation after receiving a new cursor. graphifyy is unavailable; direct component/data-flow inspection was used.
+- UI correction: focused ESLint and production build pass; Nuxt typecheck exits successfully with the existing missing Vue Router language-plugin warning. Installed icon collections contain all six share icons. Browser inspection verifies inline source/date styling, circular share controls, attributed links, and source favicon overlap. At 320px, source/card layout has no horizontal overflow (305px document width), the avatar extends 39px above the card, and share buttons measure 32px square. The article page also stays within 305px document width at 320px, and desktop article/card layouts were inspected.
+- Card, article snapshot, source header, and share modal update: focused ESLint, Nuxt typecheck, and production build pass. Browser inspection showed the new source/date/signal arrangement, five publisher favicons with related count at the left, the share options and attributed publisher URL, a linked article title, and the banner-free source header. The direct URL-helper check confirmed existing Beans UTM overrides, preservation of other query values and fragments, and rejection of unusable URLs. System share is unavailable in the inspected browser; clipboard failure and a 320px viewport override remain unverified here.
+- Compact indicators: ESLint on `ArticleCard.vue`, `ArticleSnapshot.vue`, and `StoryConfidenceBadge.vue`; Nuxt typecheck; production build; and `git diff --check` pass. Confidence maps low/medium/high to one/two/three Lucide signal bars in existing semantic colors; ideology and trend are icon-only/abbreviated with full labels in focusable tooltips.
+- Tags on image-free cards: ESLint on `ArticleCard.vue`, Nuxt typecheck, production build, and `git diff --check` pass. Region and entity tags use the same badge styling as image overlays and appear below the title when the image is absent or errors.
+- Related count row update on the coverage summary branch: ESLint on `ArticleCard.vue` and `ArticleTrendCounts.vue`, Nuxt typecheck, and `git diff --check` pass. `trend.related` now uses the files icon and appears in the same count row as mentions, comments, and likes only when positive.
+- Coverage summary branch: ESLint on `ArticleDetailSections.vue`, Nuxt typecheck, production build, and `git diff --check` pass. The small/medium/extra-large layouts cap middle chips at 1/3/5 and source icons per chip at 1/2/3; the expanded list contains all articles in the selected group. Browser viewport inspection was unavailable in this environment, so the 320px visual acceptance scenario remains open for branch preview.
+- Nuxt typecheck and the production build pass after the source-feed and card changes. ESLint on changed implementation files passes. Whole-app ESLint reports only the existing double-quoted string at `app/composables/useGoogleAnalytics.ts:31`, outside this change.
+- Live proxy checks on 2026-09-30: unique trending/latest feeds returned HTTP 200; populated `exclude_ids` was accepted, while an empty `exclude_ids=` returned HTTP 400 and is now omitted. The batch confidence route returned article IDs and discrete confidence values. Private similar articles returned paginated article data. Source detail returned metadata. At that time, `sources={id}` on `/articles/latest` returned zero articles for BBC and PsyPost while `domains={source.domain}` returned five matching articles and a cursor for both. Source-page queries now use `/private/articles/unique?sources={id}`; updated live behavior has not been rechecked. API credentials were read only by the server-side proxies.
+- Route smoke checks: `/`, a category, `/search`, `/articles/{id}`, and `/sources/{id}` returned HTTP 200; the removed `/stories/{id}` route returned HTTP 404. Browser checks showed the shared card on a 320px category viewport, five shared search cards, article detail sections, and source metadata. A source whose API `url` lacked a scheme exposed a broken relative link during inspection; the source page now normalizes it to `https://`, and the retest points to the external source URL with referral parameters. The BBC source page now visibly renders five source-matched articles, a More cursor, the overlapping favicon, and the scheme-free `www.bbc.co.uk` label. The home card shows date and Hot inline plus an outlined `Leans Right` badge beside category.
+- Batch ordering, exclusions, de-duplication, exhaustion fill, cursor retries, and independent detail cursors are acceptance scenarios above. Live API checks confirmed parameter acceptance and response envelopes but do not exhaustively simulate every pagination or failure case.
+- At 320px, the home card and source profile remain within the viewport (document scroll width 305px for a 320px viewport), and the source favicon still crosses the banner edge. The visible home card places Hot beside its date and the outlined ideology beside category. The source page shows five BBC cards and More.
+- After the related-count guard, ESLint on `ArticleCard.vue` and Nuxt typecheck pass. Browser inspection of five home cards shows no `0 articles` label; positive `4 articles` and `9 articles` labels still render, and publisher avatars remain visible without an `Other sources` heading.
+- After moving ideology to the title, the home card visibly places the outlined badge after the linked title, including when the title wraps at 320px. The document has no horizontal overflow at that width, the title and badge have a text-space separator, and ESLint plus Nuxt typecheck pass.
+- After moving confidence to the title, the shared card places it before ideology and omits either missing value. The ideology badge uses the confidence badge's `sm` size, full rounding, and padding. Browser checks on home showed missing-confidence cards without a blank badge and a wrapped title/ideology at 320px with no horizontal overflow; ESLint on `ArticleCard.vue` and Nuxt typecheck pass. The live checked cards did not supply confidence, so the two-badge visual state was verified by component structure and matching classes rather than a live card.
+- Removed fixed left margins from the title badges while retaining inline text separation. At 320px, a wrapped ideology badge on the second home card begins at x=31px, the same as its title; the document scroll width remains 305px. ESLint on `ArticleCard.vue` and Nuxt typecheck pass.

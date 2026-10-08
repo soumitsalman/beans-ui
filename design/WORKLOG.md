@@ -892,3 +892,10 @@ Hash inputs: 21 application files under `app/` and `server/`, plus `nuxt.config.
 - Made trending/latest stream state reactive so cursor updates and hydration restoration update More immediately on home/category feeds. Continuation now depends on an actual cursor; mixed feeds retain More while either stream can continue, and source feeds require their source cursor.
 - Retained the shared feed/search and Related visibility guards, hiding More entirely when no cursor remains. Explicitly disable visible More buttons while loading; existing exhausted/repeated-cursor request guards remain in effect.
 - Updated design guidance and pagination acceptance criteria. Verification: focused ESLint, Nuxt typecheck, production build, analytics and discovery integration checks, and whitespace checks passed. Executed the actual feed composable with mock cursor sequences for mixed/trending/source feeds: null/repeated cursors stop continuation, exhausted calls make no request, and refresh re-enables continuation after receiving a new cursor. graphifyy is unavailable; direct component/data-flow inspection was used.
+
+## 2026-10-08 — Flatten glossy UI surfaces
+
+- Removed inset highlights and drop shadows from the shared surface/control styles. Retained a restrained warm sheen and dark coffee palette so cards, modals, inputs, and buttons read as polished flat surfaces.
+- Removed the home separator between the search form and news panel, retaining the existing layout spacing. Updated the design direction to call for tonal separation without bevels or raised effects.
+- Restored the verification document from the previous intact revision after detecting a literal truncated-output marker from the preceding pagination commit; retained pagination checks and added flat-surface/home-divider acceptance criteria.
+- Verification: home-page ESLint, Nuxt typecheck, production build, discovery integration checks and whitespace checks passed. graphifyy is unavailable; direct shared-style and component inspection was used. Browser visual inspection was not performed.

@@ -34,9 +34,9 @@ const MOCK = createServer((request, response) => {
   _upstream_calls++
   const url = new URL(request.url, 'http://fixture')
   response.setHeader('content-type', 'application/json')
-  if (url.pathname === '/articles/article-1') response.end(JSON.stringify({ data: ARTICLE }))
+  if (url.pathname === '/preview/stories/article-1') response.end(JSON.stringify({ data: ARTICLE }))
   else if (url.pathname === '/sources/source-1') response.end(JSON.stringify({ data: { id: 'source-1', site_name: 'Fixture publisher' } }))
-  else if (url.pathname === '/private/confidence') response.end(JSON.stringify({ data: [{ id: 'article-1', confidence: 'high' }] }))
+  else if (url.pathname === '/preview/confidence') response.end(JSON.stringify({ data: [{ id: 'article-1', confidence: 'high' }] }))
   else response.end(JSON.stringify({ data: [ARTICLE], pagination: { next_cursor: null } }))
 })
 
@@ -106,14 +106,14 @@ try {
   assert.equal(first.headers.get('x-ratelimit-remaining'), '9')
   for (let count = 0; count < 9; count++) assert.equal((await action(cookie, '192.0.2.3', 'feed', {}, count % 2 ? APP_PORT : SECOND_PORT)).status, 200)
   const before_rejected = _upstream_calls
-  const denied = await action(cookie, '192.0.2.4', 'article', { id: 'article-1' })
+  const denied = await action(cookie, '192.0.2.4', 'story', { id: 'article-1' })
   assert.equal(denied.status, 429, 'Cookie quota persists across IPs and Machines')
   assert.ok(Number(denied.headers.get('retry-after')) >= 1)
   assert.equal(_upstream_calls, before_rejected, 'Rejected action performs no upstream work')
   assert.equal(denied.headers.get('cache-control'), 'private, no-store')
 
   const doc_cookie = cookieFor()
-  const document = await fetch(`http://127.0.0.1:${APP_PORT}/articles/article-1`, { headers: { 'cookie': doc_cookie, 'fly-client-ip': '192.0.2.5' } })
+  const document = await fetch(`http://127.0.0.1:${APP_PORT}/stories/article-1`, { headers: { 'cookie': doc_cookie, 'fly-client-ip': '192.0.2.5' } })
   assert.equal(document.status, 200)
   assert.match(await document.text(), /Fixture article/)
   assert.equal(document.headers.get('x-ratelimit-remaining'), '9', 'SSR snapshot/coverage/related count only once')
@@ -146,12 +146,12 @@ try {
   assert.equal(head.headers.get('x-ratelimit-limit'), null)
   assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}/about-beans/`, { headers: { 'fly-client-ip': '192.0.2.11', 'cookie': cookieFor() } })).status, 200)
   const before_bypass = _upstream_calls
-  for (const path of ['/api/beans/private/articles/unique', '/api/espresso/private/confidence']) {
+  for (const path of ['/api/beans/preview/articles/unique', '/api/espresso/preview/confidence']) {
     assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}${path}`)).status, 404)
   }
   assert.equal(_upstream_calls, before_bypass)
-  assert.equal((await action(cookieFor(), '192.0.2.9', 'feed', { arbitrary_path: '/private/secrets' })).status, 400)
-  assert.equal((await action(cookieFor(), '192.0.2.9', 'article', { id: '../secret' })).status, 400)
+  assert.equal((await action(cookieFor(), '192.0.2.9', 'feed', { arbitrary_path: '/preview/secrets' })).status, 400)
+  assert.equal((await action(cookieFor(), '192.0.2.9', 'story', { id: '../secret' })).status, 400)
   assert.equal((await action(cookieFor(), '192.0.2.9', 'feed', { limit: 10000 })).status, 400)
   assert.equal((await action(cookieFor(), '192.0.2.9', 'feed', { q: 'x'.repeat(100_001) })).status, 413)
   assert.equal((await action(cookieFor(), '192.0.2.9', 'feed', null)).status, 400)
@@ -163,7 +163,7 @@ try {
   const fail_child = startApp(4934, { NUXT_RATE_LIMIT_REDIS_URL: 'redis://127.0.0.1:4999' })
   await ready(4934)
   const before_outage = _upstream_calls
-  assert.equal((await action(cookieFor(), '192.0.2.10', 'article', { id: 'article-1' }, 4934)).status, 503)
+  assert.equal((await action(cookieFor(), '192.0.2.10', 'story', { id: 'article-1' }, 4934)).status, 503)
   assert.equal(_upstream_calls, before_outage)
   fail_child.kill('SIGTERM')
   console.log('Rate-limit checks passed: signed cookies, IP validation, atomic rolling windows, concurrent/shared quotas, SSR single charging, reset resistance, bypass blocking, and Redis outage protection.')

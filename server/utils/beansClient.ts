@@ -1,5 +1,7 @@
 import type {
   BeansArticle,
+  BeansStory,
+  NewsStory,
   BeansPageParams,
   EspressoConfidence,
   EspressoSignal,
@@ -81,6 +83,18 @@ function toNewsArticle(article: BeansArticle): NewsArticle {
   }
 }
 
+function toNewsStory(story: BeansStory): NewsStory {
+  return {
+    ...toNewsArticle(story),
+    story_id: story.id,
+    source: undefined,
+    url: undefined,
+    published_at: story.last_published_at,
+    last_published_at: story.last_published_at,
+    article_count: story.article_count ?? story.artcles_count
+  }
+}
+
 function toQuery(params: BeansPageParams = {}): ApiQuery {
   return {
     limit: params.limit ?? DEFAULT_PAGE_SIZE,
@@ -152,30 +166,17 @@ export function createBeansClient(fetch_api: ApiFetch, score_threshold: unknown)
     }
   }
 
-  async function fetchTopHeadlines(params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
-    const page = await fetchBeansPage<BeansArticle>('private/articles/unique', {
-      ...withEnglishNews(withScoreThreshold(params)),
-      sort: 'trend',
-      from: params.from ?? new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10)
-    })
-
-    return {
-      ...page,
-      data: page.data.map(toNewsArticle).filter(article => article.id || article.url)
-    }
-  }
-
-  async function fetchLatestArticles(params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
-    const page = await fetchBeansPage<BeansArticle>('private/articles/unique', {
-      ...withEnglishNews(withScoreThreshold(params)),
-      sort: 'recent',
-      from: params.from ?? new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
-    })
-
-    return {
-      ...page,
-      data: page.data.map(toNewsArticle).filter(article => article.id || article.url)
-    }
+  async function fetchStories(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
+    const page = await fetchBeansPage<BeansStory>('preview/stories', withEnglishNews(withScoreThreshold({
+      limit: params.limit,
+      cursor: params.cursor,
+      from: params.from,
+      categories: params.categories,
+      q: params.q,
+      tags: params.tags,
+      score_threshold: params.score_threshold
+    })))
+    return { ...page, data: page.data.map(toNewsStory).filter(story => story.id) }
   }
 
   async function fetchSearchArticles(params: BeansPageParams = {}): Promise<NewsPage<NewsArticle>> {
@@ -191,9 +192,21 @@ export function createBeansClient(fetch_api: ApiFetch, score_threshold: unknown)
     }
   }
 
-  async function fetchArticle(article_id: string): Promise<NewsArticle> {
-    const response = await fetch_api<ApiEnvelope<BeansArticle>>('beans', `articles/${article_id}`)
-    return toNewsArticle(response.data ?? {})
+  async function fetchStory(story_id: string): Promise<NewsStory> {
+    const response = await fetch_api<ApiEnvelope<BeansStory>>('beans', `preview/stories/${story_id}`, {
+      languages: NEWS_LANGUAGES, content_type: 'news'
+    })
+    return toNewsStory(response.data ?? {})
+  }
+
+  async function fetchStorySources(story_id: string): Promise<NewsPage<NewsArticle>> {
+    const page = await fetchBeansPage<BeansArticle>(`preview/stories/${story_id}/articles`, { limit: 20 })
+    return { ...page, data: page.data.map(toNewsArticle).filter(article => article.id) }
+  }
+
+  async function fetchArticlePublishers(story_id: string): Promise<NewsPage<NewsArticle>> {
+    const page = await fetchBeansPage<BeansArticle>(`preview/stories/${story_id}/articles`, { limit: 50 })
+    return { ...page, data: page.data.map(toNewsArticle).filter(article => article.id || article.url) }
   }
 
   async function fetchStoryArticles(
@@ -201,9 +214,9 @@ export function createBeansClient(fetch_api: ApiFetch, score_threshold: unknown)
     params: BeansPageParams = {},
     filters: { include_languages?: boolean } = {}
   ): Promise<NewsPage<NewsArticle>> {
-    const page = await fetchBeansPage<BeansArticle>(`private/stories/${story_id}/articles`, {
+    const page = await fetchBeansPage<BeansArticle>(`preview/stories/${story_id}/articles`, {
       ...params,
-      ...(filters.include_languages ? { languages: NEWS_LANGUAGES } : {})
+      ...(filters.include_languages ? { languages: NEWS_LANGUAGES, content_type: 'news' } : {})
     })
 
     return {
@@ -224,15 +237,15 @@ export function createBeansClient(fetch_api: ApiFetch, score_threshold: unknown)
       sources: [source_id],
       domains: undefined
     }
-    let page = await fetchBeansPage<BeansArticle>('private/articles/unique', source_params)
+    let page = await fetchBeansPage<BeansArticle>('articles/latest', source_params)
 
     if (!page.data.length) {
       source_params.content_type = undefined
-      page = await fetchBeansPage<BeansArticle>('private/articles/unique', source_params)
+      page = await fetchBeansPage<BeansArticle>('articles/latest', source_params)
     }
     if (!page.data.length) {
       source_params.languages = undefined
-      page = await fetchBeansPage<BeansArticle>('private/articles/unique', source_params)
+      page = await fetchBeansPage<BeansArticle>('articles/latest', source_params)
     }
 
     return {
@@ -242,10 +255,11 @@ export function createBeansClient(fetch_api: ApiFetch, score_threshold: unknown)
   }
 
   return {
-    fetchTopHeadlines,
-    fetchLatestArticles,
+    fetchStories,
     fetchSearchArticles,
-    fetchArticle,
+    fetchStory,
+    fetchStorySources,
+    fetchArticlePublishers,
     fetchStoryArticles,
     fetchSource,
     fetchSourceArticles
@@ -263,7 +277,7 @@ export function createEspressoClient(fetch_api: ApiFetch) {
     const ids = [...new Set(article_ids.filter(Boolean))]
     if (!ids.length) return {}
 
-    const response = await fetch_api<ApiEnvelope<ConfidencePayload>>('espresso', 'private/confidence', { ids: ids.join(',') })
+    const response = await fetch_api<ApiEnvelope<ConfidencePayload>>('espresso', 'preview/confidence', { ids: ids.join(',') })
 
     return confidenceMap(response.data)
   }

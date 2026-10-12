@@ -17,7 +17,7 @@ const { trackEvent } = useGoogleAnalytics()
 const SITE_URL = useRuntimeConfig().public.site_url.replace(/\/+$/, '')
 const share_mode = ref(props.has_coverage && props.article_id ? 'coverage' : 'original')
 const original_url = computed(() => withBeansShareAttribution(props.article_url))
-const coverage_url = computed(() => props.has_coverage && props.article_id ? `${SITE_URL}/articles/${encodeURIComponent(props.article_id)}` : undefined)
+const coverage_url = computed(() => props.has_coverage && props.article_id ? `${SITE_URL}/stories/${encodeURIComponent(props.article_id)}` : undefined)
 const share_url = computed(() => share_mode.value === 'coverage' ? coverage_url.value : original_url.value)
 const share_options = computed(() => {
   if (!share_url.value) return []

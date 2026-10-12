@@ -1,7 +1,22 @@
 import assert from 'node:assert/strict'
 import { setTimeout as delay } from 'node:timers/promises'
-import { withActionDeadline } from '../server/utils/actionDeadline.ts'
+import { registerHooks } from 'node:module'
+import { ACTION_TIMEOUT_MS, CLIENT_ACTION_TIMEOUT_MS, UPSTREAM_TIMEOUT_MS } from '../shared/actionTiming.ts'
 import { retryAfterSeconds } from '../app/utils/resourceError.ts'
+
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === '../../shared/actionTiming') return nextResolve(new URL(`${specifier}.ts`, context.parentURL).href, context)
+    return nextResolve(specifier, context)
+  }
+})
+const { withActionDeadline } = await import('../server/utils/actionDeadline.ts')
+
+assert.equal(UPSTREAM_TIMEOUT_MS, 90_000)
+assert.equal(ACTION_TIMEOUT_MS, 95_000)
+assert.equal(CLIENT_ACTION_TIMEOUT_MS, 100_000)
+assert.ok(ACTION_TIMEOUT_MS > UPSTREAM_TIMEOUT_MS, 'Action assembly allows the full API retrieval timeout')
+assert.ok(CLIENT_ACTION_TIMEOUT_MS > ACTION_TIMEOUT_MS, 'The browser waits for the server deadline')
 
 let _signal
 const started_at = Date.now()

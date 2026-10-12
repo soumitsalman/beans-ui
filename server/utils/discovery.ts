@@ -12,7 +12,7 @@ export function escapeXml(value: string): string {
 
 export async function fetchDiscoveryArticles(): Promise<BeansArticle[]> {
   const runtime_config = useRuntimeConfig()
-  const response = await fetchPresentationApi<{ data?: BeansArticle[] }>(runtime_config.beans_api_base_url, 'private/articles/unique', {
+  const response = await fetchPresentationApi<{ data?: BeansArticle[] }>(runtime_config.beans_api_base_url, 'preview/articles/unique', {
     sort: 'recent',
     content_type: 'news',
     languages: NEWS_LANGUAGES,

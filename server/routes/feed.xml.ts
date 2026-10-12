@@ -8,8 +8,13 @@ export default defineCachedEventHandler(async (event) => {
   } catch {
     throw createError({ statusCode: 503, statusMessage: 'News feed temporarily unavailable.' })
   }
-  const items = articles.filter(article => article.story_id).map((article) => {
-    const link = `${SITE_URL}/articles/${encodeURIComponent(article.id!)}`
+  const seen_stories = new Set<string>()
+  const items = articles.filter((article) => {
+    if (!article.story_id || seen_stories.has(article.story_id)) return false
+    seen_stories.add(article.story_id)
+    return true
+  }).map((article) => {
+    const link = `${SITE_URL}/stories/${encodeURIComponent(article.story_id!)}`
     const published_at = article.published_at ? new Date(article.published_at) : undefined
     const date = published_at && !Number.isNaN(published_at.getTime()) ? `<pubDate>${published_at.toUTCString()}</pubDate>` : ''
     const source_name = article.source?.site_name || article.source?.name || article.source?.domain || 'Original publisher'

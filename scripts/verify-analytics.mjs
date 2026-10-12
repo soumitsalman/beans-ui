@@ -50,20 +50,20 @@ assert.match(EVENTS[0][2].page_location, /utm_source=newsletter/)
 assert.match(EVENTS[0][2].page_location, /utm_campaign=weekly/)
 assert.ok(!EVENTS[0][2].page_location.includes('private-'), 'Search terms are stripped while campaign attribution remains')
 
-WINDOW.location = new URL('https://beans.cafecito.tech/articles/article-1')
-RUNTIME.$router.currentRoute.value.fullPath = '/articles/article-1'
-RUNTIME.$router.currentRoute.value.path = '/articles/article-1'
+WINDOW.location = new URL('https://beans.cafecito.tech/stories/story-1')
+RUNTIME.$router.currentRoute.value.fullPath = '/stories/story-1'
+RUNTIME.$router.currentRoute.value.path = '/stories/story-1'
 _watch_navigation()
 assert.equal(EVENTS.length, 1, 'Wait for the destination metadata instead of sending the previous title')
 DOCUMENT.title = 'Fixture news | Beans coverage'
-PAGE.value = { path: '/articles/article-1', title: DOCUMENT.title }
+PAGE.value = { path: '/stories/story-1', title: DOCUMENT.title }
 _watch_navigation()
 _watch_navigation()
 assert.equal(EVENTS.filter(event => event[1] === 'page_view').length, 2, 'Navigation creates one page view')
 assert.equal(EVENTS[1][2].page_title, DOCUMENT.title)
 
-WINDOW.location = new URL('https://beans.cafecito.tech/articles/article-1?utm_source=test')
-RUNTIME.$router.currentRoute.value.fullPath = '/articles/article-1?utm_source=test'
+WINDOW.location = new URL('https://beans.cafecito.tech/stories/story-1?utm_source=test')
+RUNTIME.$router.currentRoute.value.fullPath = '/stories/story-1?utm_source=test'
 _watch_navigation()
 assert.equal(EVENTS.filter(event => event[1] === 'page_view').length, 3, 'Query navigation records a view when the head is unchanged')
 _watch_navigation()

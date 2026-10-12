@@ -7,7 +7,7 @@ const SECTIONS = [
   { title: 'Article counts and publisher counts', text: 'A coverage article count counts the loaded, deduplicated articles. A source count counts distinct publishers within that group. The related count on a card is supplied by the feed and can differ from the coverage articles currently available. More articles does not mean more independent evidence.' },
   { title: 'Confidence and ideology', text: 'Confidence is an Espresso signal available as low, moderate or high. It is not a fact-check verdict, a probability that a claim is true, or a guarantee of accuracy. Ideology is a feed-supplied label; it does not describe every statement in an article. Missing signals are omitted.' },
   { title: 'Trending and engagement', text: 'Trending indicators use attention signals from the feed. Hot and Trending describe activity, not importance or reliability. Mentions, likes and comments are lower-bound values and may be incomplete; missing or zero counts are hidden.' },
-  { title: 'Freshness and selection', text: 'Now shows trending news across all categories, five articles per batch, using a two-day window. Category feeds combine one trending article from that window with four latest articles from the past seven days where available. The interface focuses on English-language news. Source pages can relax those filters when no recent English news is available.' }
+  { title: 'Freshness and selection', text: 'Now shows stories across all categories, five per page. Category pages show stories matching the selected category, with More loading the next page. The interface focuses on English-language news. Source pages can relax those filters when no recent English news is available.' }
 ]
 </script>
 

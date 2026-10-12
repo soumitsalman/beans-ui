@@ -89,6 +89,7 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
     </UForm>
 
     <ArticleSection
+      stories
       wide_grid
       :articles="articles"
       :loading="loading"

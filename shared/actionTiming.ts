@@ -1,0 +1,3 @@
+export const ACTION_TIMEOUT_MS = 95_000
+export const CLIENT_ACTION_TIMEOUT_MS = 100_000
+export const UPSTREAM_TIMEOUT_MS = 90_000

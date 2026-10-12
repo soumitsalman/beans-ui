@@ -26,7 +26,7 @@ export function useHomeDiscovery() {
     tags: ''
   })
   const active_criteria = ref<HomeDiscoveryCriteria | null>(null)
-  const feed = useNewsFeed(undefined, undefined, 'mixed', active_criteria)
+  const feed = useNewsFeed(undefined, undefined, active_criteria)
   const { action_blocked } = useActionCooldown()
 
   const searching = computed(() => feed.loading.value && criteriaActive(active_criteria.value))

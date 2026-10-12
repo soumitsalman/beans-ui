@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NewsArticle } from '~/types/news'
+import StoryCard from '~/components/news/StoryCard.vue'
 import ArticleCard from '~/components/news/ArticleCard.vue'
 
 const STACKED_LIST_CLASS = 'space-y-3'
@@ -14,11 +15,13 @@ const props = withDefaults(defineProps<{
   error_message?: string | null
   empty_message?: string
   wide_grid?: boolean
+  stories?: boolean
 }>(), {
   title: undefined,
   error_message: null,
   empty_message: 'Nothing is available yet.',
-  wide_grid: false
+  wide_grid: false,
+  stories: false
 })
 
 const list_class = computed(() => props.wide_grid ? WIDE_GRID_CLASS : STACKED_LIST_CLASS)
@@ -64,11 +67,19 @@ const emit = defineEmits<{
       :class="list_class"
       :aria-busy="loading"
     >
-      <ArticleCard
+      <template
         v-for="article in articles"
         :key="article.id || article.url || 'article'"
-        :article="article"
-      />
+      >
+        <StoryCard
+          v-if="stories"
+          :story="article"
+        />
+        <ArticleCard
+          v-else
+          :article="article"
+        />
+      </template>
     </div>
 
     <div

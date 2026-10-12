@@ -63,6 +63,17 @@ export interface NewsArticle {
   other_publishers?: NewsPublisher[]
 }
 
+export interface BeansStory extends BeansArticle {
+  last_published_at?: string | null
+  article_count?: number | null
+  artcles_count?: number | null
+}
+
+export interface NewsStory extends NewsArticle {
+  last_published_at?: string | null
+  article_count?: number | null
+}
+
 export interface NewsPublisher {
   id: string
   source?: NewsSource | null

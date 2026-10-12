@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { NewsArticle } from '~/types/news'
 import StoryConfidenceBadge from '~/components/news/StoryConfidenceBadge.vue'
 
-const props = defineProps<{ article: NewsArticle }>()
+const props = withDefaults(defineProps<{ article: NewsArticle, show_ideology?: boolean }>(), { show_ideology: true })
 
 const trend_score = computed(() => props.article.trend?.trend_score)
 const trend_icon = computed(() => {
@@ -31,7 +31,7 @@ const ideology_label = computed(() => ideology.value === 'left'
   <div class="flex shrink-0 items-center justify-end gap-2">
     <StoryConfidenceBadge :confidence="article.confidence" />
     <UTooltip
-      v-if="ideology"
+      v-if="show_ideology && ideology"
       :text="ideology_label"
     >
       <span

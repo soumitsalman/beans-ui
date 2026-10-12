@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { NewsArticle } from '~/types/news'
+import type { NewsArticle, NewsStory } from '~/types/news'
 import ArticleSignals from '~/components/news/ArticleSignals.vue'
 import ArticleShareModal from '~/components/news/ArticleShareModal.vue'
+import StoryHeader from '~/components/news/StoryHeader.vue'
 import ArticleSourceLine from '~/components/news/ArticleSourceLine.vue'
 import MarkdownSummary from '~/components/news/MarkdownSummary.vue'
-import { formatTaxonomyLabel } from '~/utils/formatters'
+import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceLabel } from '~/utils/source'
+import { formatCount, formatTaxonomyLabel } from '~/utils/formatters'
 
-const props = defineProps<{ article: NewsArticle }>()
+const props = defineProps<{ article: NewsArticle, story?: boolean }>()
 const { outboundHref } = useOutboundUrl()
 const image_failed = ref(false)
+const articles_count = computed(() => (props.article as NewsStory).article_count)
 const article_href = computed(() => outboundHref(props.article.url))
 
 watch(() => props.article.image_url, () => {
@@ -41,7 +44,14 @@ watch(() => props.article.image_url, () => {
       </a>
 
       <div class="min-w-0 flex-1 space-y-3">
-        <div class="flex items-start justify-between gap-3 text-[11px] text-stone-500">
+        <StoryHeader
+          v-if="story"
+          :story="article"
+        />
+        <div
+          v-else
+          class="flex items-start justify-between gap-3 text-[11px] text-stone-500"
+        >
           <div class="min-w-0 flex-1">
             <ArticleSourceLine :article="article" />
             <UBadge
@@ -100,14 +110,36 @@ watch(() => props.article.image_url, () => {
         </div>
       </div>
     </div>
-    <div class="flex justify-end border-t border-stone-800/80 px-3.5 py-3">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-stone-800/80 px-3.5 py-3">
+      <div
+        v-if="story"
+        class="flex items-center gap-2 text-[11px] text-stone-500"
+      >
+        <UAvatarGroup
+          v-if="article.other_publishers?.length"
+          :max="5"
+        >
+          <UTooltip
+            v-for="publisher in article.other_publishers"
+            :key="publisher.id"
+            :text="sourceLabel(publisher)"
+          >
+            <UAvatar
+              :src="sourceFavicon(publisher)"
+              :alt="sourceLabel(publisher)"
+              :icon="DEFAULT_SOURCE_ICON"
+            />
+          </UTooltip>
+        </UAvatarGroup>
+        <span v-if="articles_count != null">{{ formatCount(articles_count) }} articles</span>
+      </div>
       <ArticleShareModal
         :article_title="article.title"
         :article_url="article.url"
         :article_id="article.id"
         :has_coverage="Boolean(article.story_id)"
         inline
-        class="min-w-0 max-w-full"
+        class="ml-auto min-w-0 max-w-full"
       />
     </div>
   </article>

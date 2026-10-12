@@ -7,14 +7,14 @@ import { resourceError, requestErrorMessage } from '~/utils/resourceError'
 
 const route = useRoute()
 const { action_blocked, cooldown_message } = useActionCooldown()
-const { fetchArticle, fetchCoverage, fetchRelated } = useBeansApi()
+const { fetchStory, fetchCoverage, fetchRelated } = useBeansApi()
 const article_id = computed(() => String(route.params.id || ''))
-const { data: initial_article, error: initial_error } = await useAsyncData(`article:${article_id.value}`, async () => {
-  const result = await fetchArticle(article_id.value)
-  if (!result.article.id || !result.article.title) throw createError({ statusCode: 404, statusMessage: 'Article not found.' })
+const { data: initial_article, error: initial_error } = await useAsyncData(`story:${article_id.value}`, async () => {
+  const result = await fetchStory(article_id.value)
+  if (!result.story.id || !result.story.title) throw createError({ statusCode: 404, statusMessage: 'Story not found.' })
   return result
 })
-const article = ref<NewsArticle | null>(initial_article.value?.article ?? null)
+const article = ref<NewsArticle | null>(initial_article.value?.story ?? null)
 const coverage_articles = ref<NewsArticle[]>(initial_article.value?.coverage.data ?? [])
 const related_articles = ref<NewsArticle[]>(initial_article.value?.related.data ?? [])
 const coverage_cursor = ref<string | null>(null)
@@ -38,11 +38,11 @@ if (initial_error.value) {
 
 useSeoMeta({ robots: () => article_error.value ? 'noindex, follow' : 'index, follow, max-image-preview:large' })
 usePageMetadata(() => ({
-  original_article: article.value,
-  title: article.value ? `${article.value.title} | Beans coverage` : 'Article temporarily unavailable | Beans',
+  kind: 'WebPage',
+  title: article.value ? `${article.value.title} | Beans coverage` : 'Story temporarily unavailable | Beans',
   description: article.value?.summary || 'Compare publisher reporting and explore related coverage of this story on Beans.',
   image: article.value?.image_url,
-  breadcrumbs: [{ name: 'Beans', path: '/' }, { name: article.value?.title || 'Article', path: route.path }]
+  breadcrumbs: [{ name: 'Beans', path: '/' }, { name: article.value?.title || 'Story', path: route.path }]
 }))
 
 const { trackEvent } = useGoogleAnalytics()
@@ -118,10 +118,10 @@ async function loadArticle(): Promise<void> {
   related_error.value = null
 
   try {
-    const result = await fetchArticle(id)
+    const result = await fetchStory(id)
     if (!isCurrentGeneration(generation)) return
-    if (!result.article.id || !result.article.title) throw createError({ statusCode: 404, statusMessage: 'Article not found.' })
-    article.value = result.article
+    if (!result.story.id || !result.story.title) throw createError({ statusCode: 404, statusMessage: 'Story not found.' })
+    article.value = result.story
     coverage_articles.value = result.coverage.data
     related_articles.value = result.related.data
     related_cursor.value = result.related.next_cursor
@@ -172,7 +172,10 @@ onMounted(() => {
     </UAlert>
 
     <template v-else-if="article">
-      <ArticleSnapshot :article="article" />
+      <ArticleSnapshot
+        :article="article"
+        story
+      />
       <ArticleDetailSections
         :coverage_articles="coverage_articles"
         :related_articles="related_articles"

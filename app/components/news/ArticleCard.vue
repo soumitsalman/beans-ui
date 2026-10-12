@@ -18,8 +18,8 @@ const card_image = useTemplateRef<HTMLImageElement>('card-image')
 const summary = computed(() => props.article.summary?.trim())
 const show_image = computed(() => Boolean(props.article.image_url) && !image_failed.value)
 const share_url = computed(() => withBeansShareAttribution(props.article.url))
-const title_link = computed(() => props.article.story_id && props.article.id
-  ? `/articles/${props.article.id}`
+const title_link = computed(() => props.article.story_id
+  ? `/stories/${props.article.story_id}`
   : undefined)
 const external_article_url = computed(() => !title_link.value && props.article.url
   ? outboundHref(props.article.url)
@@ -254,7 +254,7 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
           v-if="share_url || title_link"
           :article_title="article.title"
           :article_url="article.url"
-          :article_id="article.id"
+          :article_id="article.story_id || article.id"
           :has_coverage="Boolean(title_link)"
         />
       </div>

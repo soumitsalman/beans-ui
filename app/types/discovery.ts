@@ -1,17 +1,10 @@
 import type { NewsArticle } from './news'
 
-export interface FeedStreamSnapshot {
-  cursor: string | null
-  exhausted: boolean
-  ids: string[]
-  from: string
-}
-
 export interface FeedSnapshot {
   articles: NewsArticle[]
   error_message: string | null
-  trending: FeedStreamSnapshot
-  latest: FeedStreamSnapshot
+  cursor: string | null
+  from: string
   source_cursor: string | null
   source_exhausted: boolean
 }

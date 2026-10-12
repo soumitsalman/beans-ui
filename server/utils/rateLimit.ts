@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import type { H3Event } from 'h3'
+import { getRequestIP, type H3Event } from 'h3'
 import { ANONYMOUS_COOKIE, COOKIE_LIFETIME_SECONDS, hashIdentity, newIdentity, normaliseIp, signIdentity, verifyIdentity } from './anonymousIdentity'
 import { consumeQuota, IP_LIMIT, USER_LIMIT } from './rateLimitStore'
 
@@ -17,7 +17,7 @@ export async function enforceRateLimit(event: H3Event): Promise<void> {
   // Trust Fly's header only when configured for a deployment reached through Fly Proxy.
   const ip = String(config.rate_limit_trust_fly) === 'true'
     ? normaliseIp(getHeader(event, 'fly-client-ip'))
-    : normaliseIp(event.node.req.socket.remoteAddress)
+    : normaliseIp(getRequestIP(event, { xForwardedFor: import.meta.dev }))
   if (!ip) return failUnavailable()
   const verified_id = verifyIdentity(getCookie(event, ANONYMOUS_COOKIE), secret)
   const id = verified_id ?? newIdentity()

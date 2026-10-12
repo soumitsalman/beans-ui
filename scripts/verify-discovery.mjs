@@ -34,6 +34,7 @@ const ARTICLES = Array.from({ length: 36 }, (_, index) => ({
   entities: [0, 1, 3].includes(index) ? ['fixture_company'] : [], tags: [],
   trend: { related: 36, likes: 10 }
 }))
+const STORIES = ARTICLES.map((article, index) => ({ ...article, id: `story-${index + 1}`, last_published_at: article.published_at, article_count: 36, source: undefined, url: undefined }))
 let _fail_feed = true
 let _fail_article = true
 let _child_output = ''
@@ -126,21 +127,21 @@ const mock_server = createServer((request, response) => {
   }
   REQUESTS.push({ path: url.pathname, query: Object.fromEntries(url.searchParams), languages: url.searchParams.getAll('languages'), exclusions: url.searchParams.getAll('exclude_ids') })
   response.setHeader('content-type', 'application/json')
-  if (url.pathname === '/private/articles/unique' && _fail_feed) {
+  if (['/preview/articles/unique', '/preview/stories'].includes(url.pathname) && _fail_feed) {
     response.writeHead(500).end(JSON.stringify({ message: 'Fixture temporary outage.' }))
     return
   }
-  if (url.pathname === '/private/articles/unique' && url.searchParams.get('q') === 'fail-discovery') {
+  if (['/preview/articles/unique', '/preview/stories'].includes(url.pathname) && url.searchParams.get('q') === 'fail-discovery') {
     response.writeHead(500).end(JSON.stringify({ message: 'Fixture discovery failure.' }))
     return
   }
-  if (url.pathname.startsWith('/articles/') && url.pathname !== '/articles/search') {
+  if (/^\/preview\/stories\/[^/]+$/.test(url.pathname)) {
     const id = url.pathname.split('/').at(-1)
     if (id === 'temporary' && _fail_article) {
       response.writeHead(500).end(JSON.stringify({ message: 'Fixture temporary outage.' }))
       return
     }
-    const article = id === 'temporary' ? ARTICLES[0] : ARTICLES.find(article => article.id === id)
+    const article = id === 'temporary' ? STORIES[0] : STORIES.find(story => story.id === id)
     if (!article) response.writeHead(id === 'gone' ? 410 : 404).end(JSON.stringify({ message: 'Not found.' }))
     else response.end(JSON.stringify({ data: article }))
     return
@@ -150,13 +151,13 @@ const mock_server = createServer((request, response) => {
     else response.writeHead(404).end(JSON.stringify({ message: 'Source not found.' }))
     return
   }
-  if (url.pathname === '/private/confidence') {
+  if (url.pathname === '/preview/confidence') {
     response.end(JSON.stringify({ data: (url.searchParams.get('ids') || '').split(',').map(id => ({ id, confidence: 'high' })) }))
     return
   }
-  if (url.pathname === '/private/articles/unique' || url.pathname === '/private/stories/story-1/articles' || url.pathname === '/articles/search') {
+  if (url.pathname === '/preview/stories' || url.pathname === '/articles/latest' || url.pathname === '/preview/articles/unique' || /^\/preview\/stories\/[^/]+\/articles?$/.test(url.pathname) || url.pathname === '/preview/stories/story-1/articles' || url.pathname === '/articles/search') {
     const exclusions = new Set(url.searchParams.getAll('exclude_ids'))
-    const fixture_articles = url.pathname === '/private/stories/story-1/articles' && process.env.BEANS_COVERAGE_FIXTURE
+    const fixture_articles = url.pathname.endsWith('/articles') && process.env.BEANS_COVERAGE_FIXTURE
       ? ARTICLES.map((article, index) => ({
           ...article,
           published_at: process.env.BEANS_COVERAGE_FIXTURE === 'multi-day' && index === ARTICLES.length - 1
@@ -164,7 +165,7 @@ const mock_server = createServer((request, response) => {
             : `2026-10-02T12:${String(index).padStart(2, '0')}:00Z`,
           source: { ...SOURCE, id: `source-${index % 7 + 1}`, site_name: `Fixture publisher ${index % 7 + 1}` }
         }))
-      : ARTICLES
+      : url.pathname === '/preview/stories' ? STORIES : ARTICLES
     const filtered = fixture_articles.filter(article => !exclusions.has(article.id))
     const limit = Number(url.searchParams.get('limit') || 5)
     const offset = Number(url.searchParams.get('cursor') || 0)
@@ -235,7 +236,7 @@ try {
     const { response } = await fetchPage(path)
     assert.equal(response.status, 503, `${path} does not cache an empty success on outage`)
   }
-  const temporary = await fetchPage('/articles/temporary')
+  const temporary = await fetchPage('/stories/temporary')
   assert.equal(temporary.response.status, 503)
   assert.equal(temporary.response.headers.get('cache-control'), 'private, no-store')
   assert.match(temporary.html, /Retry/)
@@ -244,14 +245,15 @@ try {
   _fail_article = false
 
   const query_home_cookie = `beans_home_discovery=${encodeURIComponent(JSON.stringify({ query: 'old-topic', tags: ['startups'] }))}`
+  const publisher_requests_before = REQUESTS.filter(request => /^\/preview\/stories\/[^/]+\/articles$/.test(request.path) || request.path === '/preview/confidence').length
   const query_home = await fetchPage('/?q=search%20query', { headers: { cookie: query_home_cookie } })
   assert.equal(query_home.response.status, 200)
   assert.equal(query_home.response.headers.get('cache-control'), 'private, no-store', 'A home q query is not publicly cached')
   assert.match(query_home.html, /search query/)
   assert.equal((query_home.html.match(/<article(?:\s|>)/g) || []).length, 5)
-  const query_home_requests = REQUESTS.filter(request => request.path === '/private/articles/unique' && request.query.q === 'search query' && request.query.tags === 'startups' && !request.query.categories)
-  assert.ok(query_home_requests.some(request => request.query.sort === 'trend' && request.query.limit === '1' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A home q query keeps the trending request and saved tags')
-  assert.ok(query_home_requests.some(request => request.query.sort === 'recent' && request.query.limit === '4' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A home q query keeps the latest request and saved tags')
+  assert.equal(REQUESTS.filter(request => /^\/preview\/stories\/[^/]+\/articles$/.test(request.path) || request.path === '/preview/confidence').length, publisher_requests_before, 'Home SSR renders story cards before publisher enrichment')
+  const query_home_requests = REQUESTS.filter(request => request.path === '/preview/stories' && request.query.q === 'search query' && request.query.tags === 'startups' && !request.query.categories)
+  assert.ok(query_home_requests.some(request => request.query.limit === '5' && !request.query.sort && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A home q query keeps the five-story request and saved tags')
 
   const secure_page = await fetchPage('/about-beans', { headers: { 'x-forwarded-proto': 'https' } })
   assert.equal(secure_page.response.headers.get('strict-transport-security'), 'max-age=31536000')
@@ -268,7 +270,7 @@ try {
   for (const [path, headline] of [
     ['/', 'Fixture news 1 &amp; coverage'],
     ['/categories/tech-and-innovation', 'Fixture news 1 &amp; coverage'],
-    ['/articles/article-1', 'Publisher summary 1.'],
+    ['/stories/story-1', 'Publisher summary 1.'],
     ['/sources/source-1', 'Fixture publisher description.']
   ]) {
     const { response, html } = await fetchPage(path)
@@ -279,13 +281,12 @@ try {
     assert.ok(!html.includes('cafecito-beans-app.fly.dev'), `${path} has no old metadata origin`)
     assert.ok(!html.includes('fixture-only'), `${path} does not expose API credentials`)
     if (path === '/' || path.startsWith('/categories')) assert.equal((html.match(/<article(?:\s|>)/g) || []).length, 5)
-    if (path === '/articles/article-1') {
+    if (path === '/stories/story-1') {
       assert.match(html, /property="og:title" content="Fixture news 1 &(?:amp;)? coverage \| Beans coverage"/)
       assert.match(html, /aria-label="Copy link"/, 'Article detail renders direct sharing actions')
       assert.match(html, /aria-label="LinkedIn"/)
       assert.ok(!html.includes('Original reporting from'), 'Detail omits the visible attribution sentence')
-      assert.match(html, /"creditText":"By Fixture Reporter"/, 'Original author credit remains in metadata')
-      assert.match(html, /"datePublished":/, 'Original publication date is included in the citation')
+      assert.ok(!html.includes('"citation"'), 'Story metadata does not attribute a story to one publisher')
       assert.ok(!html.includes('"dateModified"'), 'No modification date is invented')
     }
     assert.match(html, /href="#main-content"/)
@@ -299,11 +300,11 @@ try {
     for (const match of html.matchAll(/<script\b[^>]*type="application\/ld\+json"[^>]*>(.*?)<\/script>/gs)) JSON.parse(match[1])
   }
 
-  const request_count = REQUESTS.filter(request => request.path === '/private/articles/unique').length
+  const request_count = REQUESTS.filter(request => request.path === '/preview/stories').length
   const warm_start = performance.now()
   const warm_home = await fetchPage('/')
   const warm_duration = performance.now() - warm_start
-  assert.equal(REQUESTS.filter(request => request.path === '/private/articles/unique').length, request_count, 'Warm feed uses the bounded presentation cache')
+  assert.equal(REQUESTS.filter(request => request.path === '/preview/stories').length, request_count, 'Warm feed uses the bounded presentation cache')
   assert.equal(warm_home.response.headers.get('cache-control'), 'private, no-store')
   assert.match(warm_home.html, /What(?:'|&#39;)s on your mind\?/)
   assert.match(warm_home.html, /Discover Trending News/)
@@ -320,12 +321,11 @@ try {
   const methodology = await fetchPage('/methodology', { redirect: 'manual' })
   assert.equal(methodology.response.status, 301)
   assert.equal(methodology.response.headers.get('location'), '/about-beans#how-it-works')
-  const home_trend = REQUESTS.find(request => request.path === '/private/articles/unique' && request.query.sort === 'trend' && request.query.limit === '1' && !request.query.categories && !request.query.q)
-  assert.ok(home_trend, 'Home fetches one trending article without a category filter')
-  assert.equal(home_trend.query.tags, undefined, 'Default home trending omits tags')
-  const home_latest = REQUESTS.find(request => request.path === '/private/articles/unique' && request.query.sort === 'recent' && request.query.limit === '4' && !request.query.categories && !request.query.q)
-  assert.ok(home_latest, 'Home fetches four latest articles without a category filter')
-  assert.equal(home_latest.query.tags, undefined, 'Default home latest omits tags')
+  const home_request = REQUESTS.find(request => request.path === '/preview/stories' && request.query.limit === '5' && !request.query.categories && !request.query.q)
+  assert.ok(home_request, 'Home requests five stories without categories')
+  assert.equal(home_request.query.sort, undefined)
+  assert.deepEqual(home_request.exclusions, [])
+  assert.equal(home_request.query.tags, undefined)
   async function discoveryAction(q) {
     return fetch(`http://127.0.0.1:${APP_PORT}/api/actions/feed`, {
       method: 'POST', headers: { 'content-type': 'application/json', 'fly-client-ip': '192.0.2.100', 'cookie': fixtureCookie() },
@@ -335,7 +335,7 @@ try {
   const discovery_before = REQUESTS.filter(request => request.query.q === 'battery').length
   assert.equal((await discoveryAction('battery')).status, 200)
   assert.equal((await discoveryAction('battery')).status, 200)
-  assert.equal(REQUESTS.filter(request => request.query.q === 'battery').length, discovery_before + 2, 'Identical action searches reuse both cached streams')
+  assert.equal(REQUESTS.filter(request => request.query.q === 'battery').length, discovery_before + 1, 'Identical action searches reuse the cached story page')
   const discovery_request = REQUESTS.find(request => request.query.q === 'battery')
   assert.equal(discovery_request.query.score_threshold, DEFAULT_SCORE_THRESHOLD)
   assert.equal(discovery_request.query.categories, undefined)
@@ -354,9 +354,8 @@ try {
   assert.match(personalized.html, /battery/)
   assert.match(personalized.html, />Find</)
   assert.equal((personalized.html.match(/<article(?:\s|>)/g) || []).length, 5)
-  const personalized_requests = REQUESTS.filter(request => request.path === '/private/articles/unique' && request.query.q === 'battery' && request.query.tags === 'startups' && !request.query.categories)
-  assert.ok(personalized_requests.some(request => request.query.sort === 'trend' && request.query.limit === '1' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A saved home search keeps the trending request')
-  assert.ok(personalized_requests.some(request => request.query.sort === 'recent' && request.query.limit === '4' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A saved home search keeps the latest request')
+  const personalized_requests = REQUESTS.filter(request => request.path === '/preview/stories' && request.query.q === 'battery' && request.query.tags === 'startups' && !request.query.categories)
+  assert.ok(personalized_requests.some(request => request.query.limit === '5' && !request.query.sort && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A saved home search keeps the five-story request')
   const personalized_after = personalized_requests.length
   assert.equal(personalized_after, personalized_before, 'Saved home search reuses the identical action feed cache')
 
@@ -367,22 +366,21 @@ try {
   const tags_home = await fetchPage('/', { headers: { cookie: tags_cookie } })
   assert.equal(tags_home.response.status, 200)
   assert.equal(tags_home.response.headers.get('cache-control'), 'private, no-store')
-  const tags_requests = REQUESTS.filter(request => request.path === '/private/articles/unique' && request.query.tags === 'energy' && !request.query.q && !request.query.categories)
-  assert.ok(tags_requests.some(request => request.query.sort === 'trend' && request.query.score_threshold === undefined), 'A tags-only home search keeps trending and omits the score threshold')
-  assert.ok(tags_requests.some(request => request.query.sort === 'recent' && request.query.score_threshold === undefined), 'A tags-only home search keeps latest and omits the score threshold')
+  const tags_requests = REQUESTS.filter(request => request.path === '/preview/stories' && request.query.tags === 'energy' && !request.query.q && !request.query.categories)
+  assert.ok(tags_requests.some(request => request.query.limit === '5' && !request.query.sort && request.query.score_threshold === undefined), 'A tags-only home search loads five stories and omits the score threshold')
   console.log(`Warm home response: ${warm_duration.toFixed(1)} ms; no upstream feed fetches.`)
 
-  for (const [path, expected] of [['/articles/missing', 404], ['/articles/gone', 410], ['/sources/missing', 404]]) {
+  for (const [path, expected] of [['/stories/missing', 404], ['/stories/gone', 410], ['/sources/missing', 404]]) {
     assert.equal((await fetchPage(path)).response.status, expected, path)
   }
-  assert.equal((await fetchPage('/articles/temporary')).response.status, 200, 'An outage does not permanently mark an article missing')
+  assert.equal((await fetchPage('/stories/temporary')).response.status, 200, 'An outage does not permanently mark an article missing')
 
   assert.equal((await fetchPage('/archive')).response.status, 404, 'Removed archive route is not served')
 
   const sitemap = await fetchPage('/sitemap.xml')
   assert.equal(sitemap.response.status, 200)
   assert.ok(!sitemap.html.includes('/archive'), 'Removed archive is absent from the sitemap')
-  assert.match(sitemap.html, /\/articles\/article-1<\/loc>/)
+  assert.match(sitemap.html, /\/stories\/story-1<\/loc>/)
   assert.match(sitemap.html, /\/sources\/source-1<\/loc>/)
   assert.ok(!sitemap.html.includes('/articles/article-36'), 'Story-less item is not advertised as coverage')
   const rss = await fetchPage('/feed.xml')
@@ -398,7 +396,7 @@ try {
   assert.equal(REQUESTS.find(request => request.path === '/articles/search' && request.query.tags === 'startups' && !request.query.q)?.query.score_threshold, undefined, 'Tag-only search omits the score threshold')
   // Node fetch can override Host; use the HTTP client to exercise the actual host middleware.
   const redirect = await new Promise((resolve, reject) => {
-    const redirect_request = request(`http://127.0.0.1:${APP_PORT}/articles/article-1?utm_campaign=test`, {
+    const redirect_request = request(`http://127.0.0.1:${APP_PORT}/stories/story-1?utm_campaign=test`, {
       headers: { host: 'cafecito-beans-app.fly.dev' }
     }, (response) => {
       response.resume()
@@ -408,13 +406,40 @@ try {
     redirect_request.end()
   })
   assert.equal(redirect.statusCode, 308)
-  assert.equal(redirect.headers.location, `${SITE_URL}/articles/article-1?utm_campaign=test`)
+  assert.equal(redirect.headers.location, `${SITE_URL}/stories/story-1?utm_campaign=test`)
   const localhost = await fetchPage('/about-beans')
   assert.equal(localhost.response.status, 200, 'Localhost is not redirected')
 
-  const latest_request = REQUESTS.find(request => request.path === '/private/articles/unique' && request.query.limit === '4')
-  assert.ok(latest_request.exclusions.includes('article-1'), 'Latest excludes the server-rendered trending ID')
-  assert.ok(latest_request.languages.includes('en'), 'Repeated English language keys retained')
+  async function cursorFeed(payload) {
+    const response = await fetch(`http://127.0.0.1:${APP_PORT}/api/actions/feed`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'fly-client-ip': '192.0.2.101', 'cookie': fixtureCookie() },
+      body: JSON.stringify(payload)
+    })
+    assert.equal(response.status, 200)
+    return response.json()
+  }
+  const criteria = { q: 'cursor-fixture', tags: ['startups'], categories: ['artificial_intelligence'] }
+  const first_page = await cursorFeed(criteria)
+  assert.equal(first_page.articles.length, 5)
+  assert.ok(first_page.articles.every(story => !story.other_publishers && !story.confidence), 'Feed action returns stories before enrichment')
+  const enriched_response = await fetch(`http://127.0.0.1:${APP_PORT}/api/actions/story_enrichment`, {
+    method: 'POST', headers: { 'content-type': 'application/json', 'fly-client-ip': '192.0.2.101', 'cookie': fixtureCookie() },
+    body: JSON.stringify({ ids: first_page.articles.map(story => story.id) })
+  })
+  assert.equal(enriched_response.status, 200)
+  const enriched = await enriched_response.json()
+  assert.ok(first_page.articles.every(story => enriched[story.id]?.other_publishers?.length && enriched[story.id]?.confidence === 'high'))
+  assert.ok(REQUESTS.filter(request => /^\/preview\/stories\/[^/]+\/articles$/.test(request.path)).some(request => request.query.limit === '20'), 'Deferred action uses the existing favicon route')
+  const next_page = await cursorFeed({ ...criteria, cursor: first_page.cursor, from: first_page.from, seen_ids: first_page.articles.map(story => story.id) })
+  assert.equal(next_page.articles.length, 5)
+  assert.ok(next_page.articles.every(story => !first_page.articles.some(previous => previous.id === story.id)))
+  const cursor_requests = REQUESTS.filter(request => request.path === '/preview/stories' && request.query.q === criteria.q)
+  assert.equal(cursor_requests.length, 2, 'Initial/More each make exactly one collection request')
+  assert.equal(cursor_requests[0].query.cursor, undefined)
+  assert.equal(cursor_requests[1].query.cursor, first_page.cursor)
+  assert.ok(cursor_requests.every(request => request.query.limit === '5' && request.query.tags === 'startups' && request.query.categories === 'artificial_intelligence' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD && request.query.from === first_page.from))
+  assert.ok(REQUESTS.filter(request => request.path === '/preview/stories').every(request => !request.query.sort && !request.exclusions.length && request.query.limit === '5'), 'Every story feed page omits sort/exclusions and requests five')
+  assert.ok(home_request.languages.includes('en'), 'Repeated English language keys retained')
   console.log('Discovery integration checks passed: SSR content, canonical/meta/JSON-LD, resource errors, removed archive, sitemap/RSS, host redirects and feed filters.')
   if (process.argv.includes('--serve')) {
     REQUESTS.length = 0

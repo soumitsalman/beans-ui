@@ -1,15 +1,15 @@
 import type { H3Event } from 'h3'
 import { createError, setHeader } from 'h3'
-import type { NewsArticle, NewsPage } from '../../app/types/news'
-import type { FeedSnapshot, FeedStreamSnapshot } from '../../app/types/discovery'
-import type { ArticleAction, FeedInput, SourceAction } from '#shared/actions'
+import type { NewsArticle, NewsStory, NewsPage } from '../../app/types/news'
+import type { FeedSnapshot } from '../../app/types/discovery'
+import type { StoryAction, StoryEnrichment, FeedInput, SourceAction } from '#shared/actions'
 import { ACTION_INPUTS } from './actionInput'
 import type { ActionName } from './actionInput'
 import { createBeansClient, createEspressoClient } from './beansClient'
 import { fetchPresentationApi } from './proxyApi'
 import { withActionDeadline } from './actionDeadline'
+import { sourceFavicon } from '../../app/utils/source'
 
-const MAX_FEED_PAGES = 10
 const MAX_COVERAGE_PAGES = 100
 
 export function createPresentationActions(event: H3Event) {
@@ -35,7 +35,7 @@ export function createPresentationActions(event: H3Event) {
       const confidence = await espresso.fetchConfidence(articles.map(article => article.id)).catch(() => ({}))
       return Promise.all(articles.map(async (article) => {
         const page = article.story_id
-          ? await beans.fetchStoryArticles(article.story_id, { limit: 50 }).catch(() => null)
+          ? await beans.fetchArticlePublishers(article.story_id).catch(() => null)
           : null
         const seen_sources = new Set([article.source?.id])
         const publishers = (page?.data ?? []).filter((item) => {
@@ -48,70 +48,68 @@ export function createPresentationActions(event: H3Event) {
       }))
     }
 
-    function initialStream(days: number): FeedStreamSnapshot {
-      return { cursor: null, exhausted: false, ids: [], from: new Date(Date.now() - days * 86400000).toISOString().slice(0, 10) }
+    async function fetchStoryEnrichment(story_ids: string[]): Promise<Record<string, StoryEnrichment>> {
+      const source_pages = await Promise.all(story_ids.map(id => beans.fetchStorySources(id).catch(() => null)))
+      const article_ids = source_pages.map(page => [...new Set((page?.data ?? []).map(article => article.id).filter(Boolean))])
+      const confidence: Record<string, NewsArticle['confidence']> = {}
+      const scores = { low: 1, medium: 2, high: 3 }
+      const queried_ids = new Set<string>()
+      while (true) {
+        const pending_ids = [...new Set(article_ids.flatMap((ids, index) => confidence[story_ids[index]!]
+          ? []
+          : ids.filter(id => !queried_ids.has(id))))].slice(0, 100)
+        if (!pending_ids.length) break
+        pending_ids.forEach(id => queried_ids.add(id))
+        const values = await espresso.fetchConfidence(pending_ids).catch(() => ({}))
+        for (const [index, ids] of article_ids.entries()) {
+          for (const id of ids) {
+            const value = (values as Record<string, NewsArticle['confidence']>)[id]
+            const story_id = story_ids[index]!
+            const previous = confidence[story_id]
+            if (value && (!previous || scores[value] > scores[previous])) confidence[story_id] = value
+          }
+        }
+      }
+      return Object.fromEntries(story_ids.map((story_id, index) => {
+        const favicons = new Set<string>()
+        const publishers = (source_pages[index]?.data ?? []).filter((article) => {
+          const favicon = sourceFavicon(article)
+          if (!favicon || favicons.has(favicon)) return false
+          favicons.add(favicon)
+          return true
+        }).slice(0, 5).map(article => ({ id: article.id, source: article.source, url: article.url }))
+        return [story_id, { confidence: confidence[story_id], other_publishers: publishers }]
+      }))
+    }
+
+    async function enrichStories(stories: NewsStory[]): Promise<NewsStory[]> {
+      const enrichment = await fetchStoryEnrichment(stories.map(story => story.id))
+      return stories.map(story => ({ ...story, ...enrichment[story.id] }))
     }
 
     async function feed(input: FeedInput): Promise<FeedSnapshot> {
-      const trending = input.trending ?? initialStream(2)
-      const latest = input.latest ?? initialStream(7)
-      const batch: NewsArticle[] = []
-      const seen_ids = new Set(input.seen_ids ?? [...trending.ids, ...latest.ids])
-      let error_message: string | null = null
+      const from = input.from ?? new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
+      const seen_ids = new Set(input.seen_ids ?? [])
+      let cursor = input.cursor ?? null
       let source_cursor = input.source_cursor ?? null
-      const failures = new Set<string>()
-      async function fetchStream(kind: 'trending' | 'latest', desired: number): Promise<void> {
-        const state = kind === 'trending' ? trending : latest
-        const opposite = kind === 'trending' ? latest : trending
-        const fetch_page = kind === 'trending' ? beans.fetchTopHeadlines : beans.fetchLatestArticles
-        let received = 0
-        const cursors = new Set<string | null>()
-        try {
-          for (let index = 0; index < MAX_FEED_PAGES && !state.exhausted && received < desired; index++) {
-            const previous_cursor = state.cursor
-            if (cursors.has(previous_cursor)) break
-            cursors.add(previous_cursor)
-            const page = await fetch_page({ categories: input.categories, q: input.q, tags: input.tags,
-              limit: desired - received, cursor: previous_cursor, exclude_ids: opposite.ids, from: state.from })
-            for (const article of page.data) {
-              if (!article.id || seen_ids.has(article.id)) continue
-              seen_ids.add(article.id)
-              state.ids.push(article.id)
-              batch.push(article)
-              if (++received >= desired) break
-            }
-            state.cursor = page.next_cursor && !cursors.has(page.next_cursor) ? page.next_cursor : null
-            state.exhausted = !state.cursor
-          }
-        } catch {
-          failures.add(kind)
-          error_message = 'Some news could not be loaded right now.'
+      try {
+        const page = input.source_id
+          ? await beans.fetchSourceArticles(input.source_id, { limit: 5, cursor: source_cursor })
+          : await beans.fetchStories({ limit: 5, cursor, from, categories: input.categories, q: input.q, tags: input.tags })
+        const articles = page.data.filter((article) => {
+          if (!article.id || seen_ids.has(article.id) || (input.source_id && article.source?.id !== input.source_id)) return false
+          seen_ids.add(article.id)
+          return true
+        })
+        if (input.source_id) source_cursor = page.next_cursor !== source_cursor ? page.next_cursor : null
+        else cursor = page.next_cursor !== cursor ? page.next_cursor : null
+        return {
+          articles: input.source_id ? await enrichArticles(articles) : articles,
+          cursor, from, source_cursor, source_exhausted: !source_cursor, error_message: null
         }
+      } catch {
+        return { articles: [], cursor, from, source_cursor, source_exhausted: !source_cursor, error_message: 'News could not be loaded right now.' }
       }
-      if (input.source_id) {
-        try {
-          const page = await beans.fetchSourceArticles(input.source_id, { limit: 5, cursor: source_cursor })
-          batch.push(...page.data.filter((article) => {
-            if (!article.id || article.source?.id !== input.source_id || seen_ids.has(article.id)) return false
-            seen_ids.add(article.id)
-            return true
-          }))
-          source_cursor = page.next_cursor !== source_cursor ? page.next_cursor : null
-        } catch {
-          error_message = 'News could not be loaded right now.'
-        }
-      } else if (input.feed_mode === 'trending') {
-        await fetchStream('trending', 5)
-      } else {
-        await fetchStream('trending', 1)
-        await fetchStream('latest', 4)
-        const missing = Math.max(0, 5 - batch.length)
-        if (missing && latest.exhausted && !trending.exhausted && !failures.has('trending')) await fetchStream('trending', missing)
-        else if (missing && trending.exhausted && !latest.exhausted && !failures.has('latest')) await fetchStream('latest', missing)
-      }
-      trending.ids = trending.ids.slice(-2000)
-      latest.ids = latest.ids.slice(-2000)
-      return { articles: await enrichArticles(batch), trending, latest, source_cursor, source_exhausted: !source_cursor, error_message }
     }
 
     async function coverage(story_id: string): Promise<NewsPage<NewsArticle>> {
@@ -151,30 +149,31 @@ export function createPresentationActions(event: H3Event) {
           if (!source.id) throw createError({ statusCode: 404, statusMessage: 'Source not found.' })
           return { source, feed: await feed({ source_id: id }) } satisfies SourceAction
         }
-        case 'article': {
-          const { id } = ACTION_INPUTS.article.parse(payload)
-          const article = await beans.fetchArticle(id)
-          if (!article.id || !article.title) throw createError({ statusCode: 404, statusMessage: 'Article not found.' })
+        case 'story': {
+          const { id } = ACTION_INPUTS.story.parse(payload)
+          const story = await beans.fetchStory(id)
+          if (!story.id || !story.title) throw createError({ statusCode: 404, statusMessage: 'Story not found.' })
           const empty: NewsPage<NewsArticle> = { data: [], next_cursor: null }
           let coverage_error: string | null = null
           let related_error: string | null = null
-          const [confidence, coverage_page, related] = await Promise.all([
-            espresso.fetchConfidence([id]).catch(() => ({})),
-            article.story_id
-              ? coverage(article.story_id).catch(() => {
+          const [enriched, coverage_page, related] = await Promise.all([
+            enrichStories([story]),
+            story.id
+              ? coverage(story.id).catch(() => {
                   coverage_error = 'Coverage could not be loaded right now.'
                   return empty
                 })
               : empty,
-            article.story_id
-              ? beans.fetchStoryArticles(article.story_id, { limit: 5 }, { include_languages: true }).catch(() => {
+            story.id
+              ? beans.fetchStoryArticles(story.id, { limit: 5 }, { include_languages: true }).catch(() => {
                   related_error = 'Related articles could not be loaded right now.'
                   return empty
                 })
               : empty
           ])
-          return { article: { ...article, confidence: (confidence as Record<string, NewsArticle['confidence']>)[id] }, coverage: coverage_page, related, coverage_error, related_error } satisfies ArticleAction
+          return { story: enriched[0]!, coverage: coverage_page, related, coverage_error, related_error } satisfies StoryAction
         }
+        case 'story_enrichment': return fetchStoryEnrichment(ACTION_INPUTS.story_enrichment.parse(payload).ids)
         case 'coverage': return coverage(ACTION_INPUTS.coverage.parse(payload).id)
         case 'related': {
           const { id, cursor } = ACTION_INPUTS.related.parse(payload)

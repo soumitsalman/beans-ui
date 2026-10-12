@@ -930,3 +930,77 @@ Hash inputs: 21 application files under `app/` and `server/`, plus `nuxt.config.
 - Removed the home separator between the search form and news panel, retaining the existing layout spacing. Updated the design direction to call for tonal separation without bevels or raised effects.
 - Restored the verification document from the previous intact revision after detecting a literal truncated-output marker from the preceding pagination commit; retained pagination checks and added flat-surface/home-divider acceptance criteria.
 - Verification: home-page ESLint, Nuxt typecheck, production build, discovery integration checks and whitespace checks passed. graphifyy is unavailable; direct shared-style and component inspection was used. Browser visual inspection was not performed.
+
+
+## 2026-10-12 — Story feeds and detail routes
+
+- Replaced article detail with `/stories/{id}` and the `story` presentation action; propagated story IDs to card/image/share URLs, SSR protection, sitemap/RSS and existing verification fixtures. Source and search article requests retain their routes and fallback behavior.
+- Home/categories now request `/preview/stories` with existing filtering, feed mix, pagination and cache policy. Added typed story mapping using `last_published_at` and `article_count`, plus StoryCard and a publisher-free date line. Story detail retains the existing coverage timeline, snapshot/share layout and retry controls.
+- Story source enrichment requests the plural `/articles` route once with limit 20 and selects at most five distinct favicon URLs. Confidence uses all returned article IDs in batches of up to 100, stops resolved stories and selects the highest observed value. Only high confidence renders across news components; Espresso path is unchanged.
+- Coverage drains `/articles` pages at 100 without language/content filters; Related uses the same route with the unchanged English language values, news content type and an independent limit-five cursor.
+- Focused lint, story-service fixtures, analytics checks and production build pass. Full typecheck and production rendering checks are blocked by checkout dependency/type-resolution issues; dependency installation fails with the package-store SQLite error. The local HTTPS API probe fails with SSL RECORD_LAYER_FAILURE. Details and acceptance cases are in VERIFICATIONS.md.
+
+
+## 2026-10-12 — Repair story migration against running services
+
+- Debugged the actual localhost:3000 application and HTTP localhost:8080 API. Corrected count mapping to the API's `article_count` field and Coverage/Related requests to plural `/articles`; the previous singular route returned 404.
+- Restored missing already-declared zod, ioredis and Node type dependencies. Moved shared action timing constants to TypeScript and corrected their imports to prevent Nitro development from externalizing them as `/shared/actionTiming.js`.
+- Fixed development client-IP resolution through the Nuxt proxy with H3 getRequestIP. Forwarded IP handling is development-only; production trust configuration, limits and failure behavior are retained.
+- Verified live home cards and story navigation, a complete 276-article Coverage timeline, and Related pagination from five to ten. Lint, typecheck, build, story-service, action-deadline and analytics checks pass. Production discovery HTTP and memory request-protection regressions also pass with the existing memory quota store. The live category renders five stories and available high confidence badges. Current evidence is recorded in VERIFICATIONS.md and supersedes the earlier blocked validation note.
+
+
+## 2026-10-12 — Single-cursor story collection feeds
+
+- Home and categories now make one limit-five `/preview/stories` request per initial load or More, retaining only the returned collection cursor. Removed the obsolete trending/latest stream state, sort/exclude_ids parameters and mixed-feed fill calls. Retained the existing seven-day recent window across continuation requests.
+- Preserved language/content type, topic/score/tag/category filters, enrichment, cache policy, duplicate guards and source-feed behavior. Cursor restoration/retry still preserve visible stories and hide More when continuation ends.
+- Updated current design/data/verification guidance, reader-facing selection copy and regression fixtures to match the five-story cursor contract.
+- Verification: focused lint, typecheck, production build, analytics, story-service and production HTTP rendering checks pass. Live API returns five stories plus next_cursor without sort/exclude_ids; manual retry recovers occasional cold-request timeouts under the existing timeout policy.
+- Live browser check: home shows five stories initially and ten after one More click, with no load error.
+
+
+## 2026-10-12 — Story date/category spacing
+
+- Added a gentle 8px horizontal gap between story-card dates and categories, with a 4px gap on wrapped rows. Removed the category badge's vertical margin. Applies to the shared home/category StoryCard.
+- Focused component lint passes.
+
+
+## 2026-10-12 — Source articles, story header and 60-second retrieval
+
+- Changed source feed requests to `/articles` for all fallback attempts, retaining all query parameters and fallback behavior. Kept the existing source feed cache policy on the new route.
+- Added shared StoryHeader for home/category cards and story detail: category at the left; published date, high confidence and trend indicator at the right. Preserved article-card source headers and ideology signals.
+- Raised upstream retrieval timeout to 60 seconds, with server assembly at 65 seconds and browser actions at 70 seconds so outer deadlines allow the requested retrieval interval. Retained abort/retry behavior and updated timeout regressions.
+- Verification: lint, typecheck, build, story/source service fixtures, action-loading and production HTTP rendering regressions pass. Live card/story headers confirm left/right alignment and high confidence placement; the inspected story page has no horizontal overflow.
+- The full stalled-request regression passes with the new 60-second upstream timeout. Live source articles remain blocked: localhost:8080 returns HTTP 404 for the requested `/articles` route with unchanged query parameters. Source metadata loads; no API/backend changes or fallback route were added.
+
+
+## 2026-10-12 — Source latest route
+
+- Replaced source retrieval with `/articles/latest`, retaining news/English defaults, then removing content type and language in order only on empty API responses. Preserved other query parameters, pagination and caching; stop at the first non-empty response. Updated fallback and rendering fixtures.
+- Verification: focused lint/typecheck and fallback fixtures pass. The running Mail Online source page returns HTTP 200 with five article cards and no load error, resolving the earlier /articles 404.
+- Production build and updated HTTP rendering regressions pass.
+
+
+## 2026-10-12 — Audit and remove stale internal API prefixes
+
+- Migrated the remaining Beans/Espresso private calls: article-card publisher favicons to `/preview/stories/{id}/articles`, sitemap/RSS discovery to `/preview/articles/unique`, confidence to `/preview/confidence`. Updated the corresponding cached-feed path and route fixtures.
+- Preserved public API routes, parameters, confidence aggregation, pagination and cache-control privacy. Added regression protection against private-prefix upstream requests and an explicit preview publisher-enrichment check. Public OpenAPI remains unchanged.
+- Verification: focused lint/typecheck/build and service checks pass, with no private API path remaining in runtime source. Live preview publisher enrichment returns HTTP 200; Beans preview unique discovery and configured Espresso preview confidence currently return 404, pending upstream availability.
+- Updated production HTTP rendering regressions pass; final case-insensitive audit finds no private API path in app/server/shared or route fixtures.
+
+
+## 2026-10-12 — 90-second API retrieval timeout
+
+- Increased the shared Beans/Espresso upstream request timeout from 60 to 90 seconds. Raised server action and browser deadlines to 95 and 100 seconds so they allow the full retrieval interval.
+- Updated the timing regression and current data/verification guidance. Timeout and build checks are recorded in VERIFICATIONS.md.
+
+
+## 2026-10-12 — Current verification contract
+
+- Replaced stale acceptance cases and historical route snapshots in VERIFICATIONS.md with the current story, source, search, discovery and confidence routes, query parameters, cursor behavior and 90-second timeout hierarchy.
+- Kept current fixture, browser and live API evidence, including the unresolved preview discovery and confidence 404 responses, while separating that evidence from acceptance criteria.
+
+
+## 2026-10-12 — Deferred story-card publisher enrichment
+
+- Home and category feed actions now return the five collection stories immediately. One deferred browser action per batch fetches publisher favicons and confidence using the existing preview story-articles and confidence routes, then updates the already rendered cards. Story detail and source/search enrichment retain their existing behavior.
+- Added a protected, five-ID enrichment action and updated story-service and production HTTP regression coverage. Focused lint, typecheck, build and those checks pass. A local fixture browser showed home/category icons and confidence after hydration and five more cards after More; client paint timing was not measured. Verification details are in VERIFICATIONS.md.

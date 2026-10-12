@@ -1,4 +1,4 @@
-import { ACTION_TIMEOUT_MS } from '../../shared/actionTiming.js'
+import { ACTION_TIMEOUT_MS } from '../../shared/actionTiming'
 
 export async function withActionDeadline<T>(execute: (signal: AbortSignal) => Promise<T>, timeout_ms = ACTION_TIMEOUT_MS): Promise<T> {
   const controller = new AbortController()

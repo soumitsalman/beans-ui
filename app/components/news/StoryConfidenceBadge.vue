@@ -27,7 +27,7 @@ const tooltip = label
 
 <template>
   <UTooltip
-    v-if="label"
+    v-if="confidence === 'high'"
     :text="tooltip"
   >
     <span

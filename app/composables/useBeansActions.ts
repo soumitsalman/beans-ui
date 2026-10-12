@@ -1,4 +1,4 @@
-import { CLIENT_ACTION_TIMEOUT_MS } from '#shared/actionTiming.js'
+import { CLIENT_ACTION_TIMEOUT_MS } from '#shared/actionTiming'
 import { resourceError, retryAfterSeconds } from '~/utils/resourceError'
 
 export function useBeansActions() {

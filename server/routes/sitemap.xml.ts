@@ -12,7 +12,7 @@ export default defineCachedEventHandler(async (event) => {
   try {
     const articles = await fetchDiscoveryArticles()
     for (const article of articles) {
-      if (article.story_id) paths.add(`/articles/${encodeURIComponent(article.id!)}`)
+      if (article.story_id) paths.add(`/stories/${encodeURIComponent(article.story_id!)}`)
       if (article.source?.id) paths.add(`/sources/${encodeURIComponent(article.source.id)}`)
     }
   } catch {

@@ -3,6 +3,7 @@ import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as delay } from 'node:timers/promises'
+import { UPSTREAM_TIMEOUT_MS } from '../shared/actionTiming.ts'
 import { consumeQuota, WINDOW_MS } from '../server/utils/rateLimitStore.ts'
 import { signIdentity } from '../server/utils/anonymousIdentity.ts'
 
@@ -43,7 +44,7 @@ try {
 
 const MOCK = createServer((request, response) => {
   _upstream_calls++
-  if (request.url === '/articles/stalled') {
+  if (request.url.startsWith('/preview/stories/stalled')) {
     response.once('close', () => {
       _stalled_closed = true
     })
@@ -97,7 +98,7 @@ try {
   startApp(FIRST_PORT)
   startApp(SECOND_PORT)
   await Promise.all([ready(FIRST_PORT), ready(SECOND_PORT)])
-  const document = await fetch(`http://127.0.0.1:${FIRST_PORT}/articles/article-1`, { headers: { 'fly-client-ip': '192.0.2.1' } })
+  const document = await fetch(`http://127.0.0.1:${FIRST_PORT}/stories/article-1`, { headers: { 'fly-client-ip': '192.0.2.1' } })
   assert.equal(document.status, 200, 'Production renders content without a Redis URL')
   assert.match(await document.text(), /Memory fixture article/)
   assert.equal(document.headers.get('x-ratelimit-remaining'), '9')
@@ -110,7 +111,7 @@ try {
     assert.ok([200, 301].includes(response.status), 'Static navigation works after quota exhaustion')
     assert.equal(response.headers.get('x-ratelimit-limit'), null, 'Static pages spend no action quota')
   }
-  const denied = await action(cookie, '192.0.2.2', FIRST_PORT, 'article', { id: 'article-1' })
+  const denied = await action(cookie, '192.0.2.2', FIRST_PORT, 'story', { id: 'article-1' })
   assert.equal(denied.status, 429)
   assert.ok(Number(denied.headers.get('retry-after')) >= 1)
   assert.equal(_upstream_calls, before_denied, 'Memory rejection happens before upstream work')
@@ -126,10 +127,10 @@ try {
   for (let index = 0; index < 60; index++) assert.equal((await action(cookieFor(), '192.0.2.5')).status, 200)
   assert.equal((await action(cookieFor(), '192.0.2.5')).status, 429)
   const stalled_at = Date.now()
-  const stalled = await action(cookieFor(), '192.0.2.6', FIRST_PORT, 'article', { id: 'stalled' })
+  const stalled = await action(cookieFor(), '192.0.2.6', FIRST_PORT, 'story', { id: 'stalled' })
   assert.equal(stalled.status, 503, 'A stalled upstream returns a retryable response')
   assert.equal(stalled.headers.get('retry-after'), '5')
-  assert.ok(Date.now() - stalled_at < 15_000, 'Upstream timeout bounds real HTTP actions')
+  assert.ok(Date.now() - stalled_at >= UPSTREAM_TIMEOUT_MS - 1000 && Date.now() - stalled_at < UPSTREAM_TIMEOUT_MS + 5000, 'Upstream timeout bounds real HTTP actions')
   await delay(100)
   assert.equal(_stalled_closed, true, 'The stalled upstream connection is aborted')
   console.log('Memory rate-limit checks passed: production SSR without Redis, independent processes, concurrency, rolling expiry, IP guards, and rejection before upstream work.')

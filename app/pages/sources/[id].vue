@@ -6,6 +6,7 @@ import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceLabel } from '~/utils/source'
 import { resourceError } from '~/utils/resourceError'
 
 const route = useRoute()
+const { action_blocked, cooldown_message } = useActionCooldown()
 const source_id = computed(() => String(route.params.id || ''))
 const source = ref<NewsSource | null>(null)
 const loading_source = ref(false)
@@ -18,7 +19,7 @@ const {
   can_load_more,
   error_message,
   initialiseFeed,
-  refreshFeed,
+  restoreFeed,
   loadMore,
   retryFeed
 } = useNewsFeed(undefined, source_id)
@@ -53,36 +54,36 @@ async function loadSource(): Promise<void> {
   loading_source.value = true
   try {
     const result = await fetchSource(id)
-    if (!result.id) throw createError({ statusCode: 404, statusMessage: 'Source not found.' })
+    if (!result.source.id) throw createError({ statusCode: 404, statusMessage: 'Source not found.' })
     if (generation !== _generation) return
-    source.value = result
+    source.value = result.source
+    restoreFeed(result.feed)
   } catch (error) {
     if (generation === _generation) {
       const failure = resourceError(error)
-      if (failure.statusCode !== 503) showError(failure)
+      if (failure.statusCode !== 503 && failure.statusCode !== 429) showError(failure)
       source_error.value = failure.statusMessage
     }
   } finally {
     if (generation === _generation) {
       loading_source.value = false
-      if (import.meta.client && source.value) void refreshFeed()
     }
   }
 }
 
 const { data: initial_source, error: initial_error } = await useAsyncData(`source:${source_id.value}`, async () => {
   const result = await fetchSource(source_id.value)
-  if (!result.id) throw createError({ statusCode: 404, statusMessage: 'Source not found.' })
+  if (!result.source.id) throw createError({ statusCode: 404, statusMessage: 'Source not found.' })
   return result
 })
-source.value = initial_source.value ?? null
+source.value = initial_source.value?.source ?? null
 if (initial_error.value) {
   const failure = resourceError(initial_error.value)
-  if (failure.statusCode !== 503) throw createError(failure)
-  if (import.meta.server) setResponseStatus(useRequestEvent()!, 503)
+  if (failure.statusCode !== 503 && failure.statusCode !== 429) throw createError(failure)
+  if (import.meta.server) setResponseStatus(useRequestEvent()!, failure.statusCode)
   source_error.value = failure.statusMessage
 }
-if (source.value) await initialiseFeed()
+if (initial_source.value) await initialiseFeed(initial_source.value.feed)
 </script>
 
 <template>
@@ -96,7 +97,7 @@ if (source.value) await initialiseFeed()
       color="warning"
       variant="subtle"
       icon="lucide:triangle-alert"
-      :title="source_error"
+      :title="cooldown_message || source_error"
     >
       <template #actions>
         <UButton
@@ -104,6 +105,7 @@ if (source.value) await initialiseFeed()
           color="warning"
           variant="outline"
           size="xs"
+          :disabled="loading_source || action_blocked"
           @click="loadSource"
         />
       </template>

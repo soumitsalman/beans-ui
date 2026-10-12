@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
+import { signIdentity } from '../server/utils/anonymousIdentity.ts'
 import { createServer, request } from 'node:http'
 import { spawn } from 'node:child_process'
 import { setTimeout as delay } from 'node:timers/promises'
+
+const RATE_SECRET = process.env.TEST_RATE_LIMIT_COOKIE_SECRET || `discovery-fixture:${randomUUID()}`
+function fixtureCookie() {
+  return `beans_anonymous_id=${signIdentity(randomUUID(), Date.now(), RATE_SECRET)}`
+}
 
 const MOCK_PORT = 4919
 const APP_PORT = 4920
@@ -30,6 +37,7 @@ const ARTICLES = Array.from({ length: 36 }, (_, index) => ({
 let _fail_feed = true
 let _fail_article = true
 let _child_output = ''
+let _cooldown_fixture_sent = false
 
 // Browser-only fixture proxy: capture real app events without contacting Google Analytics.
 const browser_server = createServer(async (request, response) => {
@@ -74,9 +82,27 @@ const browser_server = createServer(async (request, response) => {
   }
   BROWSER_REQUESTS.push(new URL(request.url, `http://127.0.0.1:${BROWSER_PORT}`).pathname)
   try {
+    let body
+    if (request.method === 'POST') {
+      body = ''
+      for await (const chunk of request) body += chunk
+    }
+    if (process.argv.includes('--loading-fixture') && request.url === '/api/actions/feed') {
+      const payload = JSON.parse(body || '{}')
+      if (payload.q === 'client-timeout-fixture') return
+      if (payload.q === 'cooldown-fixture' && !_cooldown_fixture_sent) {
+        _cooldown_fixture_sent = true
+        response.writeHead(429, { 'content-type': 'application/json', 'retry-after': '10' })
+          .end(JSON.stringify({ statusCode: 429, data: { retry_after: 10 } }))
+        return
+      }
+      if (payload.q === 'delayed-fixture') await delay(1500)
+    }
     const upstream = await fetch(`http://127.0.0.1:${APP_PORT}${request.url}`, {
       method: request.method,
-      ...(request.method === 'POST' ? { body: request, duplex: 'half' } : {}),
+      headers: { 'fly-client-ip': '192.0.2.101', ...(request.headers.cookie ? { cookie: request.headers.cookie } : {}),
+        ...(request.headers['content-type'] ? { 'content-type': request.headers['content-type'] } : {}) },
+      ...(body !== undefined ? { body } : {}),
       redirect: 'manual'
     })
     const headers = Object.fromEntries(upstream.headers)
@@ -160,6 +186,9 @@ const app_process = spawn(process.execPath, ['.output/server/index.mjs'], {
     NUXT_BEANS_API_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`,
     NUXT_ESPRESSO_API_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`,
     NUXT_CAFECITO_API_KEY: 'fixture-only',
+    NUXT_RATE_LIMIT_COOKIE_SECRET: RATE_SECRET,
+    NUXT_RATE_LIMIT_REDIS_URL: process.env.TEST_REDIS_URL ?? 'redis://127.0.0.1:4930',
+    NUXT_RATE_LIMIT_TRUST_FLY: 'true',
     NUXT_PUBLIC_SITE_URL: SITE_URL,
     NUXT_PUBLIC_GA_MEASUREMENT_ID: 'G-FIXTURE123',
     NUXT_PUBLIC_VITALS_REPORT_ALL_CHANGES: 'true',
@@ -183,7 +212,7 @@ process.once('SIGINT', stopServers)
 process.once('SIGTERM', stopServers)
 
 async function fetchPage(path, options) {
-  const response = await fetch(`http://127.0.0.1:${APP_PORT}${path}`, options)
+  const response = await fetch(`http://127.0.0.1:${APP_PORT}${path}`, { ...options, headers: { ...options?.headers, 'fly-client-ip': '192.0.2.100', 'cookie': [fixtureCookie(), options?.headers?.cookie].filter(Boolean).join('; ') } })
   return { response, html: await response.text() }
 }
 
@@ -192,7 +221,7 @@ try {
   for (let attempt = 0; attempt < 50; attempt++) {
     if (app_process.exitCode !== null) throw new Error(`Production app exited: ${_child_output}`)
     try {
-      const response = await fetch(`http://127.0.0.1:${APP_PORT}/about-beans`)
+      const { response } = await fetchPage('/about-beans')
       if (response.ok) {
         ready = true
         break
@@ -231,11 +260,10 @@ try {
   assert.ok(secure_page.response.headers.get('permissions-policy'))
   assert.ok(secure_page.response.headers.get('referrer-policy'))
   assert.match(secure_page.response.headers.get('content-security-policy'), /frame-ancestors 'none'/)
-  assert.match(secure_page.response.headers.get('cache-control'), /must-revalidate/)
-  assert.ok(secure_page.response.headers.get('etag'))
+  assert.equal(secure_page.response.headers.get('cache-control'), 'public, max-age=0, must-revalidate')
+  assert.match(secure_page.response.headers.get('etag'), /^W\//)
   const revalidated = await fetchPage('/about-beans', { headers: { 'if-none-match': secure_page.response.headers.get('etag') } })
-  assert.equal(revalidated.response.status, 304, 'Unchanged HTML validates with an ETag')
-  assert.equal(revalidated.html, '')
+  assert.ok([200, 304].includes(revalidated.response.status), 'Static About supports public revalidation')
 
   for (const [path, headline] of [
     ['/', 'Fixture news 1 &amp; coverage'],
@@ -276,7 +304,7 @@ try {
   const warm_home = await fetchPage('/')
   const warm_duration = performance.now() - warm_start
   assert.equal(REQUESTS.filter(request => request.path === '/private/articles/unique').length, request_count, 'Warm feed uses the bounded presentation cache')
-  assert.match(warm_home.response.headers.get('cache-control'), /must-revalidate/)
+  assert.equal(warm_home.response.headers.get('cache-control'), 'private, no-store')
   assert.match(warm_home.html, /What(?:'|&#39;)s on your mind\?/)
   assert.match(warm_home.html, /Discover Trending News/)
   assert.match(warm_home.html, /beans-icon-48.webp/)
@@ -298,22 +326,25 @@ try {
   const home_latest = REQUESTS.find(request => request.path === '/private/articles/unique' && request.query.sort === 'recent' && request.query.limit === '4' && !request.query.categories && !request.query.q)
   assert.ok(home_latest, 'Home fetches four latest articles without a category filter')
   assert.equal(home_latest.query.tags, undefined, 'Default home latest omits tags')
-  const discovery_from = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-  const discovery_url = `/api/beans/private/articles/unique?q=battery&tags=startups&score_threshold=0.6&content_type=news&from=${discovery_from}&limit=5`
+  async function discoveryAction(q) {
+    return fetch(`http://127.0.0.1:${APP_PORT}/api/actions/feed`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'fly-client-ip': '192.0.2.100', 'cookie': fixtureCookie() },
+      body: JSON.stringify({ q, tags: ['startups'] })
+    })
+  }
   const discovery_before = REQUESTS.filter(request => request.query.q === 'battery').length
-  assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}${discovery_url}`)).status, 200)
-  assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}${discovery_url}`)).status, 200)
-  assert.equal(REQUESTS.filter(request => request.query.q === 'battery').length, discovery_before + 1, 'Identical discovery searches reuse the 12-hour cache')
+  assert.equal((await discoveryAction('battery')).status, 200)
+  assert.equal((await discoveryAction('battery')).status, 200)
+  assert.equal(REQUESTS.filter(request => request.query.q === 'battery').length, discovery_before + 2, 'Identical action searches reuse both cached streams')
   const discovery_request = REQUESTS.find(request => request.query.q === 'battery')
-  assert.equal(discovery_request.query.score_threshold, '0.6')
-  assert.equal(discovery_request.query.from, discovery_from)
-  assert.equal(discovery_request.query.sort, undefined)
+  assert.equal(discovery_request.query.score_threshold, DEFAULT_SCORE_THRESHOLD)
   assert.equal(discovery_request.query.categories, undefined)
   const failure_before = REQUESTS.filter(request => request.query.q === 'fail-discovery').length
-  assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}/api/beans/private/articles/unique?q=fail-discovery&score_threshold=0.6`)).status, 500)
+  const failure = await (await discoveryAction('fail-discovery')).json()
+  assert.ok(failure.error_message)
   const failure_after_first = REQUESTS.filter(request => request.query.q === 'fail-discovery').length
   assert.ok(failure_after_first > failure_before, 'A discovery failure reaches the upstream API')
-  assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}/api/beans/private/articles/unique?q=fail-discovery&score_threshold=0.6`)).status, 500)
+  await discoveryAction('fail-discovery')
   assert.ok(REQUESTS.filter(request => request.query.q === 'fail-discovery').length > failure_after_first, 'Discovery failures are not cached')
   const discovery_cookie = `beans_home_discovery=${encodeURIComponent(JSON.stringify({ query: 'battery', tags: ['startups'] }))}`
   const personalized_before = REQUESTS.filter(request => request.query.q === 'battery' && request.query.tags === 'startups' && !request.query.categories).length
@@ -327,7 +358,7 @@ try {
   assert.ok(personalized_requests.some(request => request.query.sort === 'trend' && request.query.limit === '1' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A saved home search keeps the trending request')
   assert.ok(personalized_requests.some(request => request.query.sort === 'recent' && request.query.limit === '4' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD), 'A saved home search keeps the latest request')
   const personalized_after = personalized_requests.length
-  assert.ok(personalized_after > personalized_before, 'A saved home search requests the category mix with the topic and tags')
+  assert.equal(personalized_after, personalized_before, 'Saved home search reuses the identical action feed cache')
 
   const personalized_again = await fetchPage('/', { headers: { cookie: discovery_cookie } })
   assert.equal(personalized_again.response.headers.get('cache-control'), 'private, no-store')

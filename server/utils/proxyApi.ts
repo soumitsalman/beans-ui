@@ -1,20 +1,29 @@
-import { createError, getQuery, getRouterParam } from 'h3'
-import type { H3Event } from 'h3'
 import { createHash } from 'node:crypto'
+import { UPSTREAM_TIMEOUT_MS } from '../../shared/actionTiming.js'
 
-const PATH_PATTERN = /^[a-z0-9/-]+$/i
 const DISCOVERY_CACHE_SECONDS = 12 * 60 * 60
 
 function feedCacheKey(url: string, query: Record<string, unknown>, api_key?: string): string {
   return createHash('sha256').update(JSON.stringify([url, query, api_key])).digest('hex')
 }
 
-function fetchUpstream(url: string, query: Record<string, unknown>, api_key?: string): Promise<unknown> {
-  return $fetch(url, {
-    query,
-    headers: api_key ? { 'X-API-KEY': api_key } : undefined,
-    timeout: 60_000
-  })
+async function fetchUpstream(url: string, query: Record<string, unknown>, api_key?: string, signal?: AbortSignal): Promise<unknown> {
+  const fetch_signal = signal ? AbortSignal.any([signal, AbortSignal.timeout(UPSTREAM_TIMEOUT_MS)]) : undefined
+  try {
+    return await $fetch(url, {
+      query,
+      headers: api_key ? { 'X-API-KEY': api_key } : undefined,
+      timeout: UPSTREAM_TIMEOUT_MS,
+      retry: 0,
+      signal: fetch_signal
+    })
+  } catch (error) {
+    const failure = error as { cause?: { name?: string } }
+    if (fetch_signal?.aborted || ['TimeoutError', 'AbortError'].includes(failure.cause?.name ?? '')) {
+      throw createError({ statusCode: 503, statusMessage: 'News took too long to load. Please retry.' })
+    }
+    throw error
+  }
 }
 
 const fetchPublicFeed = defineCachedFunction(fetchUpstream, {
@@ -47,22 +56,11 @@ function isDiscoverySearch(query: Record<string, unknown>): boolean {
   )
 }
 
-export async function proxyApi(event: H3Event, api_base_url: string, api_key?: string): Promise<unknown> {
-  const path = getRouterParam(event, 'path')
-
-  if (!path || !PATH_PATTERN.test(path)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid API path.' })
-  }
-
+export async function fetchPresentationApi<T>(api_base_url: string, path: string, query: Record<string, unknown> = {}, api_key?: string, signal?: AbortSignal): Promise<T> {
+  signal?.throwIfAborted()
   const url = `${api_base_url.replace(/\/$/, '')}/${path}`
-  // Trending, latest, and source feeds share a 30-second cache. Home discovery searches use a separate 12-hour cache.
   if (path === 'private/articles/unique') {
-    const query = getQuery(event)
-    return isDiscoverySearch(query) ? fetchDiscoverySearch(url, query, api_key) : fetchPublicFeed(url, query, api_key)
+    return (isDiscoverySearch(query) ? fetchDiscoverySearch(url, query, api_key) : fetchPublicFeed(url, query, api_key)) as Promise<T>
   }
-  return $fetch(url, {
-    query: getQuery(event),
-    headers: api_key ? { 'X-API-KEY': api_key } : undefined,
-    timeout: 60_000
-  })
+  return fetchUpstream(url, query, api_key, signal) as Promise<T>
 }

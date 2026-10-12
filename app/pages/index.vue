@@ -16,6 +16,7 @@ const {
   retry,
   start
 } = useHomeDiscovery()
+const { action_blocked } = useActionCooldown()
 
 usePageMetadata({
   title: 'Beans | Trending news from publishers',
@@ -66,7 +67,7 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
                 square
                 class="size-8 justify-center"
                 aria-label="Clear search"
-                :disabled="!can_clear"
+                :disabled="!can_clear || loading || action_blocked"
                 @click="clearSearch"
               />
             </template>
@@ -80,6 +81,7 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
           class="size-9 shrink-0 justify-center md:w-auto"
           aria-label="Find"
           :loading="searching"
+          :disabled="loading || action_blocked"
         >
           <span class="hidden md:inline">Find</span>
         </UButton>

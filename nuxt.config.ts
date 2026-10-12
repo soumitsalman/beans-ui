@@ -28,6 +28,9 @@ export default defineNuxtConfig({
     beans_api_base_url: ENV.BEANS_API_BASE_URL?.trim() || 'https://cafecito-beans-api.fly.dev',
     espresso_api_base_url: ENV.ESPRESSO_API_BASE_URL?.trim() || 'https://cafecito-espresso-api.fly.dev',
     cafecito_api_key: ENV.CAFECITO_API_KEY,
+    rate_limit_cookie_secret: '',
+    rate_limit_redis_url: '',
+    rate_limit_trust_fly: 'false',
     public: {
       vitals_report_all_changes: false,
       site_url: ENV.NUXT_PUBLIC_SITE_URL?.trim() || 'https://beans.cafecito.tech',

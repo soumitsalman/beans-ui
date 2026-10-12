@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import type { NewsArticle } from '~/types/news'
-import { useArticleEnrichment } from '~/composables/useArticleEnrichment'
+import { requestErrorMessage } from '~/utils/resourceError'
 import { normaliseSourceInput } from '~/utils/searchQuery'
 import { normaliseTagInput } from '~/utils/formatters'
 import { logClientEvent } from '~/utils/telemetry'
@@ -45,7 +45,6 @@ function searchCriteria(input: SearchInput): SearchCriteria {
 
 export function useSearchFeed() {
   const { fetchSearchArticles } = useBeansApi()
-  const { enrichArticles } = useArticleEnrichment()
   const route = useRoute()
   const articles = ref<NewsArticle[]>([])
   const next_cursor = ref<string | null>(null)
@@ -89,13 +88,6 @@ export function useSearchFeed() {
 
       articles.value = append ? appendArticles(articles.value, page.data) : appendArticles([], page.data)
       next_cursor.value = page.data.length && page.next_cursor !== cursor ? page.next_cursor : null
-      if (page.data.length) {
-        void enrichArticles(page.data).then((enriched) => {
-          if (!isCurrentGeneration(generation)) return
-          const by_id = new Map(enriched.map(article => [article.id, article]))
-          articles.value = articles.value.map(article => by_id.get(article.id) ?? article)
-        })
-      }
 
       logClientEvent({
         event: 'content_load',
@@ -109,12 +101,12 @@ export function useSearchFeed() {
         received_count: page.data.length,
         visible_count: articles.value.length
       })
-    } catch {
+    } catch (error) {
       if (isCurrentGeneration(generation)) {
         const label = submittedCriteriaLabel(criteria)
-        error_message.value = label
+        error_message.value = requestErrorMessage(error, label
           ? `Search results could not be loaded for ${label}.`
-          : 'Search results could not be loaded right now.'
+          : 'Search results could not be loaded right now.')
         logClientEvent({
           event: 'content_load',
           path: route.path,
@@ -139,7 +131,6 @@ export function useSearchFeed() {
     loading.value = true
     error_message.value = null
     next_cursor.value = null
-    articles.value = []
     active_criteria.value = null
     last_attempt_append.value = false
     last_input.value = {
@@ -159,6 +150,23 @@ export function useSearchFeed() {
     await loadResults(false, generation)
   }
 
+  async function initialiseSearch(input: SearchInput): Promise<void> {
+    const { data } = await useAsyncData(`search:${route.fullPath}`, async () => {
+      await search(input)
+      return {
+        articles: articles.value, next_cursor: next_cursor.value, error_message: error_message.value,
+        active_criteria: active_criteria.value, last_input: last_input.value
+      }
+    })
+    if (!data.value) return
+    articles.value = data.value.articles
+    next_cursor.value = data.value.next_cursor
+    error_message.value = data.value.error_message
+    active_criteria.value = data.value.active_criteria
+    last_input.value = data.value.last_input
+    has_searched.value = true
+  }
+
   function retrySearch(): Promise<void> {
     if (active_criteria.value) return loadResults(last_attempt_append.value, _generation)
     return last_input.value ? search(last_input.value) : Promise.resolve()
@@ -172,6 +180,7 @@ export function useSearchFeed() {
     has_searched,
     can_load_more,
     search,
+    initialiseSearch,
     loadMore: () => loadResults(true),
     retrySearch
   }

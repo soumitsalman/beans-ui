@@ -3,38 +3,36 @@ import { computed, onMounted, ref } from 'vue'
 import ArticleDetailSections from '~/components/news/ArticleDetailSections.vue'
 import ArticleSnapshot from '~/components/news/ArticleSnapshot.vue'
 import type { NewsArticle } from '~/types/news'
-import { resourceError } from '~/utils/resourceError'
+import { resourceError, requestErrorMessage } from '~/utils/resourceError'
 
-const COVERAGE_PAGE_SIZE = 100
-const RELATED_PAGE_SIZE = 5
 const route = useRoute()
-const { fetchArticle, fetchStoryArticles } = useBeansApi()
-const { fetchConfidence } = useEspressoApi()
+const { action_blocked, cooldown_message } = useActionCooldown()
+const { fetchArticle, fetchCoverage, fetchRelated } = useBeansApi()
 const article_id = computed(() => String(route.params.id || ''))
 const { data: initial_article, error: initial_error } = await useAsyncData(`article:${article_id.value}`, async () => {
   const result = await fetchArticle(article_id.value)
-  if (!result.id || !result.title) throw createError({ statusCode: 404, statusMessage: 'Article not found.' })
+  if (!result.article.id || !result.article.title) throw createError({ statusCode: 404, statusMessage: 'Article not found.' })
   return result
 })
-const article = ref<NewsArticle | null>(initial_article.value ?? null)
-const coverage_articles = ref<NewsArticle[]>([])
-const related_articles = ref<NewsArticle[]>([])
+const article = ref<NewsArticle | null>(initial_article.value?.article ?? null)
+const coverage_articles = ref<NewsArticle[]>(initial_article.value?.coverage.data ?? [])
+const related_articles = ref<NewsArticle[]>(initial_article.value?.related.data ?? [])
 const coverage_cursor = ref<string | null>(null)
-const related_cursor = ref<string | null>(null)
+const related_cursor = ref<string | null>(initial_article.value?.related.next_cursor ?? null)
 const loading_article = ref(false)
 const loading_coverage = ref(false)
 const loading_related = ref(false)
 const article_error = ref<string | null>(null)
-const coverage_error = ref<string | null>(null)
-const related_error = ref<string | null>(null)
+const coverage_error = ref<string | null>(initial_article.value?.coverage_error ?? null)
+const related_error = ref<string | null>(initial_article.value?.related_error ?? null)
 const can_load_more_related = computed(() => Boolean(related_cursor.value))
 let _request_generation = 0
-let _coverage_exhausted = false
+let _coverage_exhausted = Boolean(initial_article.value && !initial_article.value.coverage_error)
 
 if (initial_error.value) {
   const failure = resourceError(initial_error.value)
-  if (failure.statusCode !== 503) throw createError(failure)
-  if (import.meta.server) setResponseStatus(useRequestEvent()!, 503)
+  if (failure.statusCode !== 503 && failure.statusCode !== 429) throw createError(failure)
+  if (import.meta.server) setResponseStatus(useRequestEvent()!, failure.statusCode)
   article_error.value = failure.statusMessage
 }
 
@@ -70,26 +68,12 @@ async function loadCoverage(generation = _request_generation): Promise<void> {
   loading_coverage.value = true
   coverage_error.value = null
   try {
-    let cursor = coverage_cursor.value
-    while (isCurrentGeneration(generation) && !_coverage_exhausted) {
-      const page = await fetchStoryArticles(article.value.story_id, {
-        limit: COVERAGE_PAGE_SIZE,
-        cursor: cursor ?? undefined
-      })
-      if (!isCurrentGeneration(generation)) return
-
-      coverage_articles.value = appendUnique(coverage_articles.value, page.data)
-      const next_cursor = page.next_cursor
-      if (!next_cursor || next_cursor === cursor) {
-        coverage_cursor.value = null
-        _coverage_exhausted = true
-        break
-      }
-      cursor = next_cursor
-      coverage_cursor.value = cursor
-    }
-  } catch {
-    if (isCurrentGeneration(generation)) coverage_error.value = 'Coverage could not be loaded right now.'
+    const page = await fetchCoverage(article.value.story_id)
+    if (!isCurrentGeneration(generation)) return
+    coverage_articles.value = page.data
+    _coverage_exhausted = true
+  } catch (error) {
+    if (isCurrentGeneration(generation)) coverage_error.value = requestErrorMessage(error, 'Coverage could not be loaded right now.')
   } finally {
     if (isCurrentGeneration(generation)) loading_coverage.value = false
   }
@@ -103,12 +87,7 @@ async function loadRelated(append = false, generation = _request_generation): Pr
   related_error.value = null
   const cursor = append ? related_cursor.value : null
   try {
-    const page = await fetchStoryArticles(article.value.story_id, {
-      limit: RELATED_PAGE_SIZE,
-      cursor: cursor ?? undefined
-    }, {
-      include_languages: true
-    })
+    const page = await fetchRelated(article.value.story_id, cursor)
     if (!isCurrentGeneration(generation)) return
 
     related_articles.value = append
@@ -117,8 +96,8 @@ async function loadRelated(append = false, generation = _request_generation): Pr
     related_cursor.value = page.next_cursor && page.next_cursor !== cursor
       ? page.next_cursor
       : null
-  } catch {
-    if (isCurrentGeneration(generation)) related_error.value = 'Related articles could not be loaded right now.'
+  } catch (error) {
+    if (isCurrentGeneration(generation)) related_error.value = requestErrorMessage(error, 'Related articles could not be loaded right now.')
   } finally {
     if (isCurrentGeneration(generation)) loading_related.value = false
   }
@@ -141,35 +120,28 @@ async function loadArticle(): Promise<void> {
   try {
     const result = await fetchArticle(id)
     if (!isCurrentGeneration(generation)) return
-    if (!result.id || !result.title) throw createError({ statusCode: 404, statusMessage: 'Article not found.' })
-    article.value = result
+    if (!result.article.id || !result.article.title) throw createError({ statusCode: 404, statusMessage: 'Article not found.' })
+    article.value = result.article
+    coverage_articles.value = result.coverage.data
+    related_articles.value = result.related.data
+    related_cursor.value = result.related.next_cursor
+    coverage_error.value = result.coverage_error
+    related_error.value = result.related_error
+    _coverage_exhausted = !result.coverage_error
     loading_article.value = false
-    enrichArticle(generation)
   } catch (error) {
     if (isCurrentGeneration(generation)) {
       const failure = resourceError(error)
-      if (failure.statusCode !== 503) showError(failure)
+      if (failure.statusCode !== 503 && failure.statusCode !== 429) showError(failure)
       article_error.value = failure.statusMessage
       loading_article.value = false
     }
   }
 }
 
-function enrichArticle(generation = _request_generation): void {
-  const id = article.value?.id
-  if (!id) return
-  void fetchConfidence([id]).then((confidence_by_id) => {
-    if (!isCurrentGeneration(generation) || !article.value) return
-    article.value = { ...article.value, confidence: confidence_by_id[id] }
-  }).catch(() => undefined)
-  void loadCoverage(generation)
-  void loadRelated(false, generation)
-}
-
 onMounted(() => {
   if (article.value) {
     trackEvent('coverage_open', { article_id: article.value.id })
-    enrichArticle()
   }
 })
 </script>
@@ -185,7 +157,7 @@ onMounted(() => {
       color="warning"
       variant="subtle"
       icon="lucide:triangle-alert"
-      :title="article_error"
+      :title="cooldown_message || article_error"
     >
       <template #actions>
         <UButton
@@ -193,6 +165,7 @@ onMounted(() => {
           color="warning"
           variant="outline"
           size="xs"
+          :disabled="loading_article || action_blocked"
           @click="loadArticle"
         />
       </template>

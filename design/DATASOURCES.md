@@ -1,6 +1,6 @@
 # Data Sources
 
-Primary data sources are the Beans API and Espresso API. Keep API credentials on the server and use the existing same-origin Nuxt proxies.
+Primary data sources are the Beans API and Espresso API. Keep API credentials on the server and use the same-origin Nuxt presentation actions documented in [RATE-LIMIT](./RATE-LIMIT.md). Public low-level Beans/Espresso proxies are blocked; action services and discovery fetch upstream internally.
 
 ## Beans API
 
@@ -23,7 +23,7 @@ Primary data sources are the Beans API and Espresso API. Keep API credentials on
 
 ## Espresso API
 
-- Base URL: `ESPRESSO_API_BASE_URL` (default `https://cafecito-espresso-api.fly.dev`; runtime override `NUXT_ESPRESSO_API_BASE_URL`). Use the same-origin Espresso proxy; never expose the API key to client code.
+- Base URL: `ESPRESSO_API_BASE_URL` (default `https://cafecito-espresso-api.fly.dev`; runtime override `NUXT_ESPRESSO_API_BASE_URL`). Use the internal Espresso presentation service; never expose the API key to client code.
 - Fetch confidence in one request to `/private/confidence?ids=id1,id2,...`, where every ID is a Beans article ID, never a `story_id`. The UI associates each result with its article ID and displays only `high`, `medium`, or `low` as the existing confidence badges. Missing values and failed requests omit the badge; confidence is not a truth or fact-check score.
 
 ## Contract note

@@ -27,6 +27,7 @@ export function useHomeDiscovery() {
   })
   const active_criteria = ref<HomeDiscoveryCriteria | null>(null)
   const feed = useNewsFeed(undefined, undefined, 'mixed', active_criteria)
+  const { action_blocked } = useActionCooldown()
 
   const searching = computed(() => feed.loading.value && criteriaActive(active_criteria.value))
   const can_clear = computed(() => Boolean(
@@ -115,6 +116,7 @@ export function useHomeDiscovery() {
   }
 
   async function find(): Promise<void> {
+    if (feed.loading.value || action_blocked.value) return
     const criteria = {
       query: search_form.query.trim(),
       tags: normaliseTagInput(search_form.tags)
@@ -128,6 +130,7 @@ export function useHomeDiscovery() {
   }
 
   async function clearSearch(): Promise<void> {
+    if (feed.loading.value || action_blocked.value) return
     const had_active = criteriaActive(active_criteria.value)
     search_form.query = ''
     search_form.tags = ''

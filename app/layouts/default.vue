@@ -4,6 +4,7 @@ import { CATEGORY_GROUPS } from '~/settings/categories'
 import { CAFECITO_LINKS } from '~/settings/site'
 
 const router = useRouter()
+const { action_blocked, cooldown_message } = useActionCooldown()
 const { outboundHref } = useOutboundUrl()
 const main_content = useTemplateRef<HTMLElement>('main-content')
 const TALLY_FORM_ID = '9q8zrE'
@@ -160,6 +161,14 @@ async function skipToContent(): Promise<void> {
       tabindex="-1"
       class="mx-auto w-full max-w-6xl scroll-mt-28 px-4 pb-12 pt-6 sm:px-6 sm:pt-8"
     >
+      <UAlert
+        v-if="action_blocked"
+        color="warning"
+        variant="subtle"
+        icon="lucide:timer"
+        :title="cooldown_message"
+        class="mb-4"
+      />
       <slot />
     </main>
 

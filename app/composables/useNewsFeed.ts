@@ -1,35 +1,12 @@
-import { computed, onMounted, onScopeDispose, reactive, ref, unref } from 'vue'
+import { computed, onScopeDispose, ref, unref } from 'vue'
 import type { MaybeRef } from 'vue'
 import type { NewsCategory } from '~/settings/categories'
-import type { BeansPageParams, NewsArticle } from '~/types/news'
-import { useArticleEnrichment } from '~/composables/useArticleEnrichment'
+import type { NewsArticle } from '~/types/news'
+import type { FeedSnapshot } from '~/types/discovery'
+import { requestErrorMessage } from '~/utils/resourceError'
 import { logClientEvent } from '~/utils/telemetry'
-import type { FeedSnapshot, FeedStreamSnapshot } from '~/types/discovery'
 
-const PAGE_SIZE = 5
-const TRENDING_PER_BATCH = 1
-const LATEST_PER_BATCH = 4
-const TRENDING_WINDOW_DAYS = 2
-const LATEST_WINDOW_DAYS = 7
-
-interface FeedFilters {
-  categories?: string[]
-  sources?: string[]
-}
-
-type FeedKind = 'trending' | 'latest'
-
-export interface NewsFeedSearch {
-  query: string
-  tags: string[]
-}
-
-interface FeedStream {
-  cursor: string | null
-  exhausted: boolean
-  ids: Set<string>
-  from: string
-}
+export interface NewsFeedSearch { query: string, tags: string[] }
 
 export function useNewsFeed(
   category?: MaybeRef<NewsCategory | undefined>,
@@ -37,294 +14,78 @@ export function useNewsFeed(
   feed_mode: 'mixed' | 'trending' = 'mixed',
   search?: MaybeRef<NewsFeedSearch | null | undefined>
 ) {
-  const { fetchLatestArticles, fetchSourceArticles, fetchTopHeadlines } = useBeansApi()
-  const { enrichArticles } = useArticleEnrichment()
+  const { executeAction } = useBeansActions()
   const route = useRoute()
   const articles = ref<NewsArticle[]>([])
   const loading = ref(false)
   const error_message = ref<string | null>(null)
-  const active_category = computed(() => unref(category))
-  const active_source_id = computed(() => unref(source_id))
-  const trending_stream = reactive<FeedStream>({
-    cursor: null,
-    exhausted: false,
-    ids: new Set(),
-    from: ''
-  })
-  const latest_stream = reactive<FeedStream>({
-    cursor: null,
-    exhausted: false,
-    ids: new Set(),
-    from: ''
-  })
-  const source_cursor = ref<string | null>(null)
-  const source_exhausted = ref(false)
-  const can_load_more = computed(() => active_source_id.value
-    ? Boolean(source_cursor.value)
-    : feed_mode === 'trending' ? Boolean(trending_stream.cursor) : Boolean(trending_stream.cursor || latest_stream.cursor))
+  const paging = ref<FeedSnapshot | null>(null)
+  const can_load_more = computed(() => Boolean(unref(source_id)
+    ? paging.value?.source_cursor
+    : feed_mode === 'trending' ? paging.value?.trending.cursor : paging.value?.trending.cursor || paging.value?.latest.cursor))
   let _generation = 0
-  let _initialising = false
+  let _last_attempt_append = false
 
-  function filters(): FeedFilters {
-    return {
-      categories: active_category.value?.category_values
-        ? [...active_category.value.category_values]
-        : undefined,
-      sources: active_source_id.value ? [active_source_id.value] : undefined
-    }
-  }
-
-  function resetPaging(): void {
-    trending_stream.cursor = null
-    trending_stream.exhausted = false
-    trending_stream.ids.clear()
-    trending_stream.from = new Date(Date.now() - TRENDING_WINDOW_DAYS * 86400000).toISOString().slice(0, 10)
-    latest_stream.cursor = null
-    latest_stream.exhausted = false
-    latest_stream.ids.clear()
-    latest_stream.from = new Date(Date.now() - LATEST_WINDOW_DAYS * 86400000).toISOString().slice(0, 10)
-    source_cursor.value = null
-    source_exhausted.value = false
-  }
-
-  function seenArticleIds(batch: NewsArticle[]): Set<string> {
-    return new Set([...articles.value, ...batch].map(article => article.id).filter(Boolean))
-  }
-
-  function stream(kind: FeedKind): FeedStream {
-    return kind === 'trending' ? trending_stream : latest_stream
-  }
-
-  function searchParams(): Pick<BeansPageParams, 'q' | 'tags'> {
-    const current = unref(search)
-    const query = current?.query?.trim() || ''
-    const tags = current?.tags?.filter(Boolean) ?? []
-    if (!query && !tags.length) return {}
-    return {
-      q: query || undefined,
-      tags: tags.length ? tags : undefined
-    }
-  }
-
-  async function fetchMixedStream(
-    kind: FeedKind,
-    desired_count: number,
-    batch: NewsArticle[],
-    generation: number
-  ): Promise<NewsArticle[]> {
-    const state = stream(kind)
-    const opposite_state = stream(kind === 'trending' ? 'latest' : 'trending')
-    const received: NewsArticle[] = []
-    const fetch_page = kind === 'trending' ? fetchTopHeadlines : fetchLatestArticles
-
-    while (received.length < desired_count && !state.exhausted && generation === _generation) {
-      const previous_cursor = state.cursor
-      const params: BeansPageParams = {
-        ...filters(),
-        ...searchParams(),
-        limit: desired_count - received.length,
-        cursor: previous_cursor ?? undefined,
-        exclude_ids: [...opposite_state.ids],
-        from: state.from
-      }
-      const page = await fetch_page(params)
-      if (generation !== _generation) return received
-
-      const known_ids = seenArticleIds(batch)
-      for (const article of page.data) {
-        if (!article.id || known_ids.has(article.id)) continue
-        known_ids.add(article.id)
-        state.ids.add(article.id)
-        received.push(article)
-        batch.push(article)
-        if (received.length >= desired_count) break
-      }
-
-      state.cursor = page.next_cursor && page.next_cursor !== previous_cursor
-        ? page.next_cursor
-        : null
-      state.exhausted = !state.cursor
-    }
-
-    return received
-  }
-
-  async function fetchSourceBatch(generation: number): Promise<NewsArticle[]> {
-    const id = active_source_id.value
-    if (!id || source_exhausted.value) return []
-
-    const previous_cursor = source_cursor.value
-    const page = await fetchSourceArticles(id, {
-      limit: PAGE_SIZE,
-      cursor: previous_cursor ?? undefined
-    })
-    if (generation !== _generation) return []
-
-    const known_ids = seenArticleIds([])
-    const received = page.data.filter((article) => {
-      if (!article.id || article.source?.id !== id || known_ids.has(article.id)) return false
-      known_ids.add(article.id)
-      return true
-    })
-    source_cursor.value = page.next_cursor && page.next_cursor !== previous_cursor
-      ? page.next_cursor
-      : null
-    source_exhausted.value = !source_cursor.value
-    return received
+  function restoreFeed(snapshot: FeedSnapshot): void {
+    articles.value = snapshot.articles
+    paging.value = snapshot
+    error_message.value = snapshot.error_message
   }
 
   async function loadBatch(append: boolean): Promise<void> {
-    if (append && loading.value) return
-    if (append && !can_load_more.value) return
-
+    if (append && (loading.value || (!can_load_more.value && !error_message.value))) return
     const generation = append ? _generation : ++_generation
-    if (!append) {
-      articles.value = []
-      error_message.value = null
-      resetPaging()
-    }
-
+    _last_attempt_append = append
     loading.value = true
     error_message.value = null
-    const batch: NewsArticle[] = []
-
+    const state = append ? paging.value : null
+    const current_search = unref(search)
     try {
-      if (active_source_id.value) {
-        batch.push(...await fetchSourceBatch(generation))
-      } else if (feed_mode === 'trending') {
-        await fetchMixedStream('trending', PAGE_SIZE, batch, generation)
-      } else {
-        let trending_error = false
-        let latest_error = false
-        try {
-          await fetchMixedStream('trending', TRENDING_PER_BATCH, batch, generation)
-        } catch {
-          trending_error = true
-        }
-        try {
-          await fetchMixedStream('latest', LATEST_PER_BATCH, batch, generation)
-        } catch {
-          latest_error = true
-        }
-
-        const unfilled_count = Math.max(0, PAGE_SIZE - batch.length)
-        if (unfilled_count && !latest_error && latest_stream.exhausted && !trending_stream.exhausted) {
-          try {
-            await fetchMixedStream('trending', unfilled_count, batch, generation)
-          } catch {
-            trending_error = true
-          }
-        } else if (unfilled_count && !trending_error && trending_stream.exhausted && !latest_stream.exhausted) {
-          try {
-            await fetchMixedStream('latest', unfilled_count, batch, generation)
-          } catch {
-            latest_error = true
-          }
-        }
-
-        if (trending_error || latest_error) {
-          error_message.value = 'Some news could not be loaded right now.'
-        }
-      }
-
-      if (generation !== _generation) return
-      articles.value = append ? [...articles.value, ...batch] : batch
-      if (import.meta.client && !_initialising && batch.length) {
-        void enrichArticles(batch).then((enriched) => {
-          if (generation !== _generation) return
-          const by_id = new Map(enriched.map(article => [article.id, article]))
-          articles.value = articles.value.map(article => by_id.get(article.id) ?? article)
-        })
-      }
-
-      logClientEvent({
-        event: 'content_load',
-        path: route.path,
-        surface: active_source_id.value ? 'source' : active_category.value ? 'category' : 'home',
-        feed: active_source_id.value ? 'source_latest' : 'article_feed',
-        action: append ? 'more' : 'initial',
-        outcome: error_message.value ? 'error' : 'success',
-        requested_count: PAGE_SIZE,
-        received_count: batch.length,
-        visible_count: articles.value.length,
-        cursor_present: Boolean(source_cursor.value || trending_stream.cursor || latest_stream.cursor)
+      const snapshot = await executeAction<FeedSnapshot>('feed', {
+        categories: unref(category)?.category_values ? [...unref(category)!.category_values!] : undefined,
+        source_id: unref(source_id), feed_mode,
+        q: current_search?.query?.trim() || undefined, tags: current_search?.tags,
+        trending: state?.trending, latest: state?.latest, source_cursor: state?.source_cursor,
+        seen_ids: append ? articles.value.map(article => article.id).filter(Boolean).slice(-2000) : undefined
       })
-    } catch {
-      if (generation === _generation) {
-        error_message.value = 'News could not be loaded right now.'
+      if (generation !== _generation) return
+      if (snapshot.error_message && !snapshot.articles.length && articles.value.length) {
+        error_message.value = snapshot.error_message
+        return
       }
+      articles.value = append ? [...articles.value, ...snapshot.articles] : snapshot.articles
+      paging.value = snapshot
+      error_message.value = snapshot.error_message
+      logClientEvent({ event: 'content_load', path: route.path,
+        surface: unref(source_id) ? 'source' : unref(category) ? 'category' : 'home',
+        feed: unref(source_id) ? 'source_latest' : 'article_feed', action: append ? 'more' : 'initial',
+        outcome: error_message.value ? 'error' : 'success', requested_count: 5,
+        received_count: snapshot.articles.length, visible_count: articles.value.length, cursor_present: can_load_more.value })
+    } catch (error) {
+      if (generation === _generation) error_message.value = requestErrorMessage(error, 'News could not be loaded right now.')
     } finally {
       if (generation === _generation) loading.value = false
     }
   }
-
-  async function refreshFeed(): Promise<void> {
-    await loadBatch(false)
-  }
-
-  async function loadMore(): Promise<void> {
-    await loadBatch(true)
-  }
-
-  async function retryFeed(): Promise<void> {
-    if (articles.value.length) await loadMore()
-    else await refreshFeed()
-  }
-
-  function snapshotStream(state: FeedStream): FeedStreamSnapshot {
-    return { ...state, ids: [...state.ids] }
-  }
-
-  function restoreStream(target: FeedStream, snapshot: FeedStreamSnapshot): void {
-    Object.assign(target, snapshot, { ids: new Set(snapshot.ids) })
-  }
-
-  async function initialiseFeed(): Promise<void> {
-    _initialising = true
-    const { data } = await useAsyncData(`feed:${route.path}`, async (): Promise<FeedSnapshot> => {
-      await refreshFeed()
-      return {
-        articles: articles.value,
-        error_message: error_message.value,
-        trending: snapshotStream(trending_stream),
-        latest: snapshotStream(latest_stream),
-        source_cursor: source_cursor.value,
-        source_exhausted: source_exhausted.value
-      }
+  async function initialiseFeed(snapshot?: FeedSnapshot): Promise<void> {
+    if (snapshot) {
+      restoreFeed(snapshot)
+      return
+    }
+    const { data } = await useAsyncData(`feed:${route.path}`, async () => {
+      await loadBatch(false)
+      return { ...paging.value, articles: articles.value, error_message: error_message.value }
     })
     if (data.value) {
       articles.value = data.value.articles
       error_message.value = data.value.error_message
-      restoreStream(trending_stream, data.value.trending)
-      restoreStream(latest_stream, data.value.latest)
-      source_cursor.value = data.value.source_cursor
-      source_exhausted.value = data.value.source_exhausted
+      if (data.value.trending && data.value.latest) paging.value = data.value as FeedSnapshot
     }
-    _initialising = false
   }
-
-  onMounted(() => {
-    const generation = _generation
-    if (articles.value.length) {
-      void enrichArticles(articles.value).then((enriched) => {
-        if (generation !== _generation) return
-        const by_id = new Map(enriched.map(article => [article.id, article]))
-        articles.value = articles.value.map(article => by_id.get(article.id) ?? article)
-      }).catch(() => undefined)
-    }
-  })
   onScopeDispose(() => {
     _generation++
   })
-
-  return {
-    articles,
-    loading,
-    error_message,
-    can_load_more,
-    initialiseFeed,
-    refreshFeed,
-    loadMore,
-    retryFeed
-  }
+  return { articles, loading, error_message, can_load_more, initialiseFeed,
+    refreshFeed: () => loadBatch(false), loadMore: () => loadBatch(true),
+    retryFeed: () => loadBatch(_last_attempt_append), restoreFeed }
 }

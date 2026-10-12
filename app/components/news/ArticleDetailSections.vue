@@ -38,6 +38,7 @@ const emit = defineEmits<{
 }>()
 
 const { outboundHref } = useOutboundUrl()
+const { action_blocked, cooldown_message } = useActionCooldown()
 const selected_group_id = ref<string | null>(null)
 const sorted_articles = computed(() => [...props.coverage_articles].sort((left, right) => articleTime(left) - articleTime(right)))
 const first_article = computed(() => sorted_articles.value[0])
@@ -137,7 +138,7 @@ function articleTime(article: NewsArticle): number {
         color="warning"
         variant="subtle"
         icon="lucide:triangle-alert"
-        :title="coverage_error"
+        :title="cooldown_message || coverage_error"
       >
         <template #actions>
           <UButton
@@ -146,6 +147,7 @@ function articleTime(article: NewsArticle): number {
             variant="outline"
             size="xs"
             :loading="loading_coverage"
+            :disabled="loading_coverage || action_blocked"
             @click="emit('retry-coverage')"
           />
         </template>
@@ -365,7 +367,7 @@ function articleTime(article: NewsArticle): number {
         color="warning"
         variant="subtle"
         icon="lucide:triangle-alert"
-        :title="related_error"
+        :title="cooldown_message || related_error"
       >
         <template #actions>
           <UButton
@@ -374,6 +376,7 @@ function articleTime(article: NewsArticle): number {
             variant="outline"
             size="xs"
             :loading="loading_related"
+            :disabled="loading_related || action_blocked"
             @click="emit('retry-related')"
           />
         </template>
@@ -443,7 +446,7 @@ function articleTime(article: NewsArticle): number {
           color="neutral"
           variant="outline"
           :loading="loading_related"
-          :disabled="loading_related"
+          :disabled="loading_related || action_blocked"
           @click="emit('load-more-related')"
         />
       </div>

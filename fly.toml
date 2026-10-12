@@ -11,6 +11,7 @@ primary_region = 'iad'
   ignorefile = '.dockerignore'
 
 [env]
+  NUXT_RATE_LIMIT_TRUST_FLY = 'true'
   BEANS_API_BASE_URL = 'http://cafecito-beans-api.flycast'
   ESPRESSO_API_BASE_URL = 'http://cafecito-espresso-api.flycast'
   NUXT_PUBLIC_SITE_URL = 'https://beans.cafecito.tech'

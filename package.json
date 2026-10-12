@@ -9,16 +9,21 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
+    "verify:rate-limit": "node scripts/verify-rate-limit.mjs",
+    "verify:rate-limit:memory": "node scripts/verify-rate-limit-memory.mjs",
+    "verify:action-loading": "node scripts/verify-action-loading.mjs",
     "verify:discovery": "node scripts/verify-analytics.mjs && node scripts/verify-discovery.mjs"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.100",
     "@iconify-json/simple-icons": "^1.2.75",
     "@nuxt/ui": "^4.6.0",
+    "ioredis": "^5.10.1",
     "markdown-it": "^14.1.1",
     "nuxt": "^4.4.2",
     "tailwindcss": "^4.2.2",
-    "web-vitals": "^6.2.2"
+    "web-vitals": "^6.2.2",
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.15.2",

@@ -7,6 +7,7 @@ import { searchCriteriaFromQuery, toSearchRouteQuery } from '~/utils/searchQuery
 const route = useRoute()
 const router = useRouter()
 const { trackEvent } = useGoogleAnalytics()
+const { action_blocked } = useActionCooldown()
 
 const search_form = reactive({
   query: '',
@@ -22,6 +23,7 @@ const {
   has_searched,
   can_load_more,
   search,
+  initialiseSearch,
   loadMore,
   retrySearch
 } = useSearchFeed()
@@ -37,11 +39,15 @@ function applyCriteriaToForm(query: string, tags: string[], sources: string[]): 
 async function writeSearchRoute(query: string, tags: string[], sources: string[]): Promise<void> {
   const next_query = toSearchRouteQuery({ query, tags, sources })
   _syncing_route = true
-  await router.replace({ query: next_query })
-  _syncing_route = false
+  try {
+    await router.replace({ query: next_query })
+  } finally {
+    _syncing_route = false
+  }
 }
 
 async function submitSearch(): Promise<void> {
+  if (loading.value || action_blocked.value) return
   const query = search_form.query.trim()
   const tags = normaliseTagInput(search_form.tags)
   const { sources } = searchCriteriaFromQuery({ sources: search_form.sources })
@@ -62,9 +68,15 @@ watch(
     const { query, tags, sources } = searchCriteriaFromQuery(route.query)
     applyCriteriaToForm(query, tags, sources)
     if (query || tags.length || sources.length) void search({ query, tags, sources })
-  },
-  { immediate: true }
+  }
 )
+
+const initial_criteria = searchCriteriaFromQuery(route.query)
+applyCriteriaToForm(initial_criteria.query, initial_criteria.tags, initial_criteria.sources)
+if (initial_criteria.query || initial_criteria.tags.length || initial_criteria.sources.length) {
+  if (import.meta.server || useNuxtApp().isHydrating) await initialiseSearch(initial_criteria)
+  else void search(initial_criteria)
+}
 
 usePageMetadata({
   title: 'Search | Beans',
@@ -137,6 +149,7 @@ useSeoMeta({ robots: 'noindex, follow' })
           icon="lucide:search"
           color="primary"
           :loading="loading"
+          :disabled="loading || action_blocked"
         />
       </div>
     </UForm>

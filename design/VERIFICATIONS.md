@@ -2,6 +2,25 @@
 
 This document defines implementation acceptance for the mobile-first UI. It does not claim live API behavior unless a check is listed under the verification record.
 
+## Bounded action loading — 2026-10-12
+
+- Keep the 10/minute browser and anonymous-IP limits and 60/minute IP ceiling. Static About, methodology and empty Search requests spend no quota and remain navigable after exhaustion. Data routes and explicit data actions remain protected; hydration makes no repeated action.
+- A stalled action ends by its 25-second deadline, cancels uncached upstream work and returns retryable 503. Per-request upstream timeout is 10 seconds; browser request timeout is 30 seconds. Cached fetch cancellation stays independent across callers. No automatic retry occurs.
+- A 429 displays Retry-After as a shared countdown; Find/Search, Clear, More and Retry disable during cooldown across routes. The countdown expires without issuing a request. Manual retry becomes available afterward. Failed refreshes preserve rendered articles and Retry repeats the failed refresh, not its old continuation cursor.
+- Verification: lint, Nuxt typecheck, production build, `verify:action-loading`, memory and Redis quota suites, analytics and discovery integration pass. The memory HTTP test confirms a stalled upstream returns 503/Retry-After=5 within 15 seconds and closes its connection; deadline tests also prove action-wide cancellation and Retry-After parsing. The HTTP test caught and corrected ofetch's supplied-signal timeout interaction by combining deadline and per-request signals.
+- Browser at 320px: 429 keeps all five articles and disables Find/Clear/Retry while showing the countdown; a category visited during cooldown sends no data request and offers disabled Retry. After expiry, explicit navigation loads the five-card category. A stalled browser request exits with an enabled Retry and five retained cards. A failed refresh and its Retry both retain five cards and request initial one-plus-four batches without old cursors. About and empty Search navigation add no page action; document and scroll widths both measure 320px. Temporary viewport and fixture services are cleaned up. These are local synthetic checks, not live upstream or deployment measurements.
+
+## Production memory fallback — 2026-10-12
+
+- An absent, empty or whitespace-only Redis URL must select process-local memory in development and production. A configured URL must select Redis; configured Redis failures must still reject with 503. The signing secret remains required in production.
+- `pnpm verify:rate-limit:memory` passes without connecting to Redis: 30 concurrent memory calls admit exactly ten, the exact 60-second boundary expires, IP rejection leaves other keys uncharged, and two production processes with empty Redis URLs render SSR content and enforce independent browser quotas. Cookie resets and the IP ceiling remain bounded, and rejected article actions perform no upstream work. Existing Redis regressions, discovery/analytics checks, lint, typecheck and production build also pass.
+
+## Beans UI action limits — 2026-10-12
+
+- Success/failure cases and guards are defined in [RATE-LIMIT](./RATE-LIMIT.md). `pnpm verify:rate-limit` passes against dedicated local Redis and two production app processes: exactly ten of 30 concurrent calls succeed; cookie quotas survive changing IPs/Machines; expired windows recover; forged/discarded/expired cookies cannot reset their fallback; the 60/minute IP ceiling holds; denied calls make zero upstream requests; missing trusted IP and unavailable Redis reject before work. Invalid paths/fields, oversized bodies, blocked old proxies, document single charging and private HEAD/trailing-slash routes also pass.
+- Lint, Nuxt typecheck, production build, analytics and updated discovery HTTP regressions pass. The browser at 320px renders five initial cards and ten after one More request, with no public proxy request and no hydration action. Home and search retain matching 305px document/scroll widths. A quota-exhaustion fixture shows the specific warning and Retry while preserving articles. Search hydration adds no action, and About/empty Search client navigation each adds one page action. Temporary viewport override restored.
+- These are local synthetic fixtures; live Fly traffic, production Redis connectivity and production signing secrets require deployment configuration. Enrichment has moved into the server action and can increase initial response latency.
+
 ## Success criteria
 
 - Minimalist reader UI: Now shows a Discover Trending News heading, a preference box, trending news across categories and More, with no product guide or RSS/archive promotions. About includes How Beans works and sharing guidance; `/methodology` redirects to `/about-beans#how-it-works`. Footer excludes Archive, RSS and How it works.

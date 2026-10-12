@@ -22,6 +22,7 @@ const props = withDefaults(defineProps<{
 })
 
 const list_class = computed(() => props.wide_grid ? WIDE_GRID_CLASS : STACKED_LIST_CLASS)
+const { action_blocked, cooldown_message } = useActionCooldown()
 
 const emit = defineEmits<{
   'load-more': []
@@ -39,11 +40,11 @@ const emit = defineEmits<{
     </h2>
 
     <UAlert
-      v-if="error_message"
+      v-if="error_message || action_blocked"
       color="warning"
       variant="subtle"
       icon="lucide:triangle-alert"
-      :title="error_message"
+      :title="cooldown_message || error_message || undefined"
     >
       <template #actions>
         <UButton
@@ -52,6 +53,7 @@ const emit = defineEmits<{
           variant="outline"
           size="xs"
           :loading="loading"
+          :disabled="loading || action_blocked"
           @click="emit('retry')"
         />
       </template>
@@ -60,6 +62,7 @@ const emit = defineEmits<{
     <div
       v-if="articles.length"
       :class="list_class"
+      :aria-busy="loading"
     >
       <ArticleCard
         v-for="article in articles"
@@ -80,15 +83,22 @@ const emit = defineEmits<{
       />
     </div>
     <UAlert
-      v-else-if="!error_message"
+      v-else-if="!error_message && !action_blocked"
       color="neutral"
       variant="subtle"
       icon="lucide:inbox"
       :title="empty_message"
     />
 
+    <UIcon
+      v-if="loading && articles.length"
+      name="lucide:loader-circle"
+      class="size-4 animate-spin text-stone-400"
+      aria-label="Updating articles"
+    />
+
     <div
-      v-if="can_load_more && (articles.length > 0 || (!loading && !error_message))"
+      v-if="can_load_more && !error_message && (articles.length > 0 || !loading)"
       class="flex justify-center pt-1"
     >
       <UButton
@@ -97,7 +107,7 @@ const emit = defineEmits<{
         color="neutral"
         variant="outline"
         :loading="loading"
-        :disabled="loading"
+        :disabled="loading || action_blocked"
         @click="emit('load-more')"
       />
     </div>

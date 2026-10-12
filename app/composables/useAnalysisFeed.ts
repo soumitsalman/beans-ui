@@ -1,8 +1,6 @@
 import { ref } from 'vue'
 import type { EspressoSignal } from '~/types/news'
 
-const PAGE_SIZE = 5
-
 export function useAnalysisFeed() {
   const { fetchSignals } = useEspressoApi()
   const signals = ref<EspressoSignal[]>([])
@@ -13,7 +11,7 @@ export function useAnalysisFeed() {
 
     loading_signals.value = true
     try {
-      const _page = await fetchSignals({ limit: PAGE_SIZE })
+      const _page = await fetchSignals()
       signals.value = _page.data
     } catch {
       signals.value = []

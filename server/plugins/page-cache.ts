@@ -12,7 +12,7 @@ export default defineNitroPlugin((nitro_app) => {
       homeDiscoveryCookieActive(getCookie(event, HOME_DISCOVERY_COOKIE))
       || Boolean(request_url.searchParams.get('q')?.trim())
     )
-    if (pathname === '/search' || discovery_active || status !== 200) {
+    if (event.context.beans_rate_limited || pathname === '/search' || discovery_active || status !== 200) {
       response.headers['cache-control'] = 'private, no-store'
       return
     }

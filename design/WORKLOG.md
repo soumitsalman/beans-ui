@@ -1,5 +1,12 @@
 # Beans UI Working Log
 
+## 2026-10-14 — Feed loading-state polish
+
+- Replaced the generic shared feed loading blocks with StoryCard and ArticleCard skeletons that mirror each card's visible metadata, title, media, and footer structure in the existing dark coffee theme.
+- During a More request, the More button is now the only loading indicator; the standalone spinner remains available only when a refresh has rendered cards but no continuation control.
+- Updated the design and verification contracts for the shaped skeletons and non-duplicated continuation feedback.
+- Verification: `pnpm lint`, `pnpm typecheck`, production build, and `git diff --check` pass.
+
 ## 2026-10-14 — User-management implementation design
 
 - Refreshed `USER_MGT.md` and added an implementation-design section grounded in the current Nuxt presentation-action, feed, Search, Story Related, rate-limit, SSR, and cache boundaries. Graphifyy is unavailable in this checkout, so the current data flow was traced directly.

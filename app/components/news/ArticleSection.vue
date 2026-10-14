@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import type { NewsArticle } from '~/types/news'
 import StoryCard from '~/components/news/StoryCard.vue'
 import ArticleCard from '~/components/news/ArticleCard.vue'
+import StoryCardSkeleton from '~/components/news/StoryCardSkeleton.vue'
+import ArticleCardSkeleton from '~/components/news/ArticleCardSkeleton.vue'
 
 const STACKED_LIST_CLASS = 'space-y-3'
 const WIDE_GRID_CLASS = 'grid grid-cols-1 items-start gap-3 md:grid-cols-2'
@@ -87,11 +89,13 @@ const emit = defineEmits<{
       :class="list_class"
       aria-label="Loading articles"
     >
-      <USkeleton
+      <template
         v-for="item in 2"
         :key="item"
-        class="h-52 rounded-lg bg-stone-800"
-      />
+      >
+        <StoryCardSkeleton v-if="stories" />
+        <ArticleCardSkeleton v-else />
+      </template>
     </div>
     <UAlert
       v-else-if="!error_message && !action_blocked"
@@ -102,7 +106,7 @@ const emit = defineEmits<{
     />
 
     <UIcon
-      v-if="loading && articles.length"
+      v-if="loading && articles.length && !can_load_more"
       name="lucide:loader-circle"
       class="size-4 animate-spin text-stone-400"
       aria-label="Updating articles"

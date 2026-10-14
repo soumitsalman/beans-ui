@@ -199,13 +199,8 @@ export function createBeansClient(fetch_api: ApiFetch, score_threshold: unknown)
     return toNewsStory(response.data ?? {})
   }
 
-  async function fetchStorySources(story_id: string): Promise<NewsPage<NewsArticle>> {
+  async function fetchStoryPublishers(story_id: string): Promise<NewsPage<NewsArticle>> {
     const page = await fetchBeansPage<BeansArticle>(`preview/stories/${story_id}/articles`, { limit: 20 })
-    return { ...page, data: page.data.map(toNewsArticle).filter(article => article.id) }
-  }
-
-  async function fetchArticlePublishers(story_id: string): Promise<NewsPage<NewsArticle>> {
-    const page = await fetchBeansPage<BeansArticle>(`preview/stories/${story_id}/articles`, { limit: 50 })
     return { ...page, data: page.data.map(toNewsArticle).filter(article => article.id || article.url) }
   }
 
@@ -258,8 +253,7 @@ export function createBeansClient(fetch_api: ApiFetch, score_threshold: unknown)
     fetchStories,
     fetchSearchArticles,
     fetchStory,
-    fetchStorySources,
-    fetchArticlePublishers,
+    fetchStoryPublishers,
     fetchStoryArticles,
     fetchSource,
     fetchSourceArticles

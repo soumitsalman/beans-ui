@@ -185,7 +185,7 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
       >
         <UAvatarGroup
           v-if="story.other_publishers?.length"
-          :max="5"
+          :max="3"
         >
           <UTooltip
             v-for="publisher in story.other_publishers"

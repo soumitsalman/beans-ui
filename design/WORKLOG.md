@@ -1,5 +1,30 @@
 # Beans UI Working Log
 
+## 2026-10-14 — User-management implementation design
+
+- Refreshed `USER_MGT.md` and added an implementation-design section grounded in the current Nuxt presentation-action, feed, Search, Story Related, rate-limit, SSR, and cache boundaries. Graphifyy is unavailable in this checkout, so the current data flow was traced directly.
+- Defined server-verified Clerk identity, shared continuation enforcement for Home/category/source/Search/Story Related, an atomic anonymous allowance, reusable client states, PostgreSQL/SQLite persistence boundaries, preference precedence, private-page ownership, provider cleanup, failure guardrails, phased delivery, and verification coverage.
+- Kept Zuplo API-key management in the hosted developer portal and explicitly separated this documentation design from implementation. No application, authentication, database, API, or backend behavior changed.
+
+## 2026-10-14 — Three-source favicon avatars
+
+- Unified StoryCard/story-detail and source/search ArticleCard publisher-avatar enrichment on one cursor-free `/preview/stories/{id}/articles?limit=20` request.
+- Publisher groups now retain at most three distinct non-null, non-empty `source.favicon_url` values; legacy `favicon` fields, duplicates, and missing values do not fill a slot. Article cards still exclude their primary source, and fewer than three avatars is valid.
+- Story confidence continues to use every returned article ID, regardless of favicon eligibility. Updated the data-source, design, and verification contracts plus the focused fixture coverage. `graphifyy` is unavailable, so direct data-flow inspection was used.
+- Verification: `node scripts/verify-stories.mjs`, lint, Nuxt typecheck, production build, and `git diff --check` pass.
+
+## 2026-10-14 — Visitor content-continuation restriction
+
+- Added the signed-out pagination rule to `USER_MGT.md`: public Home, category, source, Search, and Story Related content remains viewable, and each page permits one successful More batch. It then displays **Sign in for more content** and disables further continuation loading until authentication succeeds.
+- Defined preservation of rendered content/context, retry behavior for the allowed request, and the rule that authentication enables but does not automatically trigger the next batch. Added an acceptance/failure check for this visitor restriction.
+- This is documentation-only planning. No application, authentication, API, or backend behavior changed.
+
+## 2026-10-14 — User management and personalization UX specification
+
+- Expanded `USER_MGT.md` from a capability note into a product-facing interaction specification for authentication, sign-out, preferences, custom pages, API keys, and account deletion. Defined visitor, in-progress, signed-in, expired-session, and deletion-pending permissions.
+- Documented valid flows, explicit confirmations, return-context behavior, validation/error states, privacy/access boundaries, and disallowed actions. Added success and failure checks for each sensitive or persistent user action.
+- This is documentation-only planning. No application, authentication, Zuplo, Clerk, API, or backend behavior changed.
+
 ## 2026-10-12 — Bounded action loading and cooldown
 
 - Kept the 10/minute user quota and 60/minute IP ceiling. Removed the no-op page action/client middleware and excluded static About, methodology and empty Search document visits from quota consumption. Data actions and initial data documents continue charging once; hydration remains free.

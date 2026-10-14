@@ -8,9 +8,9 @@ import type { ActionName } from './actionInput'
 import { createBeansClient, createEspressoClient } from './beansClient'
 import { fetchPresentationApi } from './proxyApi'
 import { withActionDeadline } from './actionDeadline'
-import { sourceFavicon } from '../../app/utils/source'
 
 const MAX_COVERAGE_PAGES = 100
+const MAX_PUBLISHER_AVATARS = 3
 
 export function createPresentationActions(event: H3Event) {
   const config = useRuntimeConfig(event)
@@ -31,25 +31,29 @@ export function createPresentationActions(event: H3Event) {
     const beans = createBeansClient(fetch_api, config.public.default_score_threshold)
     const espresso = createEspressoClient(fetch_api)
 
+    function publisherAvatars(articles: NewsArticle[], primary_source_id?: string | null) {
+      const favicon_urls = new Set<string>()
+      return articles.filter((article) => {
+        const favicon_url = article.source?.favicon_url
+        if (article.source?.id === primary_source_id || favicon_url == null || favicon_url === '' || favicon_urls.has(favicon_url)) return false
+        favicon_urls.add(favicon_url)
+        return true
+      }).slice(0, MAX_PUBLISHER_AVATARS).map(article => ({ id: article.id, source: article.source, url: article.url }))
+    }
+
     async function enrichArticles(articles: NewsArticle[]): Promise<NewsArticle[]> {
       const confidence = await espresso.fetchConfidence(articles.map(article => article.id)).catch(() => ({}))
       return Promise.all(articles.map(async (article) => {
         const page = article.story_id
-          ? await beans.fetchArticlePublishers(article.story_id).catch(() => null)
+          ? await beans.fetchStoryPublishers(article.story_id).catch(() => null)
           : null
-        const seen_sources = new Set([article.source?.id])
-        const publishers = (page?.data ?? []).filter((item) => {
-          const id = item.source?.id
-          if (!id || seen_sources.has(id)) return false
-          seen_sources.add(id)
-          return true
-        }).slice(0, 5).map(item => ({ id: item.id, source: item.source, url: item.url }))
+        const publishers = publisherAvatars(page?.data ?? [], article.source?.id)
         return { ...article, confidence: (confidence as Record<string, NewsArticle['confidence']>)[article.id], other_publishers: publishers }
       }))
     }
 
     async function fetchStoryEnrichment(story_ids: string[]): Promise<Record<string, StoryEnrichment>> {
-      const source_pages = await Promise.all(story_ids.map(id => beans.fetchStorySources(id).catch(() => null)))
+      const source_pages = await Promise.all(story_ids.map(id => beans.fetchStoryPublishers(id).catch(() => null)))
       const article_ids = source_pages.map(page => [...new Set((page?.data ?? []).map(article => article.id).filter(Boolean))])
       const confidence: Record<string, NewsArticle['confidence']> = {}
       const scores = { low: 1, medium: 2, high: 3 }
@@ -71,13 +75,7 @@ export function createPresentationActions(event: H3Event) {
         }
       }
       return Object.fromEntries(story_ids.map((story_id, index) => {
-        const favicons = new Set<string>()
-        const publishers = (source_pages[index]?.data ?? []).filter((article) => {
-          const favicon = sourceFavicon(article)
-          if (!favicon || favicons.has(favicon)) return false
-          favicons.add(favicon)
-          return true
-        }).slice(0, 5).map(article => ({ id: article.id, source: article.source, url: article.url }))
+        const publishers = publisherAvatars(source_pages[index]?.data ?? [])
         return [story_id, { confidence: confidence[story_id], other_publishers: publishers }]
       }))
     }

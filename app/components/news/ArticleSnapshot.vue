@@ -117,7 +117,7 @@ watch(() => props.article.image_url, () => {
       >
         <UAvatarGroup
           v-if="article.other_publishers?.length"
-          :max="5"
+          :max="3"
         >
           <UTooltip
             v-for="publisher in article.other_publishers"

@@ -1,5 +1,31 @@
 # Beans UI Working Log
 
+## 2026-10-14 — Skip Fly deploy on design-only pushes
+
+- `fly-deploy.yml` now ignores pushes that only change `design/**`, so design docs and mockups do not trigger a Fly deploy. Pushes that also touch app code still deploy. Manual `workflow_dispatch` is unchanged.
+
+## 2026-10-14 — Preference and visitor-limit mockups
+
+- Saved mobile concept renders in `design/user-preference-setup-mockup.png` and `design/visitor-more-limit-mockup.png`.
+- The preference screen shows all five editable filters and explicit Save/Not now actions. The visitor screen keeps rendered stories readable and replaces further More loading with an inline sign-in prompt.
+- Visual concepts only; no application behavior changed.
+
+## 2026-10-14 — Multi-field Home preferences
+
+- Revised `USER_MGT.md` so a signed-in user's single preference set can contain Topic (`q`), comma-separated Tags (`tags`), Sources (`domains`), Exclude sources (`exclude_domains`), and Languages (`languages`). Clarified validation, default language behavior, saved-filter pagination, and that the personalized Home sits alongside unchanged default category tabs.
+- Removed user-created custom-page requirements from permissions, navigation, flows, persistence, delivery steps, decisions, and acceptance checks. Updated account deletion and privacy language accordingly.
+- Documentation only; no UI, authentication, API, or backend behavior changed.
+
+## 2026-10-14 — Authentication state flow
+
+- Added a Mermaid flow to `USER_MGT.md` showing sign-in/sign-up entry, verification, cancellation, recoverable errors, return to context, pending protected actions, first-time preference choice, and signed-in continuation.
+- Clarified that preference setup follows any pending protected action and that authentication does not automatically load the next news batch. Documentation only; no application behavior changed.
+
+## 2026-10-14 — Selected Option A account-placement mockup
+
+- Saved the user-supplied, exact Option A utility-icon account mockup as `design/user-management-option-a.png` and linked it from `USER_MGT.md`.
+- The selected direction keeps account access in the existing top utility group and preserves the category-tab row for news discovery. No application behavior was changed.
+
 ## 2026-10-14 — Feed loading-state polish
 
 - Replaced the generic shared feed loading blocks with StoryCard and ArticleCard skeletons that mirror each card's visible metadata, title, media, and footer structure in the existing dark coffee theme.

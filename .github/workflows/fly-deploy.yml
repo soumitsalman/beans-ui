@@ -3,7 +3,11 @@
 name: Fly Deploy Beans API
 on:
   push:
-    branches: [main]    
+    branches: [main]
+    paths-ignore:
+      - "design/**"
+      - ".env.example"
+      - ".editorconfig"
   workflow_dispatch:
 jobs:
   deploy:

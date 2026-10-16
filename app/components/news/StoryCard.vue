@@ -6,7 +6,7 @@ import StoryHeader from '~/components/news/StoryHeader.vue'
 import ArticleShareModal from '~/components/news/ArticleShareModal.vue'
 import ArticleTrendCounts from '~/components/news/ArticleTrendCounts.vue'
 import { formatCount, formatTaxonomyLabel } from '~/utils/formatters'
-import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceIdentity, sourceLabel } from '~/utils/source'
+import { sourceFaviconUrl, sourceIdentity, sourceLabel } from '~/utils/source'
 import { hasPositiveCount } from '~/utils/trend'
 import { withBeansShareAttribution } from '~/utils/outboundUrl'
 
@@ -27,7 +27,8 @@ function openStory(event: MouseEvent): void {
 }
 
 const related_count = computed(() => props.story.article_count)
-const show_card_footer = computed(() => Boolean(props.story.other_publishers?.length)
+const { favicon_publishers, hideFavicon } = useFaviconPublishers(() => props.story.other_publishers)
+const show_card_footer = computed(() => Boolean(favicon_publishers.value.length)
   || related_count.value != null
   || [props.story.trend?.mentions, props.story.trend?.comments, props.story.trend?.likes].some(hasPositiveCount)
   || Boolean(share_url.value || title_link.value))
@@ -180,15 +181,15 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
       class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-stone-800/80 px-3.5 py-3 text-[11px] text-stone-500"
     >
       <div
-        v-if="story.other_publishers?.length || related_count != null"
+        v-if="favicon_publishers.length || related_count != null"
         class="flex shrink-0 items-center gap-2"
       >
         <UAvatarGroup
-          v-if="story.other_publishers?.length"
+          v-if="favicon_publishers.length"
           :max="3"
         >
           <UTooltip
-            v-for="publisher in story.other_publishers"
+            v-for="publisher in favicon_publishers"
             :key="publisherIdentity(publisher)"
             :text="publisherLabel(publisher)"
           >
@@ -199,11 +200,11 @@ function publisherHref(publisher: NewsPublisher): string | undefined {
               class="rounded-full focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary"
             >
               <UAvatar
-                :src="sourceFavicon(publisher)"
+                :src="sourceFaviconUrl(publisher)"
                 :alt="publisherLabel(publisher)"
-                :icon="DEFAULT_SOURCE_ICON"
                 loading="lazy"
                 referrerpolicy="no-referrer"
+                @error="hideFavicon(sourceFaviconUrl(publisher))"
               />
             </NuxtLink>
           </UTooltip>

@@ -12,12 +12,14 @@
     "verify:rate-limit": "node scripts/verify-rate-limit.mjs",
     "verify:rate-limit:memory": "node scripts/verify-rate-limit-memory.mjs",
     "verify:action-loading": "node scripts/verify-action-loading.mjs",
+    "verify:google-trends": "node scripts/verify-google-trends.mjs && node scripts/verify-stories.mjs",
     "verify:discovery": "node scripts/verify-analytics.mjs && node scripts/verify-discovery.mjs"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.100",
     "@iconify-json/simple-icons": "^1.2.75",
     "@nuxt/ui": "^4.6.0",
+    "fast-xml-parser": "^5.11.2",
     "ioredis": "^5.10.1",
     "markdown-it": "^14.1.1",
     "nuxt": "^4.4.2",

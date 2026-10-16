@@ -6,6 +6,8 @@ const CURSOR = z.string().max(4096).nullable().optional()
 const IDS = z.array(ID).max(2000)
 export const ACTION_INPUTS = {
   feed: z.object({
+    home_default: z.boolean().optional(),
+    default_tags: z.array(TEXT).max(30).optional(),
     categories: z.array(TEXT).max(100).optional(),
     q: TEXT.optional(),
     tags: z.array(TEXT).max(30).optional(),

@@ -8,6 +8,8 @@ import type { ActionName } from './actionInput'
 import { createBeansClient, createEspressoClient } from './beansClient'
 import { fetchPresentationApi } from './proxyApi'
 import { withActionDeadline } from './actionDeadline'
+import { sourceFavicon } from '../../app/utils/source'
+import { fetchGoogleTrendTags } from './googleTrends'
 
 const MAX_COVERAGE_PAGES = 100
 const MAX_PUBLISHER_AVATARS = 3
@@ -86,14 +88,19 @@ export function createPresentationActions(event: H3Event) {
     }
 
     async function feed(input: FeedInput): Promise<FeedSnapshot> {
-      const from = input.from ?? new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
+      const home = input.home_default === true && !input.source_id && !input.categories?.length
+      const from = input.from ?? new Date(Date.now() - (home ? 3 : 7) * 86400000).toISOString().slice(0, 10)
+      let default_tags: string[] | undefined
       const seen_ids = new Set(input.seen_ids ?? [])
       let cursor = input.cursor ?? null
       let source_cursor = input.source_cursor ?? null
       try {
+        if (home && !input.q?.trim() && !input.tags?.some(tag => tag.trim())) {
+          default_tags = input.default_tags ?? await fetchGoogleTrendTags().catch(() => [])
+        }
         const page = input.source_id
           ? await beans.fetchSourceArticles(input.source_id, { limit: 5, cursor: source_cursor })
-          : await beans.fetchStories({ limit: 5, cursor, from, categories: input.categories, q: input.q, tags: input.tags })
+          : await beans.fetchStories({ limit: 5, cursor, from, categories: input.categories, q: input.q, tags: default_tags ?? input.tags })
         const articles = page.data.filter((article) => {
           if (!article.id || seen_ids.has(article.id) || (input.source_id && article.source?.id !== input.source_id)) return false
           seen_ids.add(article.id)
@@ -103,10 +110,10 @@ export function createPresentationActions(event: H3Event) {
         else cursor = page.next_cursor !== cursor ? page.next_cursor : null
         return {
           articles: input.source_id ? await enrichArticles(articles) : articles,
-          cursor, from, source_cursor, source_exhausted: !source_cursor, error_message: null
+          cursor, from, default_tags, source_cursor, source_exhausted: !source_cursor, error_message: null
         }
       } catch {
-        return { articles: [], cursor, from, source_cursor, source_exhausted: !source_cursor, error_message: 'News could not be loaded right now.' }
+        return { articles: [], cursor, from, default_tags, source_cursor, source_exhausted: !source_cursor, error_message: 'News could not be loaded right now.' }
       }
     }
 

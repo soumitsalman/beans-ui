@@ -2,6 +2,8 @@ import type { FeedSnapshot } from '../app/types/discovery'
 import type { NewsArticle, NewsStory, NewsPage, NewsSource } from '../app/types/news'
 
 export interface FeedInput {
+  home_default?: boolean
+  default_tags?: string[]
   categories?: string[]
   q?: string
   tags?: string[]

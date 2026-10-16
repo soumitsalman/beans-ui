@@ -15,6 +15,9 @@ const INPUTS = Object.fromEntries(['feed', 'search', 'story', 'story_enrichment'
 const CALLS = []
 const STORIES = Array.from({ length: 10 }, (_, i) => ({ id: `story-${i}`, title: `Story ${i}`, last_published_at: '2026-10-12T12:00:00Z', article_count: 245, published_at: '2000-01-01', trend: { related: 999 } }))
 let _mode = 'normal'
+let _google_calls = 0
+let _google_tags = ['GTA 6', 'nasdaq']
+let _google_fail = false
 async function fetchApi(api, path, query = {}) {
   assert.ok(!/(^|\/)private(?:\/|$)/i.test(path), `Stale route: ${path}`)
   CALLS.push({ api, path, query })
@@ -52,7 +55,7 @@ async function fetchApi(api, path, query = {}) {
     return { data: Array.from({ length: next - offset }, (_, i) => ({ id: `coverage-${offset + i}`, title: `Coverage ${offset + i}` })), pagination: { next_cursor: next < count ? String(next) : null } }
   }
   if (path === 'preview/confidence') {
-    return { data: query.ids.split(',').map(id => ({ id, confidence: id.endsWith('-0') ? 'low' : id.endsWith('-1') ? 'high' : null })) }
+    return { data: query.ids.map(id => ({ id, confidence: id.endsWith('-0') ? 'low' : id.endsWith('-1') ? 'high' : null })) }
   }
   if (path === 'sources/source-1') return { data: { id: 'source-1', name: 'Source One' } }
   if (path === 'articles/latest') {
@@ -64,12 +67,59 @@ async function fetchApi(api, path, query = {}) {
 }
 const { createPresentationActions } = await loadService('../server/utils/presentationActions.ts', {
   createBeansClient, createEspressoClient, ACTION_INPUTS: INPUTS,
+  fetchGoogleTrendTags: async () => {
+    _google_calls++
+    if (_google_fail) throw new Error('Google unavailable')
+    return _google_tags
+  },
+
   useRuntimeConfig: () => ({ beans_api_base_url: 'beans', espresso_api_base_url: 'espresso', public: { default_score_threshold: 0.6 } }),
   fetchPresentationApi: (base, path, query) => fetchApi(base, path, query),
   withActionDeadline: fn => fn(new AbortController().signal),
   createError: value => Object.assign(new Error(value.statusMessage), value), setHeader: () => {}
 }, ['createPresentationActions'])
 const execute = createPresentationActions({})
+const dateFrom = days => new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+const home = await execute('feed', { home_default: true })
+assert.equal(home.from, dateFrom(3))
+assert.deepEqual(home.default_tags, ['GTA 6', 'nasdaq'])
+assert.equal(CALLS.at(-1).query.q, undefined)
+assert.equal(CALLS.at(-1).query.score_threshold, undefined)
+assert.deepEqual(CALLS.at(-1).query.tags, ['GTA 6', 'nasdaq'])
+_google_tags = ['changed_trend']
+const home_more = await execute('feed', { home_default: true, cursor: home.cursor, from: home.from, default_tags: home.default_tags })
+assert.equal(_google_calls, 1, 'More keeps the original tags after the Google cache changes')
+assert.deepEqual(home_more.default_tags, home.default_tags)
+assert.equal(CALLS.at(-1).query.from, home.from)
+assert.equal(CALLS.at(-1).query.q, undefined)
+assert.equal(CALLS.at(-1).query.score_threshold, undefined)
+assert.deepEqual(CALLS.at(-1).query.tags, ['GTA 6', 'nasdaq'])
+for (const criteria of [{ q: 'topic' }, { tags: ['saved_tag'] }]) {
+  await execute('feed', { home_default: true, ...criteria })
+  assert.equal(_google_calls, 1, 'User criteria bypass Google')
+  assert.deepEqual(CALLS.at(-1).query.tags, criteria.tags)
+  assert.equal(CALLS.at(-1).query.from, dateFrom(3))
+}
+await execute('feed', { categories: ['category'] })
+assert.equal(CALLS.at(-1).query.from, dateFrom(7))
+assert.equal(_google_calls, 1, 'Category feeds do not call Google')
+_google_fail = true
+const fallback = await execute('feed', { home_default: true })
+assert.deepEqual(fallback.default_tags, [])
+assert.equal(fallback.error_message, null)
+assert.equal(CALLS.at(-1).query.q, undefined)
+assert.equal(CALLS.at(-1).query.tags, undefined)
+await execute('feed', { home_default: true, cursor: fallback.cursor, from: fallback.from, default_tags: [] })
+assert.equal(_google_calls, 2, 'Fallback pagination stays unfiltered')
+_google_fail = false
+_mode = 'fail'
+const home_failure = await execute('feed', { home_default: true, cursor: home.cursor, from: home.from, default_tags: home.default_tags })
+assert.deepEqual(home_failure.default_tags, home.default_tags)
+assert.equal(home_failure.cursor, home.cursor)
+assert.equal(home_failure.from, home.from)
+assert.ok(home_failure.error_message)
+_mode = 'normal'
+CALLS.length = 0
 const feed = await execute('feed', { q: 'topic', tags: ['tag'], categories: ['category'] })
 assert.equal(feed.articles.length, 5)
 assert.equal(feed.articles[0].published_at, STORIES[0].last_published_at)
@@ -82,8 +132,8 @@ assert.ok(feed.articles.every(story => enrichment[story.id].confidence === 'high
 assert.equal(CALLS.filter(call => call.path.endsWith('/articles')).length, 5, 'One favicon request per story even with fewer than three icons and an available cursor')
 assert.ok(CALLS.filter(call => call.path.endsWith('/articles')).every(call => call.query.limit === 20 && !call.query.cursor))
 const batch = CALLS.find(call => call.path === 'preview/confidence')
-assert.equal(batch.query.ids.split(',').length, 100)
-assert.ok(!batch.query.ids.split(',').some(id => STORIES.some(story => story.id === id)), 'Confidence uses article IDs')
+assert.equal(batch.query.ids.length, 100)
+assert.ok(!batch.query.ids.some(id => STORIES.some(story => story.id === id)), 'Confidence uses article IDs')
 for (const call of CALLS.filter(call => call.path === 'preview/stories')) {
   assert.deepEqual(call.query.languages, NEWS_LANGUAGES)
   assert.equal(call.query.content_type, 'news')
@@ -119,7 +169,7 @@ assert.ok(failed.error_message)
 CALLS.length = 0
 _mode = 'batch'
 await execute('story_enrichment', { ids: STORIES.slice(0, 5).map(story => story.id) })
-const batches = CALLS.filter(call => call.path === 'preview/confidence').map(call => call.query.ids.split(','))
+const batches = CALLS.filter(call => call.path === 'preview/confidence').map(call => call.query.ids)
 assert.ok(batches.every(ids => ids.length <= 100))
 assert.equal(batches.length, 2)
 assert.ok(batches[1].every(id => id.startsWith('story-4-')), 'Later batches omit stories already resolved')
@@ -165,7 +215,7 @@ CALLS.length = 0
 _mode = 'fallback'
 await client.fetchSourceArticles('source-1', { cursor: 'next' })
 assert.equal(CALLS.length, 3)
-assert.ok(CALLS.every(call => call.path === 'articles/latest' && call.query.sources[0] === 'source-1' && call.query.cursor === 'next' && call.query.limit === 5 && call.query.sort === 'recent'))
+assert.ok(CALLS.every(call => call.path === 'articles/latest' && call.query.sources.length === 1 && call.query.sources[0] === 'source-1' && call.query.cursor === 'next' && call.query.limit === 5 && call.query.sort === 'recent'))
 assert.equal(CALLS[0].query.content_type, 'news')
 assert.equal(CALLS[1].query.content_type, undefined)
 assert.deepEqual(CALLS[1].query.languages, NEWS_LANGUAGES)
@@ -175,7 +225,7 @@ for (const [mode, expected_calls] of [['normal', 1], ['content-fallback', 2]]) {
   _mode = mode
   await client.fetchSourceArticles('source-1', { cursor: 'next' })
   assert.equal(CALLS.length, expected_calls, 'Source fallback stops at the first non-empty response')
-  assert.ok(CALLS.every(call => call.path === 'articles/latest' && call.query.sources[0] === 'source-1' && call.query.cursor === 'next'))
+  assert.ok(CALLS.every(call => call.path === 'articles/latest' && call.query.sources.length === 1 && call.query.sources[0] === 'source-1' && call.query.cursor === 'next'))
   assert.deepEqual(CALLS.at(-1).query.languages, NEWS_LANGUAGES)
 }
 CALLS.length = 0

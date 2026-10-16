@@ -25,6 +25,7 @@ export function useNewsFeed(
     : paging.value?.cursor))
   let _generation = 0
   let _last_attempt_append = false
+  let _retry_state: FeedSnapshot | null = null
   const _requested_story_ids = new Set<string>()
 
   async function loadStoryEnrichment(stories: NewsStory[], generation: number): Promise<void> {
@@ -51,17 +52,20 @@ export function useNewsFeed(
     error_message.value = snapshot.error_message
   }
 
-  async function loadBatch(append: boolean): Promise<void> {
+  async function loadBatch(append: boolean, retry = false): Promise<void> {
     if (append && (loading.value || (!can_load_more.value && !error_message.value))) return
     const generation = append ? _generation : ++_generation
     if (!append) _requested_story_ids.clear()
     _last_attempt_append = append
     loading.value = true
     error_message.value = null
-    const state = append ? paging.value : null
+    const state = retry ? _retry_state : append ? paging.value : null
+    _retry_state = state
     const current_search = unref(search)
     try {
       const snapshot = await executeAction<FeedSnapshot>('feed', {
+        home_default: !unref(category) && !unref(source_id),
+        default_tags: state?.default_tags,
         categories: unref(category)?.category_values ? [...unref(category)!.category_values!] : undefined,
         source_id: unref(source_id),
         q: current_search?.query?.trim() || undefined, tags: current_search?.tags,
@@ -69,6 +73,7 @@ export function useNewsFeed(
         seen_ids: append ? articles.value.map(article => article.id).filter(Boolean).slice(-2000) : undefined
       })
       if (generation !== _generation) return
+      _retry_state = snapshot
       if (snapshot.error_message && !snapshot.articles.length && articles.value.length) {
         error_message.value = snapshot.error_message
         return
@@ -111,5 +116,5 @@ export function useNewsFeed(
   })
   return { articles, loading, error_message, can_load_more, initialiseFeed,
     refreshFeed: () => loadBatch(false), loadMore: () => loadBatch(true),
-    retryFeed: () => loadBatch(_last_attempt_append), restoreFeed }
+    retryFeed: () => loadBatch(_last_attempt_append, true), restoreFeed }
 }

@@ -6,13 +6,14 @@ import ArticleShareModal from '~/components/news/ArticleShareModal.vue'
 import StoryHeader from '~/components/news/StoryHeader.vue'
 import ArticleSourceLine from '~/components/news/ArticleSourceLine.vue'
 import MarkdownSummary from '~/components/news/MarkdownSummary.vue'
-import { DEFAULT_SOURCE_ICON, sourceFavicon, sourceLabel } from '~/utils/source'
+import { sourceFaviconUrl, sourceLabel } from '~/utils/source'
 import { formatCount, formatTaxonomyLabel } from '~/utils/formatters'
 
 const props = defineProps<{ article: NewsArticle, story?: boolean }>()
 const { outboundHref } = useOutboundUrl()
 const image_failed = ref(false)
 const articles_count = computed(() => (props.article as NewsStory).article_count)
+const { favicon_publishers, hideFavicon } = useFaviconPublishers(() => props.article.other_publishers)
 const article_href = computed(() => outboundHref(props.article.url))
 
 watch(() => props.article.image_url, () => {
@@ -116,18 +117,18 @@ watch(() => props.article.image_url, () => {
         class="flex items-center gap-2 text-[11px] text-stone-500"
       >
         <UAvatarGroup
-          v-if="article.other_publishers?.length"
+          v-if="favicon_publishers.length"
           :max="3"
         >
           <UTooltip
-            v-for="publisher in article.other_publishers"
+            v-for="publisher in favicon_publishers"
             :key="publisher.id"
             :text="sourceLabel(publisher)"
           >
             <UAvatar
-              :src="sourceFavicon(publisher)"
+              :src="sourceFaviconUrl(publisher)"
               :alt="sourceLabel(publisher)"
-              :icon="DEFAULT_SOURCE_ICON"
+              @error="hideFavicon(sourceFaviconUrl(publisher))"
             />
           </UTooltip>
         </UAvatarGroup>

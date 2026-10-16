@@ -1,4 +1,4 @@
-import type { LocationQuery } from 'vue-router'
+import type { LocationQuery, LocationQueryRaw } from 'vue-router'
 import { normaliseTagInput } from './formatters'
 
 export interface SearchRouteCriteria {
@@ -31,10 +31,10 @@ export function searchCriteriaFromQuery(query: LocationQuery): SearchRouteCriter
   }
 }
 
-export function toSearchRouteQuery(criteria: SearchRouteCriteria): Record<string, string> {
-  const _query: Record<string, string> = {}
+export function toSearchRouteQuery(criteria: SearchRouteCriteria): LocationQueryRaw {
+  const _query: LocationQueryRaw = {}
   if (criteria.query) _query.q = criteria.query
-  if (criteria.tags.length) _query.tags = criteria.tags.join(',')
-  if (criteria.sources.length) _query.sources = criteria.sources.join(',')
+  if (criteria.tags.length) _query.tags = [...criteria.tags]
+  if (criteria.sources.length) _query.sources = [...criteria.sources]
   return _query
 }

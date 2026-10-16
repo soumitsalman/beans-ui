@@ -1,6 +1,7 @@
 import type { NewsArticle } from './news'
 
 export interface FeedSnapshot {
+  default_tags?: string[]
   articles: NewsArticle[]
   error_message: string | null
   cursor: string | null

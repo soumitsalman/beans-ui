@@ -113,7 +113,7 @@ export interface BeansPageParams {
   regions?: string[]
   entities?: string[]
   content_type?: string
-  languages?: string | string[]
+  languages?: string[]
   from?: string
   to?: string
 }

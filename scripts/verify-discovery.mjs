@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { signIdentity } from '../server/utils/anonymousIdentity.ts'
+import { NEWS_LANGUAGES } from '../shared/news.ts'
 import { createServer, request } from 'node:http'
 import { spawn } from 'node:child_process'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -125,7 +126,7 @@ const mock_server = createServer((request, response) => {
     response.end(JSON.stringify(REQUESTS))
     return
   }
-  REQUESTS.push({ path: url.pathname, query: Object.fromEntries(url.searchParams), languages: url.searchParams.getAll('languages'), exclusions: url.searchParams.getAll('exclude_ids') })
+  REQUESTS.push({ path: url.pathname, raw_url: request.url, query: Object.fromEntries(url.searchParams), tags: url.searchParams.getAll('tags'), languages: url.searchParams.getAll('languages'), exclusions: url.searchParams.getAll('exclude_ids') })
   response.setHeader('content-type', 'application/json')
   if (['/preview/articles/unique', '/preview/stories'].includes(url.pathname) && _fail_feed) {
     response.writeHead(500).end(JSON.stringify({ message: 'Fixture temporary outage.' }))
@@ -152,7 +153,7 @@ const mock_server = createServer((request, response) => {
     return
   }
   if (url.pathname === '/preview/confidence') {
-    response.end(JSON.stringify({ data: (url.searchParams.get('ids') || '').split(',').map(id => ({ id, confidence: 'high' })) }))
+    response.end(JSON.stringify({ data: url.searchParams.getAll('ids').map(id => ({ id, confidence: 'high' })) }))
     return
   }
   if (url.pathname === '/preview/stories' || url.pathname === '/articles/latest' || url.pathname === '/preview/articles/unique' || /^\/preview\/stories\/[^/]+\/articles?$/.test(url.pathname) || url.pathname === '/preview/stories/story-1/articles' || url.pathname === '/articles/search') {
@@ -180,7 +181,7 @@ await new Promise((resolve, reject) => {
   mock_server.once('error', reject)
   mock_server.listen(MOCK_PORT, '127.0.0.1', resolve)
 })
-const app_process = spawn(process.execPath, ['.output/server/index.mjs'], {
+const app_process = spawn(process.execPath, ['--import', './scripts/fixtures/google-trends-fetch.mjs', '.output/server/index.mjs'], {
   env: {
     ...process.env,
     HOST: '127.0.0.1', PORT: String(APP_PORT), NITRO_HOST: '127.0.0.1', NITRO_PORT: String(APP_PORT),
@@ -321,15 +322,17 @@ try {
   const methodology = await fetchPage('/methodology', { redirect: 'manual' })
   assert.equal(methodology.response.status, 301)
   assert.equal(methodology.response.headers.get('location'), '/about-beans#how-it-works')
-  const home_request = REQUESTS.find(request => request.path === '/preview/stories' && request.query.limit === '5' && !request.query.categories && !request.query.q)
+  const home_request = REQUESTS.find(request => request.path === '/preview/stories' && request.query.limit === '5' && !request.query.categories && request.tags[0] === 'GTA 6' && request.tags[1] === 'Space News' && request.tags.length === 2)
   assert.ok(home_request, 'Home requests five stories without categories')
   assert.equal(home_request.query.sort, undefined)
   assert.deepEqual(home_request.exclusions, [])
-  assert.equal(home_request.query.tags, undefined)
+  assert.equal(home_request.query.score_threshold, undefined)
+  assert.equal(home_request.query.q, undefined)
+  assert.deepEqual(home_request.tags, ['GTA 6', 'Space News'])
   async function discoveryAction(q) {
     return fetch(`http://127.0.0.1:${APP_PORT}/api/actions/feed`, {
       method: 'POST', headers: { 'content-type': 'application/json', 'fly-client-ip': '192.0.2.100', 'cookie': fixtureCookie() },
-      body: JSON.stringify({ q, tags: ['startups'] })
+      body: JSON.stringify({ home_default: true, q, tags: ['startups'] })
     })
   }
   const discovery_before = REQUESTS.filter(request => request.query.q === 'battery').length
@@ -418,6 +421,19 @@ try {
     assert.equal(response.status, 200)
     return response.json()
   }
+  const default_home = await cursorFeed({ home_default: true })
+  assert.deepEqual(default_home.default_tags, ['GTA 6', 'Space News'])
+  assert.equal(default_home.from, new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
+  assert.ok(REQUESTS.some(request => request.path === '/preview/stories'
+    && request.tags[0] === 'GTA 6' && request.tags[1] === 'Space News' && request.tags.length === 2 && !request.query.q
+    && request.query.from === default_home.from), 'Home sends original keywords as repeated tags and a three-day window')
+  const encoded_home_request = REQUESTS.find(request => request.path === '/preview/stories'
+    && request.tags[0] === 'GTA 6' && request.tags[1] === 'Space News')
+  assert.match(encoded_home_request?.raw_url ?? '', /[?&]tags=GTA\+6&tags=Space\+News(?:&|$)/, 'Home sends repeated tags through standard $fetch query serialization')
+  assert.deepEqual(home_request.languages, NEWS_LANGUAGES, 'English languages are repeated query keys')
+  const default_more = await cursorFeed({ home_default: true, default_tags: default_home.default_tags, from: default_home.from, cursor: default_home.cursor })
+  assert.deepEqual(default_more.default_tags, default_home.default_tags)
+  assert.equal(default_more.from, default_home.from)
   const criteria = { q: 'cursor-fixture', tags: ['startups'], categories: ['artificial_intelligence'] }
   const first_page = await cursorFeed(criteria)
   assert.equal(first_page.articles.length, 5)
@@ -439,7 +455,6 @@ try {
   assert.equal(cursor_requests[1].query.cursor, first_page.cursor)
   assert.ok(cursor_requests.every(request => request.query.limit === '5' && request.query.tags === 'startups' && request.query.categories === 'artificial_intelligence' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD && request.query.from === first_page.from))
   assert.ok(REQUESTS.filter(request => request.path === '/preview/stories').every(request => !request.query.sort && !request.exclusions.length && request.query.limit === '5'), 'Every story feed page omits sort/exclusions and requests five')
-  assert.ok(home_request.languages.includes('en'), 'Repeated English language keys retained')
   console.log('Discovery integration checks passed: SSR content, canonical/meta/JSON-LD, resource errors, removed archive, sitemap/RSS, host redirects and feed filters.')
   if (process.argv.includes('--serve')) {
     REQUESTS.length = 0

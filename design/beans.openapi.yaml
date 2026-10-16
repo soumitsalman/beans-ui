@@ -50,8 +50,6 @@ definitions:
         format: uuid
         type: string
       ideology:
-        description: Ideology is an experimental political ideology label. It is omitted
-          when unavailable and can misrepresent an Article based on geo-cultural context.
         type: string
       image_url:
         type: string
@@ -131,8 +129,6 @@ definitions:
         format: uuid
         type: string
       ideology:
-        description: Ideology is an experimental political ideology label. It is omitted
-          when unavailable and can misrepresent an Article based on geo-cultural context.
         type: string
       image_url:
         type: string
@@ -174,6 +170,36 @@ definitions:
       similar:
         type: string
       story:
+        type: string
+    type: object
+  router.ArticlePreviewCollectionResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/router.ArticlePreviewDocument'
+        type: array
+      meta:
+        $ref: '#/definitions/router.ResponseMeta'
+      pagination:
+        $ref: '#/definitions/router.Pagination'
+    required:
+    - data
+    - meta
+    - pagination
+    type: object
+  router.ArticlePreviewDocument:
+    properties:
+      id:
+        format: uuid
+        type: string
+      published_at:
+        format: date-time
+        type: string
+      source:
+        $ref: '#/definitions/router.SourceDocument'
+      title:
+        type: string
+      url:
         type: string
     type: object
   router.ErrorBody:
@@ -258,6 +284,75 @@ definitions:
     - next_cursor
     - num_results
     type: object
+  router.PreviewStoryCollectionResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/router.PreviewStoryDocument'
+        type: array
+      meta:
+        $ref: '#/definitions/router.ResponseMeta'
+      pagination:
+        $ref: '#/definitions/router.Pagination'
+    required:
+    - data
+    - meta
+    - pagination
+    type: object
+  router.PreviewStoryDetailResponse:
+    properties:
+      data:
+        $ref: '#/definitions/router.PreviewStoryDocument'
+    required:
+    - data
+    type: object
+  router.PreviewStoryDocument:
+    properties:
+      article_count:
+        type: integer
+      categories:
+        items:
+          type: string
+        type: array
+      entities:
+        items:
+          type: string
+        type: array
+      first_published_at:
+        format: date-time
+        type: string
+      id:
+        description: Canonical ID of the story
+        type: string
+      image_url:
+        description: Image URL of a representative article
+        type: string
+      last_published_at:
+        format: date-time
+        type: string
+      regions:
+        items:
+          type: string
+        type: array
+      source_count:
+        type: integer
+      summary:
+        description: Summary of a representative article
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        description: Title of a representative article
+        type: string
+      top_articles:
+        items:
+          $ref: '#/definitions/router.ArticlePreviewDocument'
+        type: array
+      trend:
+        $ref: '#/definitions/router.Trend'
+    type: object
   router.ResponseMeta:
     properties:
       as_of:
@@ -326,21 +421,6 @@ definitions:
       story_id:
         type: string
     type: object
-  router.StoryArticlePreviewDocument:
-    properties:
-      id:
-        format: uuid
-        type: string
-      published_at:
-        format: date-time
-        type: string
-      source:
-        $ref: '#/definitions/router.SourceDocument'
-      title:
-        type: string
-      url:
-        type: string
-    type: object
   router.StoryCollectionResponse:
     properties:
       data:
@@ -372,6 +452,10 @@ definitions:
         format: date-time
         type: string
       id:
+        description: Canonical ID of the story
+        type: string
+      image_url:
+        description: Image URL of a representative article
         type: string
       last_published_at:
         format: date-time
@@ -385,16 +469,18 @@ definitions:
       source_count:
         type: integer
       summary:
+        description: Summary of a representative article
         type: string
       tags:
         items:
           type: string
         type: array
       title:
+        description: Title of a representative article
         type: string
       top_articles:
         items:
-          $ref: '#/definitions/router.StoryArticlePreviewDocument'
+          $ref: '#/definitions/router.ArticlePreviewDocument'
         type: array
     type: object
   router.StoryDetailResponse:
@@ -420,6 +506,10 @@ definitions:
         format: date-time
         type: string
       id:
+        description: Canonical ID of the story
+        type: string
+      image_url:
+        description: Image URL of a representative article
         type: string
       last_published_at:
         format: date-time
@@ -431,16 +521,18 @@ definitions:
       source_count:
         type: integer
       summary:
+        description: Summary of a representative article
         type: string
       tags:
         items:
           type: string
         type: array
       title:
+        description: Title of a representative article
         type: string
       top_articles:
         items:
-          $ref: '#/definitions/router.StoryArticlePreviewDocument'
+          $ref: '#/definitions/router.ArticlePreviewDocument'
         type: array
     type: object
   router.StoryLinks:
@@ -1396,7 +1488,7 @@ paths:
       - Health
   /news/latest:
     get:
-      description: Returns news Articles ordered newest first. Equivalent to /articles/latest?content_type=news.
+      description: Returns news ordered newest first. Equivalent to /articles/latest?content_type=news.
         content_type and date bounds are not accepted.
       operationId: getLatestNews
       parameters:
@@ -1539,8 +1631,8 @@ paths:
       - Articles
   /news/top-headlines:
     get:
-      description: Returns news Articles from the recent 24-hour window, ordered by
-        attention. content_type and date bounds are not accepted.
+      description: Returns news headlines from the recent 48-hour window. content_type
+        and date bounds are not accepted.
       operationId: getTopHeadlines
       parameters:
       - description: Optional relevance query. Requires score_threshold greater than
@@ -1682,9 +1774,9 @@ paths:
       - Articles
   /news/trending:
     get:
-      description: Returns attention-ranked news Articles with trend metrics when
-        available. Equivalent to /articles/trending?content_type=news. content_type
-        and date bounds are not accepted.
+      description: Returns attention-ranked news with trend metrics when available.
+        Equivalent to /articles/trending?content_type=news. content_type and date
+        bounds are not accepted.
       operationId: getTrendingNews
       parameters:
       - description: Optional relevance query. Requires score_threshold greater than
@@ -1824,6 +1916,642 @@ paths:
       summary: List trending news
       tags:
       - Articles
+  /preview/articles/{id}/similar:
+    get:
+      description: Internal preview route. Related Articles for an Article UUID with
+        compact Article fields.
+      operationId: previewListSimilarArticles
+      parameters:
+      - description: Article UUID.
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Filterable Article type.
+        enum:
+        - blog
+        - contract
+        - earnings_report
+        - enforcement_action
+        - financial_report
+        - lawsuit
+        - news
+        - official_statement
+        - podcast
+        - press_release
+        - research_paper
+        - site
+        - technical_documentation
+        - whitepaper
+        in: query
+        name: content_type
+        type: string
+      - collectionFormat: csv
+        description: Source UUIDs to include (CSV).
+        in: query
+        items:
+          type: string
+        name: sources
+        type: array
+      - collectionFormat: csv
+        description: Source UUIDs to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_sources
+        type: array
+      - collectionFormat: csv
+        description: Source domains to include (CSV).
+        in: query
+        items:
+          type: string
+        name: domains
+        type: array
+      - collectionFormat: csv
+        description: Source domains to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_domains
+        type: array
+      - collectionFormat: csv
+        description: Author text filters (CSV).
+        in: query
+        items:
+          type: string
+        name: authors
+        type: array
+      - collectionFormat: csv
+        description: Category values (CSV).
+        in: query
+        items:
+          type: string
+        name: categories
+        type: array
+      - collectionFormat: csv
+        description: Excluded category values (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_categories
+        type: array
+      - collectionFormat: csv
+        description: Region values (CSV).
+        in: query
+        items:
+          type: string
+        name: regions
+        type: array
+      - collectionFormat: csv
+        description: Entity values (CSV).
+        in: query
+        items:
+          type: string
+        name: entities
+        type: array
+      - collectionFormat: csv
+        description: Sentiment values (CSV).
+        in: query
+        items:
+          type: string
+        name: sentiments
+        type: array
+      - collectionFormat: csv
+        description: Normalized tag terms (CSV).
+        in: query
+        items:
+          type: string
+        name: tags
+        type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV).
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
+      - description: UTC lower timestamp bound.
+        format: date
+        in: query
+        name: from
+        type: string
+      - description: UTC upper timestamp bound.
+        format: date
+        in: query
+        name: to
+        type: string
+      - default: 20
+        description: Maximum records per page. Default 20, max 100.
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Opaque continuation token from pagination.next_cursor.
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.ArticlePreviewCollectionResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+        "404":
+          description: Article not found
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+        "500":
+          description: Service unavailable
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+      security:
+      - BackendAPIKey: []
+      summary: List related Article previews (internal)
+      tags:
+      - Preview
+  /preview/stories:
+    get:
+      description: Internal preview route. Like list Stories, with trend fields on
+        each Story.
+      operationId: previewListStories
+      parameters:
+      - description: Optional Story relevance query.
+        in: query
+        maxLength: 512
+        name: q
+        type: string
+      - description: Optional Story relevance threshold; requires q.
+        in: query
+        maximum: 1
+        minimum: 0
+        name: score_threshold
+        type: number
+      - description: Filterable Article type. post is response-only and returns 400.
+        enum:
+        - blog
+        - contract
+        - earnings_report
+        - enforcement_action
+        - financial_report
+        - lawsuit
+        - news
+        - official_statement
+        - podcast
+        - press_release
+        - research_paper
+        - site
+        - technical_documentation
+        - whitepaper
+        in: query
+        name: content_type
+        type: string
+      - collectionFormat: csv
+        description: Source UUIDs to include (CSV).
+        in: query
+        items:
+          type: string
+        name: sources
+        type: array
+      - collectionFormat: csv
+        description: Source UUIDs to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_sources
+        type: array
+      - collectionFormat: csv
+        description: Source domains to include (CSV).
+        in: query
+        items:
+          type: string
+        name: domains
+        type: array
+      - collectionFormat: csv
+        description: Source domains to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_domains
+        type: array
+      - collectionFormat: csv
+        description: Author text filters (CSV).
+        in: query
+        items:
+          type: string
+        name: authors
+        type: array
+      - collectionFormat: csv
+        description: Category values (CSV).
+        in: query
+        items:
+          type: string
+        name: categories
+        type: array
+      - collectionFormat: csv
+        description: Excluded category values (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_categories
+        type: array
+      - collectionFormat: csv
+        description: Region values (CSV).
+        in: query
+        items:
+          type: string
+        name: regions
+        type: array
+      - collectionFormat: csv
+        description: Entity values (CSV).
+        in: query
+        items:
+          type: string
+        name: entities
+        type: array
+      - collectionFormat: csv
+        description: Sentiment values (CSV).
+        in: query
+        items:
+          type: string
+        name: sentiments
+        type: array
+      - collectionFormat: csv
+        description: Normalized tag terms (CSV).
+        in: query
+        items:
+          type: string
+        name: tags
+        type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV).
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
+      - default: 2
+        description: Minimum Story Article count. Default 2.
+        in: query
+        minimum: 2
+        name: min_article_count
+        type: integer
+      - description: UTC lower publication timestamp.
+        format: date
+        in: query
+        name: from
+        type: string
+      - description: UTC upper publication timestamp.
+        format: date
+        in: query
+        name: to
+        type: string
+      - default: 20
+        description: Maximum records per page. Default 20, max 100.
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Opaque continuation token from pagination.next_cursor.
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.PreviewStoryCollectionResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+        "500":
+          description: Service unavailable
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+      security:
+      - BackendAPIKey: []
+      summary: List Story previews (internal)
+      tags:
+      - Preview
+  /preview/stories/{id}:
+    get:
+      description: Internal preview route. Returns one Story with trend fields; filters
+        apply to top_articles and representative fields.
+      operationId: previewGetStory
+      parameters:
+      - description: Story UUID.
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Filterable Article type.
+        enum:
+        - blog
+        - contract
+        - earnings_report
+        - enforcement_action
+        - financial_report
+        - lawsuit
+        - news
+        - official_statement
+        - podcast
+        - press_release
+        - research_paper
+        - site
+        - technical_documentation
+        - whitepaper
+        in: query
+        name: content_type
+        type: string
+      - collectionFormat: csv
+        description: Source UUIDs to include (CSV).
+        in: query
+        items:
+          type: string
+        name: sources
+        type: array
+      - collectionFormat: csv
+        description: Source UUIDs to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_sources
+        type: array
+      - collectionFormat: csv
+        description: Source domains to include (CSV).
+        in: query
+        items:
+          type: string
+        name: domains
+        type: array
+      - collectionFormat: csv
+        description: Source domains to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_domains
+        type: array
+      - collectionFormat: csv
+        description: Author text filters (CSV).
+        in: query
+        items:
+          type: string
+        name: authors
+        type: array
+      - collectionFormat: csv
+        description: Category values (CSV).
+        in: query
+        items:
+          type: string
+        name: categories
+        type: array
+      - collectionFormat: csv
+        description: Excluded category values (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_categories
+        type: array
+      - collectionFormat: csv
+        description: Region values (CSV).
+        in: query
+        items:
+          type: string
+        name: regions
+        type: array
+      - collectionFormat: csv
+        description: Entity values (CSV).
+        in: query
+        items:
+          type: string
+        name: entities
+        type: array
+      - collectionFormat: csv
+        description: Sentiment values (CSV).
+        in: query
+        items:
+          type: string
+        name: sentiments
+        type: array
+      - collectionFormat: csv
+        description: Normalized tag terms (CSV).
+        in: query
+        items:
+          type: string
+        name: tags
+        type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV).
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
+      - description: UTC lower publication timestamp.
+        format: date
+        in: query
+        name: from
+        type: string
+      - description: UTC upper publication timestamp.
+        format: date
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.PreviewStoryDetailResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+        "404":
+          description: Story not found
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+        "500":
+          description: Service unavailable
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+      security:
+      - BackendAPIKey: []
+      summary: Get a Story preview (internal)
+      tags:
+      - Preview
+  /preview/stories/{id}/articles:
+    get:
+      description: Internal preview route. Member Articles for a Story UUID with compact
+        Article fields.
+      operationId: previewListStoryArticles
+      parameters:
+      - description: Story UUID.
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Filterable Article type.
+        enum:
+        - blog
+        - contract
+        - earnings_report
+        - enforcement_action
+        - financial_report
+        - lawsuit
+        - news
+        - official_statement
+        - podcast
+        - press_release
+        - research_paper
+        - site
+        - technical_documentation
+        - whitepaper
+        in: query
+        name: content_type
+        type: string
+      - collectionFormat: csv
+        description: Source UUIDs to include (CSV).
+        in: query
+        items:
+          type: string
+        name: sources
+        type: array
+      - collectionFormat: csv
+        description: Source UUIDs to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_sources
+        type: array
+      - collectionFormat: csv
+        description: Source domains to include (CSV).
+        in: query
+        items:
+          type: string
+        name: domains
+        type: array
+      - collectionFormat: csv
+        description: Source domains to exclude (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_domains
+        type: array
+      - collectionFormat: csv
+        description: Author text filters (CSV).
+        in: query
+        items:
+          type: string
+        name: authors
+        type: array
+      - collectionFormat: csv
+        description: Category values (CSV).
+        in: query
+        items:
+          type: string
+        name: categories
+        type: array
+      - collectionFormat: csv
+        description: Excluded category values (CSV).
+        in: query
+        items:
+          type: string
+        name: exclude_categories
+        type: array
+      - collectionFormat: csv
+        description: Region values (CSV).
+        in: query
+        items:
+          type: string
+        name: regions
+        type: array
+      - collectionFormat: csv
+        description: Entity values (CSV).
+        in: query
+        items:
+          type: string
+        name: entities
+        type: array
+      - collectionFormat: csv
+        description: Sentiment values (CSV).
+        in: query
+        items:
+          type: string
+        name: sentiments
+        type: array
+      - collectionFormat: csv
+        description: Normalized tag terms (CSV).
+        in: query
+        items:
+          type: string
+        name: tags
+        type: array
+      - collectionFormat: csv
+        description: ISO 639 language codes to include (CSV).
+        in: query
+        items:
+          type: string
+        name: languages
+        type: array
+      - description: UTC lower publication timestamp.
+        format: date
+        in: query
+        name: from
+        type: string
+      - description: UTC upper publication timestamp.
+        format: date
+        in: query
+        name: to
+        type: string
+      - default: 20
+        description: Maximum records per page. Default 20, max 100.
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Opaque continuation token from pagination.next_cursor.
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/router.ArticlePreviewCollectionResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+        "404":
+          description: Story not found
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+        "500":
+          description: Service unavailable
+          schema:
+            $ref: '#/definitions/router.ErrorResponse'
+      security:
+      - BackendAPIKey: []
+      summary: List Story Article previews (internal)
+      tags:
+      - Preview
   /regions:
     get:
       description: Lists values accepted by the corresponding Article filter.

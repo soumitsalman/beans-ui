@@ -44,10 +44,9 @@ function normaliseList(values?: string[] | null): string[] {
   return Array.isArray(values) ? values.filter(Boolean) : []
 }
 
-function serialiseQueryList(value?: string | string[]): string[] | undefined {
-  if (Array.isArray(value)) return value.length ? value.filter(Boolean) : undefined
-  const values = value?.split(',').filter(Boolean)
-  return values?.length ? values : undefined
+function presentList(values?: string[] | null): string[] | undefined {
+  const present = values?.filter(Boolean)
+  return present?.length ? present : undefined
 }
 
 function serialiseIsoDate(value?: string): string | undefined {
@@ -99,17 +98,17 @@ function toQuery(params: BeansPageParams = {}): ApiQuery {
   return {
     limit: params.limit ?? DEFAULT_PAGE_SIZE,
     cursor: params.cursor ?? undefined,
-    exclude_ids: serialiseQueryList(params.exclude_ids),
+    exclude_ids: presentList(params.exclude_ids),
     q: params.q,
     score_threshold: params.score_threshold,
-    tags: serialiseQueryList(params.tags),
-    sources: serialiseQueryList(params.sources),
-    domains: serialiseQueryList(params.domains),
-    categories: serialiseQueryList(params.categories),
-    regions: serialiseQueryList(params.regions),
-    entities: serialiseQueryList(params.entities),
+    tags: presentList(params.tags),
+    sources: presentList(params.sources),
+    domains: presentList(params.domains),
+    categories: presentList(params.categories),
+    regions: presentList(params.regions),
+    entities: presentList(params.entities),
     content_type: params.content_type,
-    languages: serialiseQueryList(params.languages),
+    languages: presentList(params.languages),
     sort: params.sort,
     from: serialiseIsoDate(params.from),
     to: serialiseIsoDate(params.to)
@@ -268,10 +267,10 @@ export function createEspressoClient(fetch_api: ApiFetch) {
   }
 
   async function fetchConfidence(article_ids: string[]): Promise<Record<string, EspressoConfidence>> {
-    const ids = [...new Set(article_ids.filter(Boolean))]
-    if (!ids.length) return {}
+    const ids = presentList([...new Set(article_ids)])
+    if (!ids) return {}
 
-    const response = await fetch_api<ApiEnvelope<ConfidencePayload>>('espresso', 'preview/confidence', { ids: ids.join(',') })
+    const response = await fetch_api<ApiEnvelope<ConfidencePayload>>('espresso', 'preview/confidence', { ids })
 
     return confidenceMap(response.data)
   }

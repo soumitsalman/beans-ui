@@ -47,8 +47,12 @@ export function sourceIdentity(article?: SourceArticle | null): string | undefin
     || nonEmptyValue(article?.source?.name)
 }
 
-export function sourceFavicon(article?: SourceArticle | null): string | undefined {
+export function sourceFaviconUrl(article?: SourceArticle | null): string | undefined {
   return nonEmptyValue(article?.source?.favicon_url)
+}
+
+export function sourceFavicon(article?: SourceArticle | null): string | undefined {
+  return sourceFaviconUrl(article)
     || nonEmptyValue(article?.source?.favicon)
     || googleFavicon(article?.url || article?.source?.base_url || article?.source?.url || article?.source?.domain_name || article?.source?.domain)
 }

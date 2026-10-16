@@ -1,5 +1,52 @@
 # Beans UI Working Log
 
+## 2026-10-16 — Favicon groups omit placeholder avatars
+
+- Story cards, article cards, and the story snapshot include a publisher in the favicon group only when `source.favicon_url` is non-null and non-blank. The avatar uses that URL alone. A failed image is removed. Legacy favicon fields, Google favicon URLs, the newspaper icon, and initials stay off this group. Named source rows still use the existing favicon fallback.
+- Verification: live `http://localhost:3000/` story cards, `/stories/02bc039b-f8e5-5879-83f2-83f8e8d4ddf0` snapshot, and `/sources/c310686a-91a9-54fc-b50c-89b7e805909f` article cards rendered favicon groups from real `favicon_url` values only. No group avatar used an empty `src`, initial, or icon slot. Dispatching an image error removed that avatar on the home feed and on an article card. One source article with no eligible favicons showed the count and share footer without a group.
+
+## 2026-10-16 — Repeated query keys for list filters
+
+- Beans and Espresso list filters stay arrays through `presentList`. Empty entries are dropped and an empty list omits the key. Nuxt `$fetch` writes one query key per value, including confidence `ids`. The `/search` route writes repeated `tags` and `sources` keys. Its form still accepts comma-separated text, and an older comma-separated URL still restores the same list.
+- Verification: `node scripts/verify-stories.mjs` and `node scripts/verify-query-encoding.mjs` pass. Focused lint and Nuxt typecheck pass. Production build completed with the existing Browserslist and sourcemap warnings. `TEST_REDIS_URL='' node scripts/verify-discovery.mjs` confirmed `tags=GTA+6&tags=Space+News` and the full repeated English `languages` list, then stopped at the existing publisher-avatar assertion. A captured enrichment sample had `confidence: high` and `other_publishers: []`; the confidence URL was repeated `ids` keys. Live Beans/Espresso calls and an interactive browser pass of the search form were not run.
+
+## 2026-10-15 — Restore Google keywords as CSV tags
+
+- Final request boundary: `beansClient.ts` serializes arrays to backend-required CSV strings; `proxyApi.ts` passes those strings through `$fetch({ query })`. Removed custom URL/URLSearchParams construction and all hand-written encoding. The production fixture captured `/preview/stories?limit=5&tags=GTA+6,Space+News&content_type=news&languages=en,en-ae,...&from=2026-10-12`.
+
+- Production build passed. Snapshot at `2026-10-15T16:33:41Z`: `presentationActions.ts` SHA-256 `dd36db4c3e9ae0e349d25d1bef4684ea4ce9511327148b904734e77bddbba71b`; `beansClient.ts` SHA-256 `0b14c632d7adde5eddcb589a0f7c246cd2a8d720c3b704f4e8e6de053e57a9fe`; `proxyApi.ts` SHA-256 `750e52640385c1d1653167c406c233d25a7aad2d510dd58c7a03436b396013e6`.
+- Production HTTP fixtures passed CSV home tags, encoding, omitted vector query and continuation assertions before the existing publisher/confidence enrichment assertion failed at `verify-discovery.mjs:445`.
+
+- Default home now sends original Google keyword phrases through `tags`, serialized as one CSV value. It no longer generates a vector `q` or score threshold. User criteria retain precedence; snapshots still preserve keywords for More/Retry. Nuxt `$fetch` owns URL construction and encoding; the only array transformation is the backend-required CSV serialization.
+- Verified actual upstream construction and live request: `http://127.0.0.1:8080/preview/stories?limit=5&tags=GTA+6,Space+News&content_type=news&languages=en,en-us&from=2026-10-12`, HTTP 200. The URL has the correct origin/path, one tags value and no q/score_threshold. Focused proxy, service, Google/cache checks, lint, typecheck and production build pass. Updated production HTTP assertions and current design/data-source/verification guidance.
+
+## 2026-10-15 — Verify backend query contract and standard encoding
+
+- Production build passed. Production HTTP fixtures passed query/CSV/encoding checks before the existing publisher/confidence assertion failed at `verify-discovery.mjs:444`. Snapshot at `2026-10-15T16:18:32Z`: `server/utils/proxyApi.ts` SHA-256 `b997909bafa0edce3ed7fbfcf3afa4484ddf17cb2b0dfb740ec4d7b152e95ede`.
+
+- Inspected the live backend router: preview stories use `storySearchParams`, CSV arrays and a semantic `q` requiring a positive score threshold. `q` is embedded as one string; OR is not interpreted as Boolean syntax. Tags are normalized by the backend and applied as an additional full-text filter. Replaced repeated list serialization at the upstream boundary with CSV values, and constructed the request URL with standard URL/URLSearchParams. No manual percent encoding or backend changes.
+- Added `verify-query-encoding.mjs`, executing actual proxy code and checking decoded values for spaces, reserved characters, Unicode, CSV arrays, cursors and omitted filters. Live runs against 127.0.0.1:8080 using the ten supplied keywords returned HTTP 200: q-only five stories, tags-only zero, combined zero. The initial smaller OR query also returned five stories. Updated discovery fixture list decoding and current design/data-source/verification guidance. Focused lint, service checks and typecheck passed. Graphify remains unavailable due to its missing Python module; inspected source directly.
+
+## 2026-10-15 — Google trend default query
+
+- Home now joins preserved US Google trend keywords with ` OR ` and sends the result as the backend `q` parameter, instead of repeated `tags`. The existing query score threshold applies. The keyword list remains in the feed snapshot so More and Retry use the same query after cache expiry; user topic and saved tags retain precedence.
+- Updated source, design and verification guidance plus deterministic service and production fixtures for the joined query, omitted generated tags and stable pagination. `node scripts/verify-google-trends.mjs`, `node scripts/verify-stories.mjs`, focused lint for the Google/parser and fixture files, Nuxt typecheck, and production build pass. The production HTTP fixture confirms the three-day `q=GTA 6 OR Space News` request has encoded spaces and no generated tags, then fails at its separate publisher/confidence enrichment assertion. Full lint remains blocked by the existing unused `sourceFavicon` import in `presentationActions.ts`.
+- Code snapshot at `2026-10-15T15:25:53Z`: SHA-256 `7b12b8596b0bc5118591fa28b8d005af9e474ee9189173aac247c5fee4252083` of `server/utils/presentationActions.ts`.
+
+## 2026-10-15 — Preserve Google keyword tags
+
+- Removed snake_case conversion from Google trend tags. Backend requests now retain decoded keyword spelling, capitalization, spaces and punctuation, trimming outer whitespace only. Empty removal, exact deduplication, six-hour caching and repeated `tags` parameters remain. Renamed the Google cache namespace to avoid reusing converted tags from the previous version. Removed the direct scule dependency; it remains in the lockfile as a transitive Nuxt dependency.
+- Updated parser/cache/client fixtures, backend tag assertions and current design/data-source/verification guidance. Focused Google checks, lint on changed source/test files, Nuxt typecheck and production build pass. Production HTTP assertions for raw keyword tags, three-day home and continuation passed before the broader suite failed at the existing publisher/confidence enrichment assertion. Full lint also reports an existing unused `sourceFavicon` import in `presentationActions.ts`; the story-service suite cannot start because its `sourceFavicon` binding is undefined. These unrelated changes were preserved.
+- Code snapshot at `2026-10-15T15:15:11Z`: `server/utils/googleTrends.ts` SHA-256 `6d3ba6e747d9f735c969bb1f00ea30fdd36820a2fb4dd1a65cb6e1c1fd10be6a`.
+
+## 2026-10-15 — US Google trend home defaults
+
+- Home now uses a date-only UTC three-day window; category feeds retain seven days. Default home requests fetch US Google Trends RSS server-side, parse keyword titles with fast-xml-parser, decode entities, normalize whole phrases to snake_case with scule, deduplicate and cap at 30 tags. Related news titles are excluded. Successful non-empty tag lists use Nitro's six-hour cache with no stale serving; a failed, malformed or empty feed is not cached and falls back to unfiltered home news.
+- Added the `home_default` action flag and effective `default_tags` in action inputs/snapshots. Backend tags use existing repeated query keys. User topic/saved tags bypass Google. Clear and empty Find restore defaults without writing generated tags into the input, URL or cookie. More and Retry retain effective tags (including an empty fallback list), date and cursor across cache expiry. Failed refresh snapshots preserve their own retry criteria while retaining visible cards. Existing story batching, deferred enrichment and Beans response caches are unchanged.
+- Verification: `node scripts/verify-google-trends.mjs`, `node scripts/verify-stories.mjs`, `TEST_REDIS_URL='' node scripts/verify-discovery.mjs`, analytics checks, lint, Nuxt typecheck and production build pass. Focused fixtures exercise installed Nitro cache reuse/expiry with controlled storage/time, XML/entity parsing, exclusions/deduplication, fallback and user precedence, hydration, stable pagination, failed-refresh Retry, Clear and empty Find. Production HTTP checks intercept Google with deterministic RSS and confirm repeated tags and three-day home requests. Live Google/Beans responses and interactive browser behavior were not tested in this change. Build completed with optional remote font-metadata lookup warnings. Graphify could not load its Python module; direct call-site inspection was used.
+- Dependency installation used the project's pinned pnpm 10.33.0 after the bundled newer pnpm reported an incompatible dependency store. No Git actions were performed.
+- Code snapshot at `2026-10-15T14:49:13Z`: SHA-256 `30426e434bb39ec613fa17e81cab22ac85970eccad3a30ef73a283bdc4f036c9` of the ordered SHA-256 manifest for `server/utils/googleTrends.ts`, `server/utils/presentationActions.ts`, `server/utils/actionInput.ts`, `shared/actions.ts`, `app/types/discovery.ts`, and `app/composables/useNewsFeed.ts`.
+
 ## 2026-10-14 — Skip Fly deploy on design-only pushes
 
 - `fly-deploy.yml` now ignores pushes that only change `design/**`, so design docs and mockups do not trigger a Fly deploy. Pushes that also touch app code still deploy. Manual `workflow_dispatch` is unchanged.

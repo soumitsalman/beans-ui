@@ -54,7 +54,6 @@ useHead({
   ],
   link: [
     { rel: 'icon', href: '/favicon.ico' },
-    { rel: 'alternate', type: 'application/rss+xml', title: 'Beans latest news', href: `${SITE_URL}/feed.xml` },
     { key: 'canonical', rel: 'canonical', href: canonical_url }
   ],
   script: [

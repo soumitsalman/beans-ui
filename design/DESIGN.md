@@ -49,7 +49,7 @@
 - Home and categories use StoryCard with the existing responsive grid, image/summary/tags/signals and footer styling, without the primary publisher favicon or name. Title and image open `/stories/{story.id}`.
 - Dates use `story.last_published_at`; the N articles label uses `story.article_count`. Story avatars and the story snapshot show up to three distinct non-null, non-empty `source.favicon_url` values from one 20-article request, and omit a failed image instead of a placeholder.
 - Confidence is visible only for `high`; absent, low, medium and failed values are hidden. Story confidence uses source-list article IDs in batches of at most 100, stops after a value is found and selects the highest conflicting value.
-- `/stories/{id}` replaces article detail. The story snapshot uses the filtered story API, story date, source avatars and article count. Coverage loads all unfiltered 100-article pages; Related retains English news filters with independent five-article pages. Sharing, sitemap and RSS link to story IDs.
+- `/stories/{id}` replaces article detail. The story snapshot uses the filtered story API, story date, source avatars and article count. Coverage loads all unfiltered 100-article pages; Related retains English news filters with independent five-article pages. Sharing links to story IDs. The sitemap lists home, About, and category routes.
 - Existing source and search feeds retain article cards and their API routes. The story-page requirements supersede the historical article-detail requirements below.
 
 ## Article detail

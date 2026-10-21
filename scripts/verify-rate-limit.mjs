@@ -146,7 +146,7 @@ try {
   assert.equal(head.headers.get('x-ratelimit-limit'), null)
   assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}/about-beans/`, { headers: { 'fly-client-ip': '192.0.2.11', 'cookie': cookieFor() } })).status, 200)
   const before_bypass = _upstream_calls
-  for (const path of ['/api/beans/preview/articles/unique', '/api/espresso/preview/confidence']) {
+  for (const path of ['/api/beans/preview/stories', '/api/espresso/preview/confidence']) {
     assert.equal((await fetch(`http://127.0.0.1:${APP_PORT}${path}`)).status, 404)
   }
   assert.equal(_upstream_calls, before_bypass)

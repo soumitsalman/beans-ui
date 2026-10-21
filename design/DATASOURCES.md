@@ -40,5 +40,5 @@ Allow 90 seconds for upstream Beans and Espresso data retrieval. Server presenta
 
 ## Internal route boundary
 
-- All UI-owned Beans/Espresso calls use `/preview` for internal endpoints. Publisher-avatar enrichment uses `/preview/stories/{story_id}/articles?limit=20`; sitemap/RSS discovery uses `/preview/articles/unique`; Espresso confidence uses `/preview/confidence`. Existing query parameters and public routes remain unchanged. Never fall back to the stale `/private` prefix.
+- All UI-owned Beans/Espresso calls use `/preview` for internal endpoints. Publisher-avatar enrichment uses `/preview/stories/{story_id}/articles?limit=20`; Espresso confidence uses `/preview/confidence`. The sitemap lists stable public routes and does not fetch articles. Existing query parameters and public routes remain unchanged. Never fall back to the stale `/private` prefix or call the removed `/preview/articles/unique` route.
 - Preview endpoints stay internal and are excluded from the public OpenAPI specification. The historical 2026-09-30 smoke checks predate this route migration; current verification records are in VERIFICATIONS.md.

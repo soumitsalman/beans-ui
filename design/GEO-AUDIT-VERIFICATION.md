@@ -1,6 +1,6 @@
 # GEO audit remediation and verification
 
-Current direction (2026-10-03): the archive page/route is removed, along with category, sitemap and llms references. Prior archive implementation notes below are historical; current discovery relies on news/category/source links and the dynamic sitemap. Now has a visible Trending News heading; category eyebrows and source Back to news controls are removed.
+Current direction (2026-10-21): the archive page/route and the RSS feed are removed. The sitemap lists home, About, and category URLs and does not fetch articles. Prior archive and dynamic-sitemap notes below are historical. Now has a visible Trending News heading; category eyebrows and source Back to news controls are removed.
 
 Source: [Audit · GEO.pdf](./Audit%20%C2%B7%20GEO.pdf), geo.new report `aud_4a3ba86d19586318e5ca5ec5c766530d`, revision 22, 2026-10-02. The report inspected the home page's initial HTML, not the whole app. Its 52/100 score is a historical observation; this change does not claim a new score, ranking, or citation rate.
 
@@ -8,7 +8,7 @@ The 26 numbered recommendations on pages 12–14 are mapped below. **Implemented
 
 ## Product-direction update — 2026-10-03
 
-Beans is a publisher-news reader. The user's minimalist UI direction supersedes recommendations to add explanatory volume, question blocks and promotional follow controls to Now. Home retains news, descriptive metadata and structured data; source/signal explanations and the sharing checklist are consolidated on About. The older implementation evidence below records the preceding audit response, not a requirement to restore home prose. `/methodology` redirects to About; Archive/RSS routes remain available without footer or home promotions. Home and category feeds use the 1+4 mix. Home sends no category filter. A fresh GEO result may still flag home word-count heuristics, which are intentionally subordinate to the reader experience.
+Beans is a publisher-news reader. The user's minimalist UI direction supersedes recommendations to add explanatory volume, question blocks and promotional follow controls to Now. Home retains news, descriptive metadata and structured data; source/signal explanations and the sharing checklist are consolidated on About. The older implementation evidence below records the preceding audit response, not a requirement to restore home prose. `/methodology` redirects to About. Archive and RSS routes are removed. Home and category feeds use the 1+4 mix. Home sends no category filter. A fresh GEO result may still flag home word-count heuristics, which are intentionally subordinate to the reader experience.
 
 ## Quick wins
 
@@ -19,9 +19,9 @@ Beans is a publisher-news reader. The user's minimalist UI direction supersedes 
 | 3 | Source attribution (CIT-13) | Implemented: server-rendered publisher identity/date and original-reporting title link; supplied credit and publication date in the cited-work metadata. The extra visible attribution paragraph was removed at the user's direction. Beans summaries are not presented as original reporting. |
 | 4 | Description length (CORE-04) | Implemented: descriptive home metadata within the report's advisory 120–160-character range; route-specific descriptions for other pages. Story excerpts may legitimately be longer. |
 | 5 | Title length (CORE-02) | Implemented: descriptive Beans home title within the advisory 30–70-character range; specific route titles. Publisher headlines are preserved rather than truncated only to satisfy a checker. |
-| 6 | Cache headers (PERF-11) | Implemented: public HTML uses ETag and mandatory revalidation; unchanged content returns 304. Search and error HTML are private/no-store. Sitemap/RSS have bounded cache lifetimes. |
+| 6 | Cache headers (PERF-11) | Implemented: public HTML uses ETag and mandatory revalidation; unchanged content returns 304. Search and error HTML are private/no-store. The static sitemap has a bounded cache lifetime. |
 | 7 | Server response time (PERF-12) | Implemented mechanism: public feed results cached for 30 seconds in the UI's existing presentation proxy, without modifying upstream APIs. Search and errors are not cached. Warm fixture home took 36.1 ms with zero upstream feed requests. This is local evidence, not a production latency promise. |
-| 8 | URL in sitemap (ACC-19) | Implemented: home and useful routes use the preferred origin; recent story-backed articles and sources are included. HTTP regression checks cover entries and outage behavior. |
+| 8 | URL in sitemap (ACC-19) | Implemented: home, About, and category routes use the preferred origin. Story and source URLs are omitted because the unique-articles route is removed. |
 | 9 | Skip link (A11Y-05) | Implemented: first focusable element links to the focusable main region, with visible keyboard-focus styling. |
 
 ## Medium-term recommendations

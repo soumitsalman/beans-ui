@@ -128,11 +128,11 @@ const mock_server = createServer((request, response) => {
   }
   REQUESTS.push({ path: url.pathname, raw_url: request.url, query: Object.fromEntries(url.searchParams), tags: url.searchParams.getAll('tags'), languages: url.searchParams.getAll('languages'), exclusions: url.searchParams.getAll('exclude_ids') })
   response.setHeader('content-type', 'application/json')
-  if (['/preview/articles/unique', '/preview/stories'].includes(url.pathname) && _fail_feed) {
+  if (url.pathname === '/preview/stories' && _fail_feed) {
     response.writeHead(500).end(JSON.stringify({ message: 'Fixture temporary outage.' }))
     return
   }
-  if (['/preview/articles/unique', '/preview/stories'].includes(url.pathname) && url.searchParams.get('q') === 'fail-discovery') {
+  if (url.pathname === '/preview/stories' && url.searchParams.get('q') === 'fail-discovery') {
     response.writeHead(500).end(JSON.stringify({ message: 'Fixture discovery failure.' }))
     return
   }
@@ -156,7 +156,7 @@ const mock_server = createServer((request, response) => {
     response.end(JSON.stringify({ data: url.searchParams.getAll('ids').map(id => ({ id, confidence: 'high' })) }))
     return
   }
-  if (url.pathname === '/preview/stories' || url.pathname === '/articles/latest' || url.pathname === '/preview/articles/unique' || /^\/preview\/stories\/[^/]+\/articles?$/.test(url.pathname) || url.pathname === '/preview/stories/story-1/articles' || url.pathname === '/articles/search') {
+  if (url.pathname === '/preview/stories' || url.pathname === '/articles/latest' || /^\/preview\/stories\/[^/]+\/articles?$/.test(url.pathname) || url.pathname === '/preview/stories/story-1/articles' || url.pathname === '/articles/search') {
     const exclusions = new Set(url.searchParams.getAll('exclude_ids'))
     const fixture_articles = url.pathname.endsWith('/articles') && process.env.BEANS_COVERAGE_FIXTURE
       ? ARTICLES.map((article, index) => ({
@@ -233,10 +233,6 @@ try {
   }
   assert.ok(ready, 'Production server became available')
 
-  for (const path of ['/sitemap.xml', '/feed.xml']) {
-    const { response } = await fetchPage(path)
-    assert.equal(response.status, 503, `${path} does not cache an empty success on outage`)
-  }
   const temporary = await fetchPage('/stories/temporary')
   assert.equal(temporary.response.status, 503)
   assert.equal(temporary.response.headers.get('cache-control'), 'private, no-store')
@@ -383,13 +379,13 @@ try {
   const sitemap = await fetchPage('/sitemap.xml')
   assert.equal(sitemap.response.status, 200)
   assert.ok(!sitemap.html.includes('/archive'), 'Removed archive is absent from the sitemap')
-  assert.match(sitemap.html, /\/stories\/story-1<\/loc>/)
-  assert.match(sitemap.html, /\/sources\/source-1<\/loc>/)
-  assert.ok(!sitemap.html.includes('/articles/article-36'), 'Story-less item is not advertised as coverage')
-  const rss = await fetchPage('/feed.xml')
-  assert.equal(rss.response.status, 200)
-  assert.match(rss.html, /Fixture news 1 &amp; coverage/)
-  assert.match(rss.html, /application\/rss\+xml/)
+  assert.match(sitemap.html, /https:\/\/beans\.cafecito\.tech\/<\/loc>/)
+  assert.match(sitemap.html, /\/about-beans<\/loc>/)
+  assert.match(sitemap.html, /\/categories\//)
+  assert.ok(!sitemap.html.includes('/stories/'), 'Sitemap lists stable routes without story URLs')
+  assert.ok(!sitemap.html.includes('/sources/'), 'Sitemap lists stable routes without source URLs')
+  assert.ok(!REQUESTS.some(request => request.path === '/preview/articles/unique'), 'Sitemap does not call the removed unique-articles route')
+  assert.equal((await fetchPage('/feed.xml')).response.status, 404, 'Removed RSS route is not served')
   assert.match((await fetchPage('/robots.txt')).html, /Sitemap: https:\/\/beans.cafecito.tech\/sitemap.xml/)
   const search_page = await fetchPage('/search?q=sensitive-query')
   assert.match(search_page.html, /content="noindex, follow"/)
@@ -455,7 +451,7 @@ try {
   assert.equal(cursor_requests[1].query.cursor, first_page.cursor)
   assert.ok(cursor_requests.every(request => request.query.limit === '5' && request.query.tags === 'startups' && request.query.categories === 'artificial_intelligence' && request.query.score_threshold === DEFAULT_SCORE_THRESHOLD && request.query.from === first_page.from))
   assert.ok(REQUESTS.filter(request => request.path === '/preview/stories').every(request => !request.query.sort && !request.exclusions.length && request.query.limit === '5'), 'Every story feed page omits sort/exclusions and requests five')
-  console.log('Discovery integration checks passed: SSR content, canonical/meta/JSON-LD, resource errors, removed archive, sitemap/RSS, host redirects and feed filters.')
+  console.log('Discovery integration checks passed: SSR content, canonical/meta/JSON-LD, resource errors, removed archive and RSS, static sitemap, host redirects and feed filters.')
   if (process.argv.includes('--serve')) {
     REQUESTS.length = 0
     await new Promise(resolve => browser_server.listen(BROWSER_PORT, '127.0.0.1', resolve))

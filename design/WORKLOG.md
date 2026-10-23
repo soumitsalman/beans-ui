@@ -1,5 +1,21 @@
 # Beans UI Working Log
 
+## 2026-10-23 — Browser-locale Google trend countries
+
+- Code snapshot at `2026-10-23T12:19:20Z`: SHA-256 `72a26026197f5e73f9b8de0872aee32a611243640434000f1c5bfb2ae1fcbc5d` (`trendCountry.ts`), `77d28d2a6200da768f1046470bf0c8196efd47db0b78862e538da4ec9ff1246b` (`googleTrends.ts`), `cfa2862289dc03c00e2c262b739c04a9e6304355507bd523ec579c926d90e365` (`presentationActions.ts`).
+
+- Added Negotiator/Intl.Locale country resolution from Accept-Language, defaulting to US without IP, timezone, GPS or UI changes. Google RSS queries and six-hour successful-result caches now vary by normalized country; non-US failure/empty results try US once, then return unfiltered news. Existing English filters, three-day home and user-filter precedence remain. This checkout already migrated tags to repeated query keys after the historical CSV work; that current serialization is preserved.
+- Added validated optional trend_country to action inputs, snapshots and client continuation state. SSR and browser actions use the same server resolver; More/Retry retain original country/tags/date/cursor. Home HTML is private/no-store; data caches remain enabled. Removed an already-unused sourceFavicon import in the touched action service so lint can run cleanly.
+- Focused checks cover weighted/script/lowercase locales, malformed/wildcard/language-only preferences, q=0, country cache isolation and expiry, fallback, hydration and continuation. Live IN/BR/US RSS each returned HTTP 200 with ten keywords. Validation results follow below.
+- Full ESLint, Nuxt typecheck, focused Google/story/query checks and production build pass. Production HTTP fixtures confirm country SSR, fallback, private home cache headers and backend request tags before the existing publisher/confidence assertion fails. Build emits optional font-metadata network warnings but completes.
+
+## 2026-10-23 — Remove story snapshot publisher avatars and article count
+
+- Removed the favicon avatar group and article count from `ArticleSnapshot.vue`, used only by `/stories/{id}`. Removed the corresponding unused imports and state. Kept the snapshot content and sharing footer.
+- Coverage/Related components, story-page data/loading behavior, and home/category StoryCard remain unchanged; checksums confirm those files are identical before and after the edit.
+- Verification: focused ESLint and Nuxt typecheck pass using installed binaries. Temporary Vue render fixtures with and without images confirm the avatar/count row is absent and the snapshot body and share controls are unchanged. Child components were stubbed; no live browser check was performed. The pnpm wrapper failed to open its store database; direct installed binaries completed successfully.
+
+
 ## 2026-10-16 — Favicon groups omit placeholder avatars
 
 - Story cards, article cards, and the story snapshot include a publisher in the favicon group only when `source.favicon_url` is non-null and non-blank. The avatar uses that URL alone. A failed image is removed. Legacy favicon fields, Google favicon URLs, the newspaper icon, and initials stay off this group. Named source rows still use the existing favicon fallback.

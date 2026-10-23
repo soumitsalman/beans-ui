@@ -67,10 +67,11 @@ async function fetchApi(api, path, query = {}) {
 }
 const { createPresentationActions } = await loadService('../server/utils/presentationActions.ts', {
   createBeansClient, createEspressoClient, ACTION_INPUTS: INPUTS,
-  fetchGoogleTrendTags: async () => {
+  resolveTrendCountry: () => 'IN', getHeader: () => 'en-IN',
+  fetchGoogleTrendDefaults: async (country) => {
     _google_calls++
-    if (_google_fail) throw new Error('Google unavailable')
-    return _google_tags
+    if (_google_fail) return { default_tags: [], trend_country: 'US' }
+    return { default_tags: _google_tags, trend_country: country }
   },
 
   useRuntimeConfig: () => ({ beans_api_base_url: 'beans', espresso_api_base_url: 'espresso', public: { default_score_threshold: 0.6 } }),
@@ -83,11 +84,13 @@ const dateFrom = days => new Date(Date.now() - days * 86400000).toISOString().sl
 const home = await execute('feed', { home_default: true })
 assert.equal(home.from, dateFrom(3))
 assert.deepEqual(home.default_tags, ['GTA 6', 'nasdaq'])
+assert.equal(home.trend_country, 'IN')
 assert.equal(CALLS.at(-1).query.q, undefined)
 assert.equal(CALLS.at(-1).query.score_threshold, undefined)
 assert.deepEqual(CALLS.at(-1).query.tags, ['GTA 6', 'nasdaq'])
 _google_tags = ['changed_trend']
-const home_more = await execute('feed', { home_default: true, cursor: home.cursor, from: home.from, default_tags: home.default_tags })
+const home_more = await execute('feed', { home_default: true, cursor: home.cursor, from: home.from, default_tags: home.default_tags, trend_country: home.trend_country })
+assert.equal(home_more.trend_country, home.trend_country)
 assert.equal(_google_calls, 1, 'More keeps the original tags after the Google cache changes')
 assert.deepEqual(home_more.default_tags, home.default_tags)
 assert.equal(CALLS.at(-1).query.from, home.from)

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { glob, readFile } from 'node:fs/promises'
 import { stripTypeScriptTypes } from 'node:module'
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
+import Negotiator from 'negotiator'
 
 async function loadService(path, bindings, names) {
   const source = stripTypeScriptTypes(await readFile(new URL(path, import.meta.url), 'utf8'))
@@ -11,6 +12,13 @@ async function loadService(path, bindings, names) {
 }
 
 let _cache_options
+const { resolveTrendCountry } = await loadService('../server/utils/trendCountry.ts', { Negotiator }, ['resolveTrendCountry'])
+for (const [header, country] of [
+  ['en-IN', 'IN'], ['pt-BR', 'BR'], ['zh-Hant-TW', 'TW'], ['en-in', 'IN'],
+  ['en-US;q=0.2,pt-BR;q=0.9', 'BR'], ['en-US;q=0,en-IN;q=1', 'IN'],
+  ['*,en;q=0.9', 'US'], ['bad_@@,fr-CA;q=0.8', 'CA'], ['en', 'US'], ['', 'US'],
+  ['es-419,en-GB;q=0.5', 'GB']
+]) assert.equal(resolveTrendCountry(header), country, header)
 let _fetch_options
 let _fetch_url
 let _xml = '<rss><channel><item><title>GTA 6</title><ht:news_item><ht:news_item_title>Excluded headline</ht:news_item_title></ht:news_item></item><item><title>Sam&apos;s Club &amp; News</title></item><item><title>GTA 6</title></item><item><title> </title></item></channel></rss>'
@@ -27,7 +35,11 @@ const { parseGoogleTrendTags, fetchGoogleTrendTags } = await loadService('../ser
   }
 }, ['parseGoogleTrendTags', 'fetchGoogleTrendTags'])
 assert.deepEqual(await fetchGoogleTrendTags(), ['GTA 6', 'Sam\'s Club & News'])
-assert.equal(new URL(_fetch_url).searchParams.get('geo'), 'US')
+assert.equal(_fetch_url, 'https://trends.google.com/trending/rss')
+assert.equal(_fetch_options.query.geo, 'US')
+await fetchGoogleTrendTags('in')
+assert.equal(_fetch_options.query.geo, 'IN')
+assert.equal(_cache_options.getKey('in'), 'IN')
 assert.equal(_fetch_options.retry, 0)
 assert.equal(_fetch_options.timeout, 10000)
 assert.equal(_cache_options.maxAge, 21600)
@@ -75,6 +87,29 @@ _cache_xml = '<rss><channel/></rss>'
 await assert.rejects(cached.fetchGoogleTrendTags())
 await assert.rejects(cached.fetchGoogleTrendTags())
 assert.equal(_fetch_count, 4, 'Empty results are not cached')
+_cache_xml = '<rss><channel><item><title>Canada Trend</title></item></channel></rss>'
+assert.deepEqual(await cached.fetchGoogleTrendTags('CA'), ['Canada Trend'])
+_cache_xml = '<rss><channel><item><title>India Trend</title></item></channel></rss>'
+assert.deepEqual(await cached.fetchGoogleTrendTags('IN'), ['India Trend'])
+assert.deepEqual(await cached.fetchGoogleTrendTags('ca'), ['Canada Trend'])
+
+const fallback_calls = []
+let fail_us = false
+const fallback_source = (await readFile(new URL('../server/utils/googleTrends.ts', import.meta.url), 'utf8')).split('export async function fetchGoogleTrendDefaults')[1]
+const fetchDefaults = new Function('normaliseTrendCountry', 'fetchGoogleTrendTags', `${stripTypeScriptTypes(`async function fetchGoogleTrendDefaults${fallback_source}`)}\nreturn fetchGoogleTrendDefaults;`)(
+  country => country.toUpperCase(), async (country) => {
+    fallback_calls.push(country)
+    if (country !== 'US' || fail_us) throw new Error('Unavailable')
+    return ['US fallback']
+  }
+)
+assert.deepEqual(await fetchDefaults('IN'), { default_tags: ['US fallback'], trend_country: 'US' })
+assert.deepEqual(fallback_calls, ['IN', 'US'])
+fail_us = true
+assert.deepEqual(await fetchDefaults('IN'), { default_tags: [], trend_country: 'US' })
+fallback_calls.length = 0
+assert.deepEqual(await fetchDefaults('US'), { default_tags: [], trend_country: 'US' })
+assert.deepEqual(fallback_calls, ['US'])
 
 const ref = value => ({ value })
 const computed = getter => ({
@@ -97,7 +132,7 @@ const { useNewsFeed } = await loadService('../app/composables/useNewsFeed.ts', {
     if (action !== 'feed') return {}
     REQUESTS.push(input)
     return { articles: _fail ? [] : [{ id: String(REQUESTS.length) }], cursor: _fail ? input.cursor : input.cursor ?? 'next',
-      from: input.from ?? '2026-10-12', default_tags: input.default_tags ?? _tags,
+      from: input.from ?? '2026-10-12', default_tags: input.default_tags ?? _tags, trend_country: input.trend_country ?? 'IN',
       error_message: _fail ? 'Failed' : null }
   } })
 }, ['useNewsFeed'])
@@ -105,6 +140,7 @@ const feed = useNewsFeed()
 await feed.initialiseFeed()
 assert.equal(REQUESTS[0].home_default, true)
 assert.deepEqual(_payload.default_tags, ['GTA 6'])
+assert.equal(_payload.trend_country, 'IN')
 _hydrate = true
 const hydrated = useNewsFeed()
 await hydrated.initialiseFeed()
@@ -112,6 +148,7 @@ assert.equal(REQUESTS.length, 1, 'Hydration reuses the SSR payload')
 _tags = ['new_trend']
 await hydrated.loadMore()
 assert.deepEqual(REQUESTS.at(-1).default_tags, ['GTA 6'])
+assert.equal(REQUESTS.at(-1).trend_country, 'IN')
 assert.equal(REQUESTS.at(-1).from, '2026-10-12')
 _fail = true
 await hydrated.refreshFeed()

@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { createError, setHeader } from 'h3'
+import { createError, getHeader, setHeader } from 'h3'
 import type { NewsArticle, NewsStory, NewsPage } from '../../app/types/news'
 import type { FeedSnapshot } from '../../app/types/discovery'
 import type { StoryAction, StoryEnrichment, FeedInput, SourceAction } from '#shared/actions'
@@ -8,8 +8,8 @@ import type { ActionName } from './actionInput'
 import { createBeansClient, createEspressoClient } from './beansClient'
 import { fetchPresentationApi } from './proxyApi'
 import { withActionDeadline } from './actionDeadline'
-import { sourceFavicon } from '../../app/utils/source'
-import { fetchGoogleTrendTags } from './googleTrends'
+import { fetchGoogleTrendDefaults } from './googleTrends'
+import { resolveTrendCountry } from './trendCountry'
 
 const MAX_COVERAGE_PAGES = 100
 const MAX_PUBLISHER_AVATARS = 3
@@ -91,12 +91,15 @@ export function createPresentationActions(event: H3Event) {
       const home = input.home_default === true && !input.source_id && !input.categories?.length
       const from = input.from ?? new Date(Date.now() - (home ? 3 : 7) * 86400000).toISOString().slice(0, 10)
       let default_tags: string[] | undefined
+      let trend_country: string | undefined
       const seen_ids = new Set(input.seen_ids ?? [])
       let cursor = input.cursor ?? null
       let source_cursor = input.source_cursor ?? null
       try {
         if (home && !input.q?.trim() && !input.tags?.some(tag => tag.trim())) {
-          default_tags = input.default_tags ?? await fetchGoogleTrendTags().catch(() => [])
+          trend_country = input.trend_country ?? resolveTrendCountry(getHeader(event, 'accept-language'))
+          if (input.default_tags !== undefined) default_tags = input.default_tags
+          else ({ default_tags, trend_country } = await fetchGoogleTrendDefaults(trend_country))
         }
         const page = input.source_id
           ? await beans.fetchSourceArticles(input.source_id, { limit: 5, cursor: source_cursor })
@@ -110,10 +113,10 @@ export function createPresentationActions(event: H3Event) {
         else cursor = page.next_cursor !== cursor ? page.next_cursor : null
         return {
           articles: input.source_id ? await enrichArticles(articles) : articles,
-          cursor, from, default_tags, source_cursor, source_exhausted: !source_cursor, error_message: null
+          cursor, from, default_tags, trend_country, source_cursor, source_exhausted: !source_cursor, error_message: null
         }
       } catch {
-        return { articles: [], cursor, from, default_tags, source_cursor, source_exhausted: !source_cursor, error_message: 'News could not be loaded right now.' }
+        return { articles: [], cursor, from, default_tags, trend_country, source_cursor, source_exhausted: !source_cursor, error_message: 'News could not be loaded right now.' }
       }
     }
 

@@ -66,6 +66,7 @@ export function useNewsFeed(
       const snapshot = await executeAction<FeedSnapshot>('feed', {
         home_default: !unref(category) && !unref(source_id),
         default_tags: state?.default_tags,
+        trend_country: state?.trend_country,
         categories: unref(category)?.category_values ? [...unref(category)!.category_values!] : undefined,
         source_id: unref(source_id),
         q: current_search?.query?.trim() || undefined, tags: current_search?.tags,

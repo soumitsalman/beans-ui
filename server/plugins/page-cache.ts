@@ -1,6 +1,4 @@
 import { createHash } from 'node:crypto'
-import { getCookie } from 'h3'
-import { HOME_DISCOVERY_COOKIE, homeDiscoveryCookieActive } from '#shared/homeDiscovery'
 
 export default defineNitroPlugin((nitro_app) => {
   nitro_app.hooks.hook('render:response', (response, { event }) => {
@@ -8,11 +6,7 @@ export default defineNitroPlugin((nitro_app) => {
     const status = response.statusCode || getResponseStatus(event)
     const request_url = getRequestURL(event)
     const pathname = request_url.pathname
-    const discovery_active = pathname === '/' && (
-      homeDiscoveryCookieActive(getCookie(event, HOME_DISCOVERY_COOKIE))
-      || Boolean(request_url.searchParams.get('q')?.trim())
-    )
-    if (event.context.beans_rate_limited || pathname === '/search' || discovery_active || status !== 200) {
+    if (event.context.beans_rate_limited || pathname === '/search' || pathname === '/' || status !== 200) {
       response.headers['cache-control'] = 'private, no-store'
       return
     }

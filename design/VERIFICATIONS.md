@@ -4,6 +4,10 @@ These are the current acceptance cases for the mobile-first UI. Verification rec
 
 ## Google Trends home defaults
 
+- Country selection: weighted Accept-Language order, q=0 exclusions, lowercase regions, script subtags, invalid entries, wildcards, missing/language-only preferences and numeric regions. Country must come from an explicit two-letter locale region; Fly headers/server location do not select trends.
+- Country caching: Google query geo must match uppercase country, cache keys must isolate countries, and failures/empty results must not cache. Check country → US → unfiltered fallback and only one US attempt when US is selected. Verify trend_country survives SSR hydration, More and Retry alongside original tags/from/cursor. Refresh/Clear reselect defaults. Home HTML must be private/no-store while data caches still work.
+- Live RSS verification on 2026-10-23: IN, BR and US each returned HTTP 200 with ten keyword items. Production fixtures use separate IN keywords and an empty BR feed to verify country-specific backend tags and US fallback without q/score_threshold. Keep the checkout's repeated-key request serialization unchanged.
+
 - Run `node scripts/verify-query-encoding.mjs` to confirm the proxy passes array query values unchanged to Nuxt `$fetch`, and that `/search` writes repeated `tags` and `sources` keys. The production discovery fixture captures the resulting request URL. A direct request to the running API verifies that exact URL independently.
 
 - Default home uses UTC today minus three days as `from`, five stories, repeated English `languages` keys and US Google trend keywords as repeated backend `tags` keys; omit default `q` and `score_threshold`. Category feeds retain seven days. User topic/saved tags bypass Google; Clear and empty Find restore trend defaults without writing them to the input, URL or cookie.

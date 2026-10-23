@@ -4,6 +4,7 @@ import type { NewsArticle, NewsStory, NewsPage, NewsSource } from '../app/types/
 export interface FeedInput {
   home_default?: boolean
   default_tags?: string[]
+  trend_country?: string
   categories?: string[]
   q?: string
   tags?: string[]

@@ -303,6 +303,12 @@ try {
   const warm_duration = performance.now() - warm_start
   assert.equal(REQUESTS.filter(request => request.path === '/preview/stories').length, request_count, 'Warm feed uses the bounded presentation cache')
   assert.equal(warm_home.response.headers.get('cache-control'), 'private, no-store')
+  const india_home = await fetchPage('/', { headers: { 'accept-language': 'en-IN', 'fly-client-ip': '192.0.2.155' } })
+  assert.equal(india_home.response.headers.get('cache-control'), 'private, no-store')
+  assert.ok(REQUESTS.some(request => request.path === '/preview/stories' && request.query.tags === 'India News' && !request.query.q))
+  const brazil_home = await fetchPage('/', { headers: { 'accept-language': 'pt-BR', 'fly-client-ip': '192.0.2.156' } })
+  assert.equal(brazil_home.response.headers.get('cache-control'), 'private, no-store')
+  assert.match(brazil_home.html, /GTA 6/)
   assert.match(warm_home.html, /What(?:'|&#39;)s on your mind\?/)
   assert.match(warm_home.html, /Discover Trending News/)
   assert.match(warm_home.html, /beans-icon-48.webp/)
@@ -409,15 +415,27 @@ try {
   const localhost = await fetchPage('/about-beans')
   assert.equal(localhost.response.status, 200, 'Localhost is not redirected')
 
-  async function cursorFeed(payload) {
+  async function cursorFeed(payload, locale = 'en-US') {
     const response = await fetch(`http://127.0.0.1:${APP_PORT}/api/actions/feed`, {
-      method: 'POST', headers: { 'content-type': 'application/json', 'fly-client-ip': '192.0.2.101', 'cookie': fixtureCookie() },
+      method: 'POST', headers: { 'content-type': 'application/json', 'accept-language': locale, 'fly-client-ip': '192.0.2.101', 'cookie': fixtureCookie() },
       body: JSON.stringify(payload)
     })
     assert.equal(response.status, 200)
     return response.json()
   }
   const default_home = await cursorFeed({ home_default: true })
+  assert.equal(default_home.trend_country, 'US')
+  const india_feed = await cursorFeed({ home_default: true }, 'en-IN')
+  assert.equal(india_feed.trend_country, 'IN')
+  assert.deepEqual(india_feed.default_tags, ['India News'])
+  const india_more = await cursorFeed({ home_default: true, trend_country: india_feed.trend_country,
+    default_tags: india_feed.default_tags, from: india_feed.from, cursor: india_feed.cursor }, 'pt-BR')
+  assert.equal(india_more.trend_country, 'IN')
+  assert.deepEqual(india_more.default_tags, india_feed.default_tags)
+  assert.equal(india_more.from, india_feed.from)
+  const brazil_feed = await cursorFeed({ home_default: true }, 'pt-BR')
+  assert.equal(brazil_feed.trend_country, 'US')
+  assert.deepEqual(brazil_feed.default_tags, ['GTA 6', 'Space News'])
   assert.deepEqual(default_home.default_tags, ['GTA 6', 'Space News'])
   assert.equal(default_home.from, new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
   assert.ok(REQUESTS.some(request => request.path === '/preview/stories'

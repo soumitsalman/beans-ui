@@ -1,5 +1,7 @@
 # Beans UI Design
 
+- Home trend country follows regional browser language preferences, resolved server-side for SSR and subsequent actions. No location UI or prompt. Missing preferences use US; country-feed failure tries US before unfiltered news. Home HTML is private and never shared across countries. English news filters remain unchanged; browser locale is not a claim of physical location. More and Retry preserve the initial effective country and keywords.
+
 - Upstream query contract: pass Beans and Espresso list filters as arrays and let Nuxt `$fetch` write one query key per value. `q` is a semantic relevance string with a positive score threshold; `OR` inside it is literal query text. Tags are normalized and applied as additional filters by the backend.
 
 - Theme: minimalist coffee-bean foreground, dark charcoal background, gently glossy but flat surfaces, dark mode only. Use a faint warm sheen and clean tonal separation; avoid inset highlights, bevels, and drop shadows.

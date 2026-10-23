@@ -8,6 +8,7 @@ export const ACTION_INPUTS = {
   feed: z.object({
     home_default: z.boolean().optional(),
     default_tags: z.array(TEXT).max(30).optional(),
+    trend_country: z.string().regex(/^[A-Z]{2}$/).optional(),
     categories: z.array(TEXT).max(100).optional(),
     q: TEXT.optional(),
     tags: z.array(TEXT).max(30).optional(),

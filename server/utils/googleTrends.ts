@@ -1,6 +1,6 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
 
-const GOOGLE_TRENDS_URL = 'https://trends.google.com/trending/rss?geo=US'
+const GOOGLE_TRENDS_URL = 'https://trends.google.com/trending/rss'
 const GOOGLE_TIMEOUT_MS = 10_000
 const PARSER = new XMLParser({ parseTagValue: false, processEntities: true })
 
@@ -17,13 +17,32 @@ export function parseGoogleTrendTags(xml: string): string[] {
   return tags
 }
 
-export const fetchGoogleTrendTags = defineCachedFunction(async (): Promise<string[]> => {
+export function normaliseTrendCountry(country = 'US'): string {
+  return /^[a-z]{2}$/i.test(country) ? country.toUpperCase() : 'US'
+}
+
+export const fetchGoogleTrendTags = defineCachedFunction(async (country = 'US'): Promise<string[]> => {
   const xml = await $fetch<string>(GOOGLE_TRENDS_URL, {
+    query: { geo: normaliseTrendCountry(country) },
     responseType: 'text', timeout: GOOGLE_TIMEOUT_MS, retry: 0
   })
   return parseGoogleTrendTags(xml)
 }, {
-  name: 'google-trends-us-keyword-tags',
+  name: 'google-trends-country-keyword-tags',
+  getKey: (country = 'US') => normaliseTrendCountry(country),
   maxAge: 21600,
   swr: false
 })
+
+export async function fetchGoogleTrendDefaults(country: string): Promise<{ default_tags: string[], trend_country: string }> {
+  const requested_country = normaliseTrendCountry(country)
+  try {
+    return { default_tags: await fetchGoogleTrendTags(requested_country), trend_country: requested_country }
+  } catch {
+    if (requested_country !== 'US') {
+      const default_tags = await fetchGoogleTrendTags('US').catch(() => [])
+      return { default_tags, trend_country: 'US' }
+    }
+    return { default_tags: [], trend_country: 'US' }
+  }
+}

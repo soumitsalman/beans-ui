@@ -1,7 +1,8 @@
+import type { ContinuationInput } from './continuation'
 import type { FeedSnapshot } from '../app/types/discovery'
 import type { NewsArticle, NewsStory, NewsPage, NewsSource } from '../app/types/news'
 
-export interface FeedInput {
+export interface FeedInput extends ContinuationInput {
   home_default?: boolean
   default_tags?: string[]
   trend_country?: string

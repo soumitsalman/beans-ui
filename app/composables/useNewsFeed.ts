@@ -1,4 +1,4 @@
-import { computed, nextTick, onMounted, onScopeDispose, ref, unref } from 'vue'
+import { computed, nextTick, onMounted, onScopeDispose, ref, unref, watch } from 'vue'
 import type { MaybeRef } from 'vue'
 import type { NewsCategory } from '~/settings/categories'
 import type { NewsArticle, NewsStory } from '~/types/news'
@@ -16,6 +16,9 @@ export function useNewsFeed(
 ) {
   const { executeAction } = useBeansActions()
   const route = useRoute()
+  const continuation = useContinuationAccess()
+  const account = useAccount()
+  const personalized = ref(false)
   const articles = ref<NewsArticle[]>([])
   const loading = ref(false)
   const error_message = ref<string | null>(null)
@@ -47,6 +50,8 @@ export function useNewsFeed(
   }
 
   function restoreFeed(snapshot: FeedSnapshot): void {
+    personalized.value = snapshot.personalized ?? false
+    continuation.updateAccess(snapshot.continuation_access)
     articles.value = snapshot.articles
     paging.value = snapshot
     error_message.value = snapshot.error_message
@@ -54,6 +59,8 @@ export function useNewsFeed(
 
   async function loadBatch(append: boolean, retry = false): Promise<void> {
     if (append && (loading.value || (!can_load_more.value && !error_message.value))) return
+    if (append && (!await continuation.canContinue() || loading.value)) return
+    const account_generation = account.generation.value
     const generation = append ? _generation : ++_generation
     if (!append) _requested_story_ids.clear()
     _last_attempt_append = append
@@ -64,6 +71,7 @@ export function useNewsFeed(
     const current_search = unref(search)
     try {
       const snapshot = await executeAction<FeedSnapshot>('feed', {
+        continuation_token: append ? continuation.access.value?.token : undefined,
         home_default: !unref(category) && !unref(source_id),
         default_tags: state?.default_tags,
         trend_country: state?.trend_country,
@@ -71,15 +79,23 @@ export function useNewsFeed(
         source_id: unref(source_id),
         q: current_search?.query?.trim() || undefined, tags: current_search?.tags,
         cursor: state?.cursor, from: state?.from, source_cursor: state?.source_cursor,
-        seen_ids: append ? articles.value.map(article => article.id).filter(Boolean).slice(-2000) : undefined
+        seen_ids: append ? articles.value.map(article => article.id).filter(Boolean).slice(-400) : undefined
       })
-      if (generation !== _generation) return
+      if (generation !== _generation || account_generation !== account.generation.value) return
       _retry_state = snapshot
       if (snapshot.error_message && !snapshot.articles.length && articles.value.length) {
         error_message.value = snapshot.error_message
         return
       }
-      articles.value = append ? [...articles.value, ...snapshot.articles] : snapshot.articles
+      personalized.value = snapshot.personalized ?? false
+      continuation.updateAccess(snapshot.continuation_access)
+      const known_ids = new Set(append ? articles.value.map(article => article.id).filter(Boolean) : [])
+      const fresh = snapshot.articles.filter((article) => {
+        if (known_ids.has(article.id)) return false
+        known_ids.add(article.id)
+        return true
+      })
+      articles.value = append ? [...articles.value, ...fresh] : fresh
       paging.value = snapshot
       error_message.value = snapshot.error_message
       if (!unref(source_id)) void loadStoryEnrichment(snapshot.articles as NewsStory[], generation)
@@ -89,7 +105,9 @@ export function useNewsFeed(
         outcome: error_message.value ? 'error' : 'success', requested_count: 5,
         received_count: snapshot.articles.length, visible_count: articles.value.length, cursor_present: can_load_more.value })
     } catch (error) {
-      if (generation === _generation) error_message.value = requestErrorMessage(error, 'News could not be loaded right now.')
+      if (generation !== _generation || account_generation !== account.generation.value) return
+      await continuation.handleFailure(error)
+      if (generation === _generation) error_message.value = continuation.access.value?.state === 'sign_in_required' ? null : requestErrorMessage(error, 'News could not be loaded right now.')
     } finally {
       if (generation === _generation) loading.value = false
     }
@@ -104,18 +122,30 @@ export function useNewsFeed(
       return { ...paging.value, articles: articles.value, error_message: error_message.value }
     })
     if (data.value) {
+      personalized.value = data.value.personalized ?? false
+      continuation.updateAccess(data.value.continuation_access)
       articles.value = data.value.articles
       error_message.value = data.value.error_message
       paging.value = data.value as FeedSnapshot
     }
   }
+  watch(account.signed_out_revision, () => {
+    if (!personalized.value) return
+    _generation++
+    articles.value = []
+    paging.value = null
+    _retry_state = null
+    personalized.value = false
+    continuation.updateAccess(undefined)
+    void loadBatch(false)
+  })
   onScopeDispose(() => {
     _generation++
   })
   onMounted(() => {
     if (!unref(source_id)) void loadStoryEnrichment(articles.value as NewsStory[], _generation)
   })
-  return { articles, loading, error_message, can_load_more, initialiseFeed,
+  return { continuation_access: continuation.access, renewAccess: continuation.renewAccess, personalized, articles, loading, error_message, can_load_more, initialiseFeed,
     refreshFeed: () => loadBatch(false), loadMore: () => loadBatch(true),
     retryFeed: () => loadBatch(_last_attempt_append, true), restoreFeed }
 }

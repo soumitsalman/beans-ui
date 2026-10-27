@@ -225,3 +225,13 @@ industry-and-infrastructure:
   - industry_and_manufacturing
   - transportation_and_logistics
   - construction_housing_and_real_estate
+
+## User management and personalization — 2026-10-27
+
+- Use the Option A account utility icon after the existing header utilities. Visitors see an accessible Sign in control; signed-in users have Account, Preferences, API keys, and Sign out. Keep the current header, category navigation, and card layout.
+- Clerk sign-in/sign-up appears in a dismissible Nuxt UI modal over the reading context. Clerk retains its verification flow; Beans owns the surrounding return/draft behavior. Account management uses Clerk's UserProfile, with visible deletion consequences and separate Zuplo cleanup wording.
+- The preference modal follows `user-preference-setup-mockup.png`: Topic, comma-separated Tags, Sources, Exclude sources, Languages, Save preferences, and Not now/Cancel. Topic is one semantic query. Use current API source-name/language examples rather than the mockup's illustrative full domains and Spanish value. Fields are optional; one valid value is required. Show field errors, preserve failed drafts, confirm Clear and unsaved-draft dismissal, and handle version conflicts through explicit reload.
+- Home shows Set preferences when none exist, or a saved-filter summary with Edit/Clear. Show Following your preferences only when the active feed is personalized. Temporary Find does not overwrite the saved preference. Category pages retain their normal feeds.
+- After the first successful visitor More batch, retain the cards and replace More with Sign in for more content, Your stories stay visible. Sign in to load more., Sign in, and Create account. Do not prompt at natural cursor exhaustion. Apply this footer to Home, category, source, Search, and Story Related; Coverage stays public.
+- Shared Clerk appearance settings use the existing dark/amber palette. All account and continuation controls use Nuxt UI and fit the mobile viewport. The supplied mockups do not authorize replacing navigation, article cards, or adding Saved/For You pages.
+- Below 400px, the date remains in the live indicator's accessible label while its visible text is compacted away, preserving the Beans mark and all four utility controls without horizontal overflow.

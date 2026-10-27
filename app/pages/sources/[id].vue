@@ -14,6 +14,8 @@ const source_error = ref<string | null>(null)
 const { fetchSource } = useBeansApi()
 const { outboundHref } = useOutboundUrl()
 const {
+  continuation_access,
+  renewAccess,
   articles,
   loading,
   can_load_more,
@@ -160,9 +162,11 @@ if (initial_source.value) await initialiseFeed(initial_source.value.feed)
       wide_grid
       :articles="articles"
       :loading="loading"
+      :continuation_access="continuation_access"
       :can_load_more="can_load_more"
       :error_message="error_message"
       empty_message="No recent news is available for this source."
+      @renew-access="renewAccess"
       @load-more="loadMore"
       @retry="retryFeed"
     />

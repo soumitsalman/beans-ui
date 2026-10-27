@@ -116,13 +116,15 @@ const computed = getter => ({
   get value() { return getter() }
 })
 const unref = value => value && typeof value === 'object' && 'value' in value ? value.value : value
+const useAccount = () => ({ generation: ref(0), session: ref({ signed_in: false }), preference_revision: ref(0), signed_out_revision: ref(0) })
+const useContinuationAccess = () => ({ access: ref(), canContinue: async () => true, updateAccess: () => {}, handleFailure: async () => {}, renewAccess: async () => {} })
 const REQUESTS = []
 let _payload
 let _hydrate = false
 let _fail = false
 let _tags = ['GTA 6']
 const { useNewsFeed } = await loadService('../app/composables/useNewsFeed.ts', {
-  computed, ref, unref, nextTick: async () => {}, onMounted: () => {}, onScopeDispose: () => {},
+  computed, ref, unref, watch: () => {}, useAccount, useContinuationAccess, nextTick: async () => {}, onMounted: () => {}, onScopeDispose: () => {},
   useRoute: () => ({ path: '/' }), requestErrorMessage: () => 'Failed', logClientEvent: () => {},
   useAsyncData: async (key, handler) => {
     if (!_hydrate) _payload = await handler()
@@ -162,7 +164,7 @@ assert.equal(REQUESTS.at(-1).cursor, undefined, 'Refresh Retry does not reuse an
 let _cookie = ref({ query: 'saved', tags: ['saved_tag'] })
 const route = { path: '/', query: {} }
 const { useHomeDiscovery } = await loadService('../app/composables/useHomeDiscovery.ts', {
-  computed, ref, reactive: value => value, watch: () => {}, useNewsFeed,
+  computed, ref, useAccount, reactive: value => value, watch: () => {}, useNewsFeed,
   HOME_DISCOVERY_COOKIE: 'beans_home_discovery', useCookie: () => _cookie,
   useRoute: () => route, useRouter: () => ({ replace: async (value) => { route.query = value.query } }),
   useNuxtApp: () => ({ isHydrating: false }), useGoogleAnalytics: () => ({ trackEvent: () => {} }),

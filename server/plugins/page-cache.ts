@@ -1,3 +1,4 @@
+import { sessionUser } from '../utils/userSession'
 import { createHash } from 'node:crypto'
 
 export default defineNitroPlugin((nitro_app) => {
@@ -6,7 +7,7 @@ export default defineNitroPlugin((nitro_app) => {
     const status = response.statusCode || getResponseStatus(event)
     const request_url = getRequestURL(event)
     const pathname = request_url.pathname
-    if (event.context.beans_rate_limited || pathname === '/search' || pathname === '/' || status !== 200) {
+    if (sessionUser(event) || event.context.beans_auth_unavailable || event.context.beans_rate_limited || pathname === '/search' || pathname === '/' || status !== 200) {
       response.headers['cache-control'] = 'private, no-store'
       return
     }

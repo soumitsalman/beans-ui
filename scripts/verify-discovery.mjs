@@ -1,10 +1,22 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { createUserDatabase } from '../server/database/database.ts'
+import { migrateUserDatabase } from '../server/database/migrations.ts'
 import { randomUUID } from 'node:crypto'
 import { signIdentity } from '../server/utils/anonymousIdentity.ts'
 import { NEWS_LANGUAGES } from '../shared/news.ts'
 import { createServer, request } from 'node:http'
 import { spawn } from 'node:child_process'
 import { setTimeout as delay } from 'node:timers/promises'
+
+const USER_FIXTURE_DIR = await mkdtemp(join(tmpdir(), 'beans-discovery-users-'))
+const USER_FIXTURE_CONNECTION = `sqlite:${join(USER_FIXTURE_DIR, 'users.sqlite')}`
+const user_database = createUserDatabase(USER_FIXTURE_CONNECTION)
+await migrateUserDatabase(user_database)
+await user_database.destroy()
+const CONTINUATION_COOKIES = new Map()
 
 const RATE_SECRET = process.env.TEST_RATE_LIMIT_COOKIE_SECRET || `discovery-fixture:${randomUUID()}`
 function fixtureCookie() {
@@ -188,6 +200,10 @@ const app_process = spawn(process.execPath, ['--import', './scripts/fixtures/goo
     NUXT_BEANS_API_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`,
     NUXT_ESPRESSO_API_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`,
     NUXT_CAFECITO_API_KEY: 'fixture-only',
+    NUXT_USER_DB: USER_FIXTURE_CONNECTION,
+    NUXT_CLERK_SECRET_KEY: 'sk_test_fixture_only',
+    NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY: `pk_test_${Buffer.from('fixture.clerk.accounts.dev$').toString('base64')}`,
+    CLERK_KEYLESS_DISABLED: 'true',
     NUXT_RATE_LIMIT_COOKIE_SECRET: RATE_SECRET,
     NUXT_RATE_LIMIT_REDIS_URL: process.env.TEST_REDIS_URL ?? 'redis://127.0.0.1:4930',
     NUXT_RATE_LIMIT_TRUST_FLY: 'true',
@@ -207,6 +223,9 @@ app_process.stderr.on('data', (chunk) => {
 
 function stopServers() {
   app_process.kill('SIGTERM')
+  app_process.once('exit', () => {
+    void rm(USER_FIXTURE_DIR, { recursive: true, force: true })
+  })
   mock_server.close()
   browser_server.close()
 }
@@ -416,12 +435,15 @@ try {
   assert.equal(localhost.response.status, 200, 'Localhost is not redirected')
 
   async function cursorFeed(payload, locale = 'en-US') {
+    const cookie = payload.continuation_token ? CONTINUATION_COOKIES.get(payload.continuation_token) : fixtureCookie()
     const response = await fetch(`http://127.0.0.1:${APP_PORT}/api/actions/feed`, {
-      method: 'POST', headers: { 'content-type': 'application/json', 'accept-language': locale, 'fly-client-ip': '192.0.2.101', 'cookie': fixtureCookie() },
+      method: 'POST', headers: { 'content-type': 'application/json', 'accept-language': locale, 'fly-client-ip': '192.0.2.101', cookie },
       body: JSON.stringify(payload)
     })
     assert.equal(response.status, 200)
-    return response.json()
+    const result = await response.json()
+    if (result.continuation_access?.token) CONTINUATION_COOKIES.set(result.continuation_access.token, cookie)
+    return result
   }
   const default_home = await cursorFeed({ home_default: true })
   assert.equal(default_home.trend_country, 'US')
@@ -429,7 +451,7 @@ try {
   assert.equal(india_feed.trend_country, 'IN')
   assert.deepEqual(india_feed.default_tags, ['India News'])
   const india_more = await cursorFeed({ home_default: true, trend_country: india_feed.trend_country,
-    default_tags: india_feed.default_tags, from: india_feed.from, cursor: india_feed.cursor }, 'pt-BR')
+    continuation_token: india_feed.continuation_access.token, default_tags: india_feed.default_tags, from: india_feed.from, cursor: india_feed.cursor }, 'pt-BR')
   assert.equal(india_more.trend_country, 'IN')
   assert.deepEqual(india_more.default_tags, india_feed.default_tags)
   assert.equal(india_more.from, india_feed.from)
@@ -445,7 +467,7 @@ try {
     && request.tags[0] === 'GTA 6' && request.tags[1] === 'Space News')
   assert.match(encoded_home_request?.raw_url ?? '', /[?&]tags=GTA\+6&tags=Space\+News(?:&|$)/, 'Home sends repeated tags through standard $fetch query serialization')
   assert.deepEqual(home_request.languages, NEWS_LANGUAGES, 'English languages are repeated query keys')
-  const default_more = await cursorFeed({ home_default: true, default_tags: default_home.default_tags, from: default_home.from, cursor: default_home.cursor })
+  const default_more = await cursorFeed({ home_default: true, continuation_token: default_home.continuation_access.token, default_tags: default_home.default_tags, from: default_home.from, cursor: default_home.cursor })
   assert.deepEqual(default_more.default_tags, default_home.default_tags)
   assert.equal(default_more.from, default_home.from)
   const criteria = { q: 'cursor-fixture', tags: ['startups'], categories: ['artificial_intelligence'] }
@@ -460,7 +482,7 @@ try {
   const enriched = await enriched_response.json()
   assert.ok(first_page.articles.every(story => enriched[story.id]?.other_publishers?.length && enriched[story.id]?.confidence === 'high'))
   assert.ok(REQUESTS.filter(request => /^\/preview\/stories\/[^/]+\/articles$/.test(request.path)).some(request => request.query.limit === '20'), 'Deferred action uses the existing favicon route')
-  const next_page = await cursorFeed({ ...criteria, cursor: first_page.cursor, from: first_page.from, seen_ids: first_page.articles.map(story => story.id) })
+  const next_page = await cursorFeed({ ...criteria, continuation_token: first_page.continuation_access.token, cursor: first_page.cursor, from: first_page.from, seen_ids: first_page.articles.map(story => story.id) })
   assert.equal(next_page.articles.length, 5)
   assert.ok(next_page.articles.every(story => !first_page.articles.some(previous => previous.id === story.id)))
   const cursor_requests = REQUESTS.filter(request => request.path === '/preview/stories' && request.query.q === criteria.q)

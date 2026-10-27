@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ContinuationFooter from './ContinuationFooter.vue'
+import type { ContinuationAccess } from '#shared/continuation'
 import { computed } from 'vue'
 import type { NewsArticle } from '~/types/news'
 import StoryCard from '~/components/news/StoryCard.vue'
@@ -10,6 +12,7 @@ const STACKED_LIST_CLASS = 'space-y-3'
 const WIDE_GRID_CLASS = 'grid grid-cols-1 items-start gap-3 md:grid-cols-2'
 
 const props = withDefaults(defineProps<{
+  continuation_access?: ContinuationAccess
   title?: string
   articles: NewsArticle[]
   loading: boolean
@@ -19,6 +22,7 @@ const props = withDefaults(defineProps<{
   wide_grid?: boolean
   stories?: boolean
 }>(), {
+  continuation_access: undefined,
   title: undefined,
   error_message: null,
   empty_message: 'Nothing is available yet.',
@@ -30,6 +34,7 @@ const list_class = computed(() => props.wide_grid ? WIDE_GRID_CLASS : STACKED_LI
 const { action_blocked, cooldown_message } = useActionCooldown()
 
 const emit = defineEmits<{
+  'renew-access': []
   'load-more': []
   'retry': []
 }>()
@@ -112,19 +117,14 @@ const emit = defineEmits<{
       aria-label="Updating articles"
     />
 
-    <div
-      v-if="can_load_more && !error_message && (articles.length > 0 || !loading)"
-      class="flex justify-center pt-1"
-    >
-      <UButton
-        label="More"
-        icon="lucide:plus"
-        color="neutral"
-        variant="outline"
-        :loading="loading"
-        :disabled="loading || action_blocked"
-        @click="emit('load-more')"
-      />
-    </div>
+    <ContinuationFooter
+      v-if="!error_message"
+      :visible_count="articles.length"
+      :access="continuation_access"
+      :can_load_more="can_load_more"
+      :loading="loading"
+      @more="emit('load-more')"
+      @renew="emit('renew-access')"
+    />
   </section>
 </template>

@@ -11,6 +11,8 @@ if (!category.value) {
 }
 
 const {
+  continuation_access,
+  renewAccess,
   articles,
   loading,
   can_load_more,
@@ -51,9 +53,11 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
       wide_grid
       :articles="articles"
       :loading="loading"
+      :continuation_access="continuation_access"
       :can_load_more="can_load_more"
       :error_message="error_message"
       :empty_message="`No news is available in ${category?.label || 'this category'} right now.`"
+      @renew-access="renewAccess"
       @load-more="loadMore"
       @retry="retryFeed"
     />

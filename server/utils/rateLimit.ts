@@ -22,7 +22,11 @@ export async function enforceRateLimit(event: H3Event): Promise<void> {
   const verified_id = verifyIdentity(getCookie(event, ANONYMOUS_COOKIE), secret)
   const id = verified_id ?? newIdentity()
   const key = (kind: string, value: string) => `beans:{actions}:${kind}:${hashIdentity(value, secret)}`
-  const keys = [key('browser', id), key('ip', ip)]
+  event.context.beans_anonymous_id = id
+  event.context.beans_identity_expiry = verified_id ? Number(getCookie(event, ANONYMOUS_COOKIE)!.split('.')[1]) + COOKIE_LIFETIME_SECONDS * 1000 : Date.now() + COOKIE_LIFETIME_SECONDS * 1000
+  event.context.beans_protection_secret = secret
+  const signed_in_id = event.context.auth?.({ acceptsToken: 'session_token' })?.userId
+  const keys = [key(signed_in_id ? 'user' : 'browser', signed_in_id || id), key('ip', ip)]
   const limits = [USER_LIMIT, IP_LIMIT]
   // A client refusing/forging cookies cannot get ten new requests with every ID.
   if (!verified_id) {

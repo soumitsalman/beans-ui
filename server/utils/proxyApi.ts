@@ -56,9 +56,10 @@ function isDiscoverySearch(query: Record<string, unknown>): boolean {
   )
 }
 
-export async function fetchPresentationApi<T>(api_base_url: string, path: string, query: Record<string, unknown> = {}, api_key?: string, signal?: AbortSignal): Promise<T> {
+export async function fetchPresentationApi<T>(api_base_url: string, path: string, query: Record<string, unknown> = {}, api_key?: string, signal?: AbortSignal, private_request = false): Promise<T> {
   signal?.throwIfAborted()
   const url = `${api_base_url.replace(/\/$/, '')}/${path}`
+  if (private_request) return fetchUpstream(url, query, api_key, signal) as Promise<T>
   if (path === 'articles/latest' || path === 'preview/stories') {
     return (isDiscoverySearch(query) ? fetchDiscoverySearch(url, query, api_key) : fetchPublicFeed(url, query, api_key)) as Promise<T>
   }

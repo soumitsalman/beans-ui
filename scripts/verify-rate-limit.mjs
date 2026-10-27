@@ -69,7 +69,7 @@ async function ready(port) {
 function cookieFor(id = randomUUID()) {
   return `beans_anonymous_id=${signIdentity(id, Date.now(), SECRET)}`
 }
-async function action(cookie, ip = '192.0.2.1', action_name = 'feed', payload = {}, port = APP_PORT) {
+async function action(cookie, ip = '192.0.2.1', action_name = 'feed', payload = { categories: ['artificial_intelligence'] }, port = APP_PORT) {
   return fetch(`http://127.0.0.1:${port}/api/actions/${action_name}`, {
     method: 'POST', headers: { 'content-type': 'application/json', 'fly-client-ip': ip, ...(cookie ? { cookie } : {}) }, body: JSON.stringify(payload)
   })

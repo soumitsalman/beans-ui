@@ -46,6 +46,8 @@ function searchCriteria(input: SearchInput): SearchCriteria {
 export function useSearchFeed() {
   const { fetchSearchArticles } = useBeansApi()
   const route = useRoute()
+  const continuation = useContinuationAccess()
+  const account = useAccount()
   const articles = ref<NewsArticle[]>([])
   const next_cursor = ref<string | null>(null)
   const loading = ref(false)
@@ -69,6 +71,8 @@ export function useSearchFeed() {
     if (!isCurrentGeneration(generation) || !active_criteria.value) return
     if (append && (loading.value || !next_cursor.value)) return
 
+    if (append && (!await continuation.canContinue() || loading.value)) return
+    const account_generation = account.generation.value
     const criteria = active_criteria.value
     const cursor = append ? next_cursor.value : null
     const before_count = articles.value.length
@@ -78,16 +82,17 @@ export function useSearchFeed() {
 
     try {
       const page = await fetchSearchArticles({
+        continuation_token: append ? continuation.access.value?.token : undefined,
         q: criteria.query || undefined,
         tags: criteria.tags,
         domains: criteria.sources,
         limit: PAGE_SIZE,
         cursor
       })
-      if (!isCurrentGeneration(generation)) return
-
+      if (!isCurrentGeneration(generation) || account_generation !== account.generation.value) return
+      continuation.updateAccess(page.continuation_access)
       articles.value = append ? appendArticles(articles.value, page.data) : appendArticles([], page.data)
-      next_cursor.value = page.data.length && page.next_cursor !== cursor ? page.next_cursor : null
+      next_cursor.value = page.next_cursor !== cursor ? page.next_cursor : null
 
       logClientEvent({
         event: 'content_load',
@@ -102,11 +107,15 @@ export function useSearchFeed() {
         visible_count: articles.value.length
       })
     } catch (error) {
+      if (!isCurrentGeneration(generation) || account_generation !== account.generation.value) return
+      await continuation.handleFailure(error)
       if (isCurrentGeneration(generation)) {
         const label = submittedCriteriaLabel(criteria)
-        error_message.value = requestErrorMessage(error, label
-          ? `Search results could not be loaded for ${label}.`
-          : 'Search results could not be loaded right now.')
+        error_message.value = continuation.access.value?.state === 'sign_in_required'
+          ? null
+          : requestErrorMessage(error, label
+              ? `Search results could not be loaded for ${label}.`
+              : 'Search results could not be loaded right now.')
         logClientEvent({
           event: 'content_load',
           path: route.path,
@@ -154,11 +163,12 @@ export function useSearchFeed() {
     const { data } = await useAsyncData(`search:${route.fullPath}`, async () => {
       await search(input)
       return {
-        articles: articles.value, next_cursor: next_cursor.value, error_message: error_message.value,
+        continuation_access: continuation.access.value, articles: articles.value, next_cursor: next_cursor.value, error_message: error_message.value,
         active_criteria: active_criteria.value, last_input: last_input.value
       }
     })
     if (!data.value) return
+    continuation.updateAccess(data.value.continuation_access)
     articles.value = data.value.articles
     next_cursor.value = data.value.next_cursor
     error_message.value = data.value.error_message
@@ -173,6 +183,8 @@ export function useSearchFeed() {
   }
 
   return {
+    continuation_access: continuation.access,
+    renewAccess: continuation.renewAccess,
     articles,
     loading,
     error_message,

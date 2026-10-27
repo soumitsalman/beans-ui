@@ -104,6 +104,7 @@ function toQuery(params: BeansPageParams = {}): ApiQuery {
     tags: presentList(params.tags),
     sources: presentList(params.sources),
     domains: presentList(params.domains),
+    exclude_domains: presentList(params.exclude_domains),
     categories: presentList(params.categories),
     regions: presentList(params.regions),
     entities: presentList(params.entities),
@@ -165,16 +166,20 @@ export function createBeansClient(fetch_api: ApiFetch, score_threshold: unknown)
     }
   }
 
-  async function fetchStories(params: BeansPageParams = {}): Promise<NewsPage<NewsStory>> {
-    const page = await fetchBeansPage<BeansStory>('preview/stories', withEnglishNews(withScoreThreshold({
+  async function fetchStories(params: BeansPageParams = {}, personalized = false): Promise<NewsPage<NewsStory>> {
+    const page = await fetchBeansPage<BeansStory>('preview/stories', withScoreThreshold({
       limit: params.limit,
       cursor: params.cursor,
       from: params.from,
       categories: params.categories,
       q: params.q,
       tags: params.tags,
+      domains: personalized ? params.domains : undefined,
+      exclude_domains: personalized ? params.exclude_domains : undefined,
+      languages: personalized && params.languages?.length ? params.languages : NEWS_LANGUAGES,
+      content_type: 'news',
       score_threshold: params.score_threshold
-    })))
+    }))
     return { ...page, data: page.data.map(toNewsStory).filter(story => story.id) }
   }
 

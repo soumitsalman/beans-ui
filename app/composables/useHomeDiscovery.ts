@@ -13,6 +13,7 @@ function criteriaLabel(criteria: HomeDiscoveryCriteria | null): string {
 }
 
 export function useHomeDiscovery() {
+  const account = useAccount()
   const criteria_cookie = useCookie<HomeDiscoveryCriteria | null>(HOME_DISCOVERY_COOKIE, {
     path: '/',
     sameSite: 'lax'
@@ -41,6 +42,7 @@ export function useHomeDiscovery() {
   })
 
   function savedCriteria(): HomeDiscoveryCriteria | null {
+    if (account.session.value.signed_in) return null
     const saved = criteria_cookie.value
     if (!saved || typeof saved !== 'object') return null
     const query = typeof saved.query === 'string' ? saved.query.trim() : ''
@@ -83,7 +85,7 @@ export function useHomeDiscovery() {
       search_form.tags = ''
     }
     active_criteria.value = criteriaActive(criteria) ? criteria : null
-    if (sync_cookie) criteria_cookie.value = active_criteria.value
+    if (sync_cookie && !account.session.value.signed_in) criteria_cookie.value = active_criteria.value
   }
 
   async function syncRouteCriteria(refresh: boolean): Promise<void> {
@@ -124,7 +126,7 @@ export function useHomeDiscovery() {
     applyForm(criteria)
     trackEvent('search_submit', { has_topic: Boolean(criteria.query), tag_count: criteria.tags.length })
     active_criteria.value = criteriaActive(criteria) ? criteria : null
-    criteria_cookie.value = active_criteria.value
+    if (!account.session.value.signed_in) criteria_cookie.value = active_criteria.value
     await writeHomeRoute(criteria.query)
     await feed.refreshFeed()
   }
@@ -164,7 +166,14 @@ export function useHomeDiscovery() {
     }
   )
 
+  watch(account.preference_revision, () => {
+    if (!criteriaActive(active_criteria.value)) void feed.refreshFeed()
+  })
+
   return {
+    continuation_access: feed.continuation_access,
+    renewAccess: feed.renewAccess,
+    personalized: feed.personalized,
     search_form,
     articles: feed.articles,
     loading: feed.loading,

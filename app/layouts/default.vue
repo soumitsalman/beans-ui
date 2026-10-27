@@ -4,6 +4,11 @@ import { CATEGORY_GROUPS } from '~/settings/categories'
 import { CAFECITO_LINKS } from '~/settings/site'
 
 const router = useRouter()
+const account = useAccount()
+await useAsyncData('beans-account-session', async () => {
+  await account.refreshSession()
+  return true
+})
 const { action_blocked, cooldown_message } = useActionCooldown()
 const { outboundHref } = useOutboundUrl()
 const main_content = useTemplateRef<HTMLElement>('main-content')
@@ -71,7 +76,7 @@ async function skipToContent(): Promise<void> {
               class="relative size-3 text-primary drop-shadow-[0_0_6px_var(--ui-primary)]"
             />
           </span>
-          {{ current_date }}
+          <span class="hidden min-[400px]:inline">{{ current_date }}</span>
         </time>
         <div class="flex min-w-0 flex-1 justify-center">
           <UButton
@@ -129,6 +134,7 @@ async function skipToContent(): Promise<void> {
               aria-label="Help improve Beans"
             />
           </UTooltip>
+          <AccountControl />
         </div>
       </div>
       <nav

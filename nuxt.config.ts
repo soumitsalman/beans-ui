@@ -1,9 +1,13 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 const ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
 
+// Reuse the configured Clerk instance; missing keys must not provision a replacement.
+ENV.CLERK_KEYLESS_DISABLED = 'true'
+
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
+    '@clerk/nuxt',
     '@nuxt/ui'
   ],
 
@@ -25,6 +29,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
+    user_db: ENV.BEANS_APP_USER_DB?.trim() || '',
     beans_api_base_url: ENV.BEANS_API_BASE_URL?.trim() || 'https://cafecito-beans-api.fly.dev',
     espresso_api_base_url: ENV.ESPRESSO_API_BASE_URL?.trim() || 'https://cafecito-espresso-api.fly.dev',
     cafecito_api_key: ENV.CAFECITO_API_KEY,
@@ -44,6 +49,13 @@ export default defineNuxtConfig({
   },
 
   compatibilityDate: '2025-01-15',
+
+  clerk: {
+    skipServerMiddleware: true,
+    appearance: {
+      variables: { colorPrimary: '#d97706', colorBackground: '#1c1917', colorForeground: '#f5f5f4', colorInputBackground: '#292524', colorInputForeground: '#f5f5f4' }
+    }
+  },
 
   eslint: {
     config: {

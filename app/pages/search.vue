@@ -16,6 +16,8 @@ const search_form = reactive({
 })
 
 const {
+  continuation_access,
+  renewAccess,
   articles,
   loading,
   error_message,
@@ -160,9 +162,11 @@ useSeoMeta({ robots: 'noindex, follow' })
       title="Search results"
       :articles="articles"
       :loading="loading"
+      :continuation_access="continuation_access"
       :can_load_more="can_load_more"
       :error_message="error_message"
       :empty_message="empty_message"
+      @renew-access="renewAccess"
       @load-more="loadMore"
       @retry="retrySearch"
     />

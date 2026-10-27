@@ -67,6 +67,9 @@ async function fetchApi(api, path, query = {}) {
 }
 const { createPresentationActions } = await loadService('../server/utils/presentationActions.ts', {
   createBeansClient, createEspressoClient, ACTION_INPUTS: INPUTS,
+  sessionUser: () => null,
+  withContinuation: (event, context, cursor, token, execute) => execute(),
+  continuationState: async (event, context, cursor) => ({ state: cursor ? 'available' : 'exhausted' }),
   resolveTrendCountry: () => 'IN', getHeader: () => 'en-IN',
   fetchGoogleTrendDefaults: async (country) => {
     _google_calls++

@@ -1,5 +1,14 @@
 # Beans UI Working Log
 
+## 2026-10-27 — User management, Home preferences, and visitor continuation
+
+- Implemented the agreed USER_MGT plan in the Nuxt app: official Clerk integration on the configured development instance; same-origin, server-verified owner-only preference endpoints; PostgreSQL/SQLite repositories and explicit migrations; version conflicts and clear/recreate protection; durable verified account-cleanup webhooks and reconciliation command. Applied migrations to the configured application database. Zuplo remains a separate-login external portal.
+- Added the Option A account control, Clerk sign-in/sign-up and account modals, first-time preference offer, five-field preference editor, unsaved-draft/clear/sign-out confirmation, Home summary/Edit/Clear, and shared continuation footer. Compact header date text below 400px keeps the mark and utilities usable. Shared Clerk appearance follows the dark coffee palette.
+- Enforced one successful visitor More per anonymous page context for up to the existing 30-day identity lifetime, using signed 30-minute cursor/filter tokens and atomic owner-checked 120-second reservations. Integrated Home, category, source, Search, and Story Related while leaving Coverage public. Successful empty/duplicate pages consume the allowance; failures release it. Sign-in restores access without automatically fetching another batch.
+- Applied all five preference filters only to signed-in Home. Temporary Find replaces preferences for that request; clearing Find restores them. Personalized requests bypass shared caches, authenticated responses are private/no-store, drafts survive failures, and older identity/route responses cannot replace current state. Preference text stays out of URLs, cookies, metadata, logs, and telemetry.
+- Added database, client-state, production HTTP, and browser fixtures; updated existing focused fixtures for the new account/access dependencies. PostgreSQL/SQLite, client, HTTP, lint/typecheck/build, existing focused content checks, and memory rate-limit checks pass. The broader discovery suite still fails at its pre-existing publisher-enrichment assertion. Browser checks and their provider/fixture boundaries are recorded in VERIFICATIONS.md, with saved visual evidence under design/verification/.
+- Updated USER_MGT, DATASOURCES, DESIGN, VERIFICATIONS, environment examples, and package commands. Verified the real local app on port 3000 with live content and the Clerk development form; no credentials were submitted. No git actions or Beans/Espresso backend changes were performed.
+
 ## 2026-10-23 — Browser-locale Google trend countries
 
 - Code snapshot at `2026-10-23T12:19:20Z`: SHA-256 `72a26026197f5e73f9b8de0872aee32a611243640434000f1c5bfb2ae1fcbc5d` (`trendCountry.ts`), `77d28d2a6200da768f1046470bf0c8196efd47db0b78862e538da4ec9ff1246b` (`googleTrends.ts`), `cfa2862289dc03c00e2c262b739c04a9e6304355507bd523ec579c926d90e365` (`presentationActions.ts`).

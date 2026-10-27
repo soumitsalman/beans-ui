@@ -6,6 +6,9 @@ import type { NewsArticle } from '~/types/news'
 import { resourceError, requestErrorMessage } from '~/utils/resourceError'
 
 const route = useRoute()
+const continuation = useContinuationAccess()
+const account = useAccount()
+const continuation_access = continuation.access
 const { action_blocked, cooldown_message } = useActionCooldown()
 const { fetchStory, fetchCoverage, fetchRelated } = useBeansApi()
 const article_id = computed(() => String(route.params.id || ''))
@@ -14,6 +17,7 @@ const { data: initial_article, error: initial_error } = await useAsyncData(`stor
   if (!result.story.id || !result.story.title) throw createError({ statusCode: 404, statusMessage: 'Story not found.' })
   return result
 })
+continuation.updateAccess(initial_article.value?.related.continuation_access)
 const article = ref<NewsArticle | null>(initial_article.value?.story ?? null)
 const coverage_articles = ref<NewsArticle[]>(initial_article.value?.coverage.data ?? [])
 const related_articles = ref<NewsArticle[]>(initial_article.value?.related.data ?? [])
@@ -83,13 +87,15 @@ async function loadRelated(append = false, generation = _request_generation): Pr
   if (!isCurrentGeneration(generation) || !article.value?.story_id || loading_related.value) return
   if (append && !related_cursor.value) return
 
+  if (append && (!await continuation.canContinue() || loading_related.value)) return
+  const account_generation = account.generation.value
   loading_related.value = true
   related_error.value = null
   const cursor = append ? related_cursor.value : null
   try {
-    const page = await fetchRelated(article.value.story_id, cursor)
-    if (!isCurrentGeneration(generation)) return
-
+    const page = await fetchRelated(article.value.story_id, cursor, append ? continuation.access.value?.token : undefined)
+    if (!isCurrentGeneration(generation) || account_generation !== account.generation.value) return
+    continuation.updateAccess(page.continuation_access)
     related_articles.value = append
       ? appendUnique(related_articles.value, page.data)
       : appendUnique([], page.data)
@@ -97,7 +103,9 @@ async function loadRelated(append = false, generation = _request_generation): Pr
       ? page.next_cursor
       : null
   } catch (error) {
-    if (isCurrentGeneration(generation)) related_error.value = requestErrorMessage(error, 'Related articles could not be loaded right now.')
+    if (!isCurrentGeneration(generation) || account_generation !== account.generation.value) return
+    await continuation.handleFailure(error)
+    if (isCurrentGeneration(generation)) related_error.value = continuation.access.value?.state === 'sign_in_required' ? null : requestErrorMessage(error, 'Related articles could not be loaded right now.')
   } finally {
     if (isCurrentGeneration(generation)) loading_related.value = false
   }
@@ -124,6 +132,7 @@ async function loadArticle(): Promise<void> {
     article.value = result.story
     coverage_articles.value = result.coverage.data
     related_articles.value = result.related.data
+    continuation.updateAccess(result.related.continuation_access)
     related_cursor.value = result.related.next_cursor
     coverage_error.value = result.coverage_error
     related_error.value = result.related_error
@@ -181,9 +190,11 @@ onMounted(() => {
         :related_articles="related_articles"
         :loading_coverage="loading_coverage"
         :loading_related="loading_related"
+        :continuation_access="continuation_access"
         :can_load_more_related="can_load_more_related"
         :coverage_error="coverage_error"
         :related_error="related_error"
+        @renew-access="continuation.renewAccess"
         @retry-coverage="loadCoverage"
         @retry-related="() => loadRelated(Boolean(related_articles.length))"
         @load-more-related="() => loadRelated(true)"

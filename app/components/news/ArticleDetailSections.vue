@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ContinuationFooter from './ContinuationFooter.vue'
+import type { ContinuationAccess } from '#shared/continuation'
 import { computed, ref, watch } from 'vue'
 import type { NewsArticle } from '~/types/news'
 import ArticleTrendCounts from '~/components/news/ArticleTrendCounts.vue'
@@ -22,6 +24,7 @@ interface CoverageView {
 }
 
 const props = defineProps<{
+  continuation_access?: ContinuationAccess
   coverage_articles: NewsArticle[]
   related_articles: NewsArticle[]
   loading_coverage: boolean
@@ -32,6 +35,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  'renew-access': []
   'retry-coverage': []
   'retry-related': []
   'load-more-related': []
@@ -436,20 +440,14 @@ function articleTime(article: NewsArticle): number {
         No related articles are available.
       </div>
 
-      <div
-        v-if="can_load_more_related"
-        class="flex justify-center pt-1"
-      >
-        <UButton
-          label="More"
-          icon="lucide:plus"
-          color="neutral"
-          variant="outline"
-          :loading="loading_related"
-          :disabled="loading_related || action_blocked"
-          @click="emit('load-more-related')"
-        />
-      </div>
+      <ContinuationFooter
+        :visible_count="related_articles.length"
+        :access="continuation_access"
+        :can_load_more="can_load_more_related"
+        :loading="loading_related"
+        @more="emit('load-more-related')"
+        @renew="emit('renew-access')"
+      />
     </section>
   </div>
 </template>

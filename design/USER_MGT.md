@@ -153,7 +153,7 @@ API keys are for the signed-in user's own developer use and are managed in the Z
 ## Account deletion
 
 - Deletion is available only in the signed-in account-management experience and may require re-authentication.
-- Before confirmation, state that the user will lose account access, their Beans preferences, and API-key access subject to the applicable retention policy. Link that policy when available.
+- Before confirmation, state that the user will lose Clerk account access and their Beans preferences. Zuplo uses a separate login; API keys and portal access must be managed there separately. Link an applicable retention policy when available.
 - The destructive control has an explicit confirmation step; cancellation returns to Account unchanged.
 - A successful deletion ends the session, removes account-only UI, and shows a neutral completion state with a recovery/contact route only when one is actually supported.
 - A failed deletion must not sign the user out prematurely or claim completion; retain a safe account state and offer retry/support.
@@ -177,7 +177,7 @@ API keys are for the signed-in user's own developer use and are managed in the Z
 
 ## Implementation design and considerations
 
-This section guides a future implementation. It does not authorize backend or API changes in the current documentation task.
+The implementation stays inside the Nuxt application and its application-owned user database; Beans and Espresso services are unchanged.
 
 The selected Option A utility-icon placement is shown in the [user-management mockup](./user-management-option-a.png).
 
@@ -239,7 +239,7 @@ The visitor allowance is enforced on the server as well as represented in the UI
 ### Personalization data and precedence
 
 - Keep authentication records in Clerk. Store the Beans-owned preference set separately, keyed by stable Clerk user ID. Never store passwords, provider verification data, or session tokens.
-- Use PostgreSQL in production and SQLite for local development, behind one typed repository/migration boundary. Vue components and route handlers should not contain database-dialect behavior.
+- Use the configured PostgreSQL database in production and local development, with an explicit SQLite alternative for local development, behind one typed repository/migration boundary. Vue components and route handlers should not contain database-dialect behavior.
 - Suggested logical records:
   - `user_preferences`: unique owner ID, optional topic text, normalized tags, included domains, excluded domains, languages, schema version, timestamps, and concurrency version.
   - `continuation_usage`: hashed anonymous identity/context, reservation/consumed state, expiry, and timestamps, with an identity-plus-context uniqueness constraint.
@@ -284,14 +284,14 @@ Each phase must be independently releasable and reversible. Do not expose a cont
 - Persistence tests cover preference owner isolation, optimistic conflicts, idempotent deletion/webhooks, PostgreSQL/SQLite migration parity, and partial-cleanup recovery.
 - Telemetry tests reject raw preferences, searches, identity IDs, provider tokens, continuation contexts, and API secrets.
 
-### Decisions required before implementation
+### Selected implementation decisions
 
-- Clerk's supported Nuxt/server integration and session-verification pattern.
-- The typed persistence/migration library and shared production store for atomic continuation reservations.
-- Topic and list-field length/count limits, supported language values, and source-domain validation rules.
-- Anonymous allowance lifetime and the intended behavior when privacy settings remove its cookie.
-- Clerk/Zuplo deletion guarantees and ownership of partial-cleanup support.
-- Whether Zuplo uses a separate login or a supported SSO handoff from Beans.
+- Use the official Clerk Nuxt SDK and server-verified session tokens. Local work stays on the configured development instance.
+- Use Kysely with PostgreSQL/SQLite repositories and migrations. The user database also stores atomic continuation reservations.
+- Use current API source-name and language values; apply the field limits documented below.
+- Anonymous allowance lasts until the existing identity expires, up to 30 days. Cookie removal can reset this conversion prompt.
+- Zuplo uses separate login and separate key/account cleanup. Clerk deletion triggers verified local preference cleanup; provider redelivery and the reconciliation command handle retries.
+- Explicit Home Find temporarily replaces all saved filters; clearing it restores the preference.
 
 ## Acceptance and failure checks
 
@@ -305,3 +305,18 @@ Each phase must be independently releasable and reversible. Do not expose a cont
 | Preference clear | Confirmation restores default signed-in discovery. | No sign-out or stale personalized label. |
 | Sign out | Session ends; public reading remains possible. | Personal data is hidden and nothing is deleted. |
 | Delete account | Consequences, confirmation, and completion/failure status are accurate. | One-click or unsupported-recovery deletion claims are impossible. |
+
+## Implemented application contracts — 2026-10-27
+
+- Local Clerk configuration remains on the development instance. `@clerk/nuxt` supplies SSR state and the provider UI; Beans' middleware verifies session tokens and fails closed for personal actions while public reading remains available.
+- `BEANS_APP_USER_DB` configures the server-owned database (runtime override `NUXT_USER_DB`). Kysely repositories support PostgreSQL and explicit SQLite development storage. Migrations are run with `pnpm db:migrate`, not automatically during requests. Preferences are provisioned on first explicit Save.
+- `/api/account/session` returns verified sign-in presentation state, the owner's preference, and any storage error. `/api/account/preferences` supports authenticated GET, POST `{ preference, version }`, and DELETE `{ version }`. Owner identity comes from Clerk, never the request body. POST/DELETE require same-origin requests; stale versions return 409. Clear retains a version tombstone to prevent an older edit matching a recreated preference.
+- Topic is limited to 500 characters. Each list accepts up to 30 entries; tags are limited to 500 characters per entry and source names to 253. List normalization trims, removes blanks, deduplicates, lowercases, and converts spaces in tags to underscores. Sources accept stored source names without schemes, paths, or whitespace. Languages are restricted to `NEWS_LANGUAGES`; included/excluded source overlap is invalid.
+- Home precedence is temporary Find → saved preference → existing public discovery. Find temporarily replaces all saved filters; clearing Find restores them. Preferences never populate browser query/cookie persistence. Effective preference filters are carried in signed continuation snapshots and bypass shared upstream caches.
+- Continuation snapshots expose `continuation_access`: available, retryable_error, sign_in_required, exhausted, or authenticated_available. The UI also represents loading. Tokens bind anonymous identity, account when applicable, surface/context, filters, and expected cursor, and expire after 30 minutes. `/api/account/continuation` renews a token after verifying its signature and current access; renewal does not load content or restore allowance.
+- The anonymous ledger lasts until identity expiry, up to 30 days. PostgreSQL atomic reservations use a 120-second lease and owner-checked completion/release. Failed collection requests release the reservation; empty/duplicate-only successful batches consume it. Consumed-context refresh/reopening remains gated. Different normalized Search criteria/category/source/story contexts have separate allowances; Home keeps one context across temporary Find changes.
+- `/api/webhooks/clerk` verifies the provider signature, queues `user.deleted` cleanup durably, then deletes preferences idempotently. Pending cleanup blocks preference recreation. `pnpm db:reconcile` retries queued cleanup and prunes expired continuation records; provider delivery retries remain necessary when storage itself is unavailable.
+- API keys remain entirely at `https://developer.cafecito.tech` with separate login. Beans neither stores keys nor revokes Zuplo access on deletion. The account UI discloses this boundary. No provider dashboard settings, production-instance configuration, or Zuplo SSO are changed by this implementation.
+
+- Context enforcement canonicalizes empty, duplicate, comma-separated, whitespace and case variants of category/Search selectors; selector-free feed requests are Home regardless of the legacy `home_default` hint. UUID IDs are canonicalized without changing case-sensitive opaque IDs. These equivalent requests share the same allowance.
+- Account UI closes on expired/unverifiable sessions while retaining a same-owner draft for explicit re-authentication and review. A different owner resets that draft. Sign-out requires a loaded provider, preserves public query/hash context, and never claims success when the provider fails. Unknown network outcomes use “not confirmed” copy and require checking the saved version before retrying.

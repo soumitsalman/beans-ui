@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import HomePreferences from '~/components/account/HomePreferences.vue'
 import ArticleSection from '~/components/news/ArticleSection.vue'
 
 const {
+  continuation_access,
+  renewAccess,
+  personalized,
   search_form,
   articles,
   loading,
@@ -36,6 +40,8 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
         Discover Trending News
       </h1>
     </div>
+
+    <HomePreferences :personalized="personalized" />
 
     <UForm
       :state="search_form"
@@ -93,9 +99,11 @@ useSeoMeta({ robots: () => error_message.value && !articles.value.length ? 'noin
       wide_grid
       :articles="articles"
       :loading="loading"
+      :continuation_access="continuation_access"
       :can_load_more="can_load_more"
       :error_message="error_message"
       :empty_message="empty_message"
+      @renew-access="renewAccess"
       @load-more="loadMore"
       @retry="retry"
     />

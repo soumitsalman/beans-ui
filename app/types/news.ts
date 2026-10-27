@@ -1,3 +1,5 @@
+import type { ContinuationResult } from '#shared/continuation'
+
 export interface NewsSource {
   id?: string | null
   description?: string | null
@@ -93,7 +95,7 @@ export interface NewsMention {
   } | null
 }
 
-export interface NewsPage<T> {
+export interface NewsPage<T> extends ContinuationResult {
   data: T[]
   next_cursor: string | null
   num_results?: number
@@ -108,6 +110,8 @@ export interface BeansPageParams {
   score_threshold?: number
   tags?: string[]
   sources?: string[]
+  continuation_token?: string
+  exclude_domains?: string[]
   domains?: string[]
   categories?: string[]
   regions?: string[]

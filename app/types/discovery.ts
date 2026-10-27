@@ -1,6 +1,9 @@
+import type { ContinuationResult } from '#shared/continuation'
 import type { NewsArticle } from './news'
 
-export interface FeedSnapshot {
+export interface FeedSnapshot extends ContinuationResult {
+  personalized?: boolean
+  preference_version?: number
   default_tags?: string[]
   trend_country?: string
   articles: NewsArticle[]
